@@ -3954,6 +3954,11 @@ ngx_http_v2_run_request(ngx_http_request_t *r)
 
     h2c->payload_bytes += r->request_length;
 
+#if (NGX_RESTY_EXT)
+    r->request_header_length = r->request_length;
+#endif
+
+
     ngx_http_process_request(r);
 
 failed:
