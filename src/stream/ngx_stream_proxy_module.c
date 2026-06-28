@@ -799,6 +799,10 @@ ngx_stream_proxy_connect(ngx_stream_session_t *s)
 
     u->start_time = ngx_current_msec;
 
+#if (NGX_RESTY_EXT)
+    u->state->start_msec = ngx_current_msec;
+#endif
+
     u->state->connect_time = (ngx_msec_t) -1;
     u->state->first_byte_time = (ngx_msec_t) -1;
     u->state->response_time = (ngx_msec_t) -1;
@@ -2290,6 +2294,10 @@ ngx_stream_proxy_next_upstream(ngx_stream_session_t *s)
 
     pscf = ngx_stream_get_module_srv_conf(s, ngx_stream_proxy_module);
 
+#if (NGX_RESTY_EXT)
+    u->state->status = NGX_STREAM_BAD_GATEWAY;
+#endif
+
     timeout = pscf->next_upstream_timeout;
 
     if (u->peer.tries == 0
@@ -2351,6 +2359,12 @@ ngx_stream_proxy_finalize(ngx_stream_session_t *s, ngx_uint_t rc)
         if (u->state->response_time == (ngx_msec_t) -1) {
             u->state->response_time = ngx_current_msec - u->start_time;
         }
+
+#if (NGX_RESTY_EXT)
+        if (u->state->status == 0) {
+            u->state->status = rc;
+        }
+#endif
 
         if (pc) {
             u->state->bytes_received = u->received;
