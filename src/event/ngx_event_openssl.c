@@ -2116,6 +2116,9 @@ ngx_ssl_create_connection(ngx_ssl_t *ssl, ngx_connection_t *c, ngx_uint_t flags)
     sc->buffer = ((flags & NGX_SSL_BUFFER) != 0);
     sc->buffer_size = ssl->buffer_size;
 
+#if (NGX_RESTY_EXT)
+    sc->dyn_rec = ssl->dyn_rec;
+#endif
     sc->session_ctx = ssl->ctx;
 
 #ifdef SSL_READ_EARLY_DATA_SUCCESS
@@ -2204,6 +2207,10 @@ ngx_ssl_handshake(ngx_connection_t *c)
     ngx_err_t  err;
     ngx_int_t  rc;
 
+#if (NGX_RESTY_EXT)
+    ngx_time_t *tp;
+#endif
+
 #ifdef SSL_READ_EARLY_DATA_SUCCESS
     if (c->ssl->try_early_data) {
         return ngx_ssl_try_early_data(c);
@@ -2277,6 +2284,11 @@ ngx_ssl_handshake(ngx_connection_t *c)
         }
 
         c->ssl->handshaked = 1;
+
+#if (NGX_RESTY_EXT)
+        tp = ngx_timeofday();
+        c->ssl->handshake_end_msec = tp->sec * 1000 + tp->msec;
+#endif
 
         return NGX_OK;
     }
@@ -3180,6 +3192,43 @@ ngx_ssl_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 
     for ( ;; ) {
 
+#if (NGX_RESTY_EXT)
+        /* Dynamic record resizing:
+           We want the initial records to fit into one TCP segment
+           so we don't get TCP HoL blocking due to TCP Slow Start.
+           A connection always starts with small records, but after
+           a given amount of records sent, we make the records larger
+           to reduce header overhead.
+           After a connection has idled for a given timeout, begin
+           the process from the start. The actual parameters are
+           configurable. If dyn_rec_timeout is 0, we assume dyn_rec is off. */
+
+        if (c->ssl->dyn_rec.timeout > 0 ) {
+
+            if (ngx_current_msec - c->ssl->dyn_rec_last_write >
+                c->ssl->dyn_rec.timeout)
+            {
+                buf->end = buf->start + c->ssl->dyn_rec.size_lo;
+                c->ssl->dyn_rec_records_sent = 0;
+
+            } else {
+                if (c->ssl->dyn_rec_records_sent >
+                    c->ssl->dyn_rec.threshold * 2)
+                {
+                    buf->end = buf->start + c->ssl->buffer_size;
+
+                } else if (c->ssl->dyn_rec_records_sent >
+                           c->ssl->dyn_rec.threshold)
+                {
+                    buf->end = buf->start + c->ssl->dyn_rec.size_hi;
+
+                } else {
+                    buf->end = buf->start + c->ssl->dyn_rec.size_lo;
+                }
+            }
+        }
+#endif
+
         while (in && buf->last < buf->end && send < limit) {
             if (in->buf->last_buf || in->buf->flush) {
                 flush = 1;
@@ -3318,6 +3367,11 @@ ngx_ssl_write(ngx_connection_t *c, u_char *data, size_t size)
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "SSL_write: %d", n);
 
     if (n > 0) {
+
+#if (NGX_RESTY_EXT)
+        c->ssl->dyn_rec_records_sent++;
+        c->ssl->dyn_rec_last_write = ngx_current_msec;
+#endif
 
         if (c->ssl->saved_read_handler) {
 
@@ -6654,6 +6708,100 @@ ngx_ssl_get_client_v_remain(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
 
     return NGX_OK;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+ngx_int_t
+ngx_ssl_get_handshake_time(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
+{
+    ngx_msec_int_t   ms;
+    u_char          *p;
+    ngx_time_t      *tp;
+
+    if (c->ssl == NULL) {
+        ngx_str_null(s);
+
+        return NGX_OK;
+    }
+
+    tp = ngx_timeofday();
+
+    if (c->ssl->handshake_end_msec == 0) {
+        ms = tp->sec * 1000 + tp->msec - c->ssl->handshake_start_msec;
+
+    } else {
+        ms = c->ssl->handshake_end_msec - c->ssl->handshake_start_msec;
+    }
+
+    ms = ngx_max(ms, 0);
+
+    p = ngx_pnalloc(pool, NGX_TIME_T_LEN + 4);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    s->len = ngx_sprintf(p, "%T.%03M", (time_t) ms / 1000, ms % 1000) - p;
+    s->data = p;
+
+    return NGX_OK;
+}
+
+
+ngx_int_t
+ngx_ssl_get_handshake_start_msec(ngx_connection_t *c, ngx_pool_t *pool,
+    ngx_str_t *s)
+{
+    ngx_msec_t       ms;
+    u_char          *p;
+
+    if (c->ssl == NULL || c->ssl->handshake_start_msec == 0) {
+        ngx_str_null(s);
+
+        return NGX_OK;
+    }
+
+    ms = c->ssl->handshake_start_msec;
+
+    p = ngx_pnalloc(pool, NGX_TIME_T_LEN + 4);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    s->len = ngx_sprintf(p, "%T.%03M", (time_t) ms / 1000, ms % 1000) - p;
+    s->data = p;
+
+    return NGX_OK;
+}
+
+
+ngx_int_t
+ngx_ssl_get_handshake_end_msec(ngx_connection_t *c, ngx_pool_t *pool,
+    ngx_str_t *s)
+{
+    ngx_msec_t       ms;
+    u_char          *p;
+
+    if (c->ssl == NULL || c->ssl->handshake_end_msec == 0) {
+        ngx_str_null(s);
+
+        return NGX_OK;
+    }
+
+    ms = c->ssl->handshake_end_msec;
+
+    p = ngx_pnalloc(pool, NGX_TIME_T_LEN + 4);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    s->len = ngx_sprintf(p, "%T.%03M", (time_t) ms / 1000, ms % 1000) - p;
+    s->data = p;
+
+    return NGX_OK;
+}
+
+#endif
 
 
 static time_t
