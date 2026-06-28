@@ -118,6 +118,9 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
     ngx_http_v2_connection_t  *h2c;
     ngx_http_core_loc_conf_t  *clcf;
     ngx_http_core_srv_conf_t  *cscf;
+#if (NGX_RESTY_EXT)
+    ngx_time_t                *tp;
+#endif
     u_char                     addr[NGX_SOCKADDR_STRLEN];
 
     static const u_char nginx[8] = { 0x87, 0x3d, 0x65, 0xaa, 0xc2, 0xa1, 0x3e, 0xbf};
@@ -148,6 +151,12 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
     }
 
     r->header_sent = 1;
+
+#if (NGX_RESTY_EXT)
+    tp = ngx_timeofday();
+    r->header_sent_sec = tp->sec;
+    r->header_sent_msec = tp->msec;
+#endif
 
     if (r != r->main) {
         return NGX_OK;

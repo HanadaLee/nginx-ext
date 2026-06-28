@@ -1238,6 +1238,9 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
     ngx_http_conf_addr_t  *addr;
 #if (NGX_HTTP_SSL)
     ngx_uint_t             ssl;
+#if (NGX_RESTY_EXT)
+    ngx_uint_t             https_allow_http;
+#endif
 #endif
 #if (NGX_HTTP_V2)
     ngx_uint_t             http2;
@@ -1280,6 +1283,10 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         ssl = lsopt->ssl || addr[i].opt.ssl;
         protocols |= lsopt->ssl << 1;
         protocols_prev |= addr[i].opt.ssl << 1;
+#if (NGX_RESTY_EXT)
+        https_allow_http = lsopt->https_allow_http
+                           || addr[i].opt.https_allow_http;
+#endif
 #endif
 #if (NGX_HTTP_V2)
         http2 = lsopt->http2 || addr[i].opt.http2;
@@ -1372,6 +1379,9 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         addr[i].opt.proxy_protocol = proxy_protocol;
 #if (NGX_HTTP_SSL)
         addr[i].opt.ssl = ssl;
+#if (NGX_RESTY_EXT)
+        addr[i].opt.https_allow_http = https_allow_http;
+#endif
 #endif
 #if (NGX_HTTP_V2)
         addr[i].opt.http2 = http2;
@@ -1916,6 +1926,9 @@ ngx_http_add_addrs(ngx_conf_t *cf, ngx_http_port_t *hport,
         addrs[i].conf.default_server = addr[i].default_server;
 #if (NGX_HTTP_SSL)
         addrs[i].conf.ssl = addr[i].opt.ssl;
+#if (NGX_RESTY_EXT)
+        addrs[i].conf.https_allow_http = addr[i].opt.https_allow_http;
+#endif
 #endif
 #if (NGX_HTTP_V2)
         addrs[i].conf.http2 = addr[i].opt.http2;
@@ -1984,6 +1997,9 @@ ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
         addrs6[i].conf.default_server = addr[i].default_server;
 #if (NGX_HTTP_SSL)
         addrs6[i].conf.ssl = addr[i].opt.ssl;
+#if (NGX_RESTY_EXT)
+        addrs6[i].conf.https_allow_http = addr[i].opt.https_allow_http;
+#endif
 #endif
 #if (NGX_HTTP_V2)
         addrs6[i].conf.http2 = addr[i].opt.http2;
