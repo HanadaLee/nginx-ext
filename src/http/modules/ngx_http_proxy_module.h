@@ -58,6 +58,10 @@ typedef struct {
     ngx_array_t                   *cookie_domains;
     ngx_array_t                   *cookie_paths;
     ngx_array_t                   *cookie_flags;
+#if (NGX_RESTY_EXT)
+    ngx_array_t                   *cookie_values;
+    ngx_array_t                   *cookie_max_age;
+#endif
 
     ngx_http_complex_value_t      *method;
     ngx_str_t                      location;
@@ -75,6 +79,10 @@ typedef struct {
 
     ngx_uint_t                     headers_hash_max_size;
     ngx_uint_t                     headers_hash_bucket_size;
+
+#if (NGX_RESTY_EXT)
+    ngx_flag_t                     headers_inherit;
+#endif
 
 #if (NGX_HTTP_SSL || NGX_COMPAT)
     ngx_uint_t                     ssl;
@@ -98,6 +106,10 @@ typedef struct {
     ngx_chain_t                   *busy;
 
     ngx_buf_t                     *trailers;
+
+#if (NGX_RESTY_EXT)
+    ngx_list_t                     headers_in;
+#endif
 
     unsigned                       head:1;
     unsigned                       internal_chunked:1;
