@@ -55,6 +55,18 @@
 #define NGX_HTTP_UPSTREAM_IGN_XA_BUFFERING   0x00000080
 #define NGX_HTTP_UPSTREAM_IGN_XA_CHARSET     0x00000100
 #define NGX_HTTP_UPSTREAM_IGN_VARY           0x00000200
+#if (NGX_RESTY_EXT)
+#define NGX_HTTP_UPSTREAM_IGN_PRAGMA         0x00000400
+
+
+#define NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE     0x00000002
+#define NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE     0x00000004
+#define NGX_HTTP_UPSTREAM_IGN_CC_PRIVATE     0x00000008
+#define NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE      0x00000010
+#define NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE     0x00000020
+#define NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR    0x00000040
+#define NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE    0x00000080
+#endif
 
 
 #define NGX_HTTP_UPSTREAM_NOTIFY_HEADER      0x1
@@ -66,6 +78,18 @@ typedef struct {
     ngx_msec_t                       connect_time;
     ngx_msec_t                       header_time;
     ngx_msec_t                       queue_time;
+
+#if (NGX_RESTY_EXT)
+    ngx_msec_t                       start_msec;
+
+#if (NGX_HTTP_SSL)
+    ngx_msec_t                       ssl_start_msec;
+#endif
+
+    ngx_msec_t                       send_start_msec;
+    ngx_msec_t                       send_end_msec;
+#endif
+
     off_t                            response_length;
     off_t                            bytes_received;
     off_t                            bytes_sent;
@@ -185,6 +209,9 @@ typedef struct {
     ngx_bufs_t                       bufs;
 
     ngx_uint_t                       ignore_headers;
+#if (NGX_RESTY_EXT)
+    ngx_uint_t                       ignore_cache_control;
+#endif
     ngx_uint_t                       next_upstream;
     ngx_uint_t                       store_access;
     ngx_uint_t                       next_upstream_tries;
@@ -205,6 +232,9 @@ typedef struct {
     ngx_hash_t                       hide_headers_hash;
     ngx_array_t                     *hide_headers;
     ngx_array_t                     *pass_headers;
+#if (NGX_RESTY_EXT)
+    ngx_array_t                     *hide_cookies;
+#endif
 
     ngx_http_upstream_local_t       *local;
     ngx_flag_t                       socket_keepalive;
@@ -215,10 +245,23 @@ typedef struct {
     ngx_shm_zone_t                  *cache_zone;
     ngx_http_complex_value_t        *cache_value;
 
+#if (NGX_RESTY_EXT)
+    ngx_http_complex_value_t        *cache_min_age;
+#endif
     ngx_uint_t                       cache_min_uses;
     ngx_uint_t                       cache_use_stale;
+#if (NGX_RESTY_EXT)
+    ngx_http_complex_value_t        *cache_stale_if_error;
+    ngx_http_complex_value_t        *cache_stale_while_revalidate;
+    ngx_http_complex_value_t        *cache_vary;
+    ngx_flag_t                       cache_hide_cookies;
+#endif
     ngx_uint_t                       cache_methods;
 
+#if (NGX_RESTY_EXT)
+    off_t                            cache_min_length;
+    off_t                            cache_max_length;
+#endif
     off_t                            cache_max_range_offset;
 
     ngx_flag_t                       cache_lock;
@@ -233,6 +276,11 @@ typedef struct {
     ngx_array_t                     *cache_bypass;
     ngx_array_t                     *cache_purge;
     ngx_array_t                     *no_cache;
+#if (NGX_RESTY_EXT)
+    ngx_array_t                     *cache_types_keys;
+
+    ngx_hash_t                       cache_types;
+#endif
 #endif
 
     ngx_array_t                     *store_lengths;
@@ -307,6 +355,9 @@ typedef struct {
     ngx_table_elt_t                 *vary;
 
     ngx_table_elt_t                 *cache_control;
+#if (NGX_RESTY_EXT)
+    ngx_table_elt_t                 *pragma;
+#endif
     ngx_table_elt_t                 *set_cookie;
 
     off_t                            content_length_n;
@@ -465,6 +516,9 @@ ngx_int_t ngx_http_upstream_merge_ssl_passwords(ngx_conf_t *cf,
 extern ngx_module_t        ngx_http_upstream_module;
 extern ngx_conf_bitmask_t  ngx_http_upstream_cache_method_mask[];
 extern ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[];
+#if (NGX_RESTY_EXT)
+extern ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[];
+#endif
 
 
 #endif /* _NGX_HTTP_UPSTREAM_H_INCLUDED_ */
