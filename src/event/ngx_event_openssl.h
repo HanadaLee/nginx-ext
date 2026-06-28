@@ -102,6 +102,16 @@
 typedef struct ngx_ssl_ocsp_s   ngx_ssl_ocsp_t;
 
 
+#if (NGX_RESTY_EXT)
+typedef struct {
+    ngx_msec_t                  timeout;
+    ngx_uint_t                  threshold;
+    size_t                      size_lo;
+    size_t                      size_hi;
+} ngx_ssl_dyn_rec_t;
+#endif
+
+
 struct ngx_ssl_s {
     SSL_CTX                    *ctx;
     ngx_log_t                  *log;
@@ -111,6 +121,9 @@ struct ngx_ssl_s {
 
     ngx_rbtree_t                staple_rbtree;
     ngx_rbtree_node_t           staple_sentinel;
+#if (NGX_RESTY_EXT)
+    ngx_ssl_dyn_rec_t           dyn_rec;
+#endif
 };
 
 
@@ -129,6 +142,15 @@ struct ngx_ssl_connection_s {
 
     ngx_event_handler_pt        saved_read_handler;
     ngx_event_handler_pt        saved_write_handler;
+
+#if (NGX_RESTY_EXT)
+    ngx_msec_t                  handshake_start_msec;
+    ngx_msec_t                  handshake_end_msec;
+
+    ngx_ssl_dyn_rec_t           dyn_rec;
+    ngx_msec_t                  dyn_rec_last_write;
+    ngx_uint_t                  dyn_rec_records_sent;
+#endif
 
     ngx_ssl_ocsp_t             *ocsp;
 
@@ -159,7 +181,11 @@ struct ngx_ssl_connection_s {
 #define NGX_SSL_DFLT_BUILTIN_SCACHE  -5
 
 
+#if (NGX_RESTY_EXT)
+#define NGX_SSL_MAX_SESSION_SIZE  16384
+#else
 #define NGX_SSL_MAX_SESSION_SIZE  8192
+#endif
 
 typedef struct ngx_ssl_sess_id_s  ngx_ssl_sess_id_t;
 
@@ -382,6 +408,14 @@ ngx_int_t ngx_ssl_get_client_v_remain(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
 ngx_int_t ngx_ssl_get_client_sigalg(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
+#if (NGX_RESTY_EXT)
+ngx_int_t ngx_ssl_get_handshake_time(ngx_connection_t *c, ngx_pool_t *pool,
+    ngx_str_t *s);
+ngx_int_t ngx_ssl_get_handshake_start_msec(ngx_connection_t *c,
+    ngx_pool_t *pool, ngx_str_t *s);
+ngx_int_t ngx_ssl_get_handshake_end_msec(ngx_connection_t *c, ngx_pool_t *pool,
+    ngx_str_t *s);
+#endif
 
 
 ngx_int_t ngx_ssl_handshake(ngx_connection_t *c);

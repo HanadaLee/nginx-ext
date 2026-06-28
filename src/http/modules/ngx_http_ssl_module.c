@@ -90,6 +90,16 @@ static ngx_conf_enum_t  ngx_http_ssl_ocsp[] = {
 };
 
 
+#if (NGX_RESTY_EXT)
+static ngx_conf_enum_t  ngx_http_ssl_strict_server_name[] = {
+    { ngx_string("off"), 0 },
+    { ngx_string("on"), 1 },
+    { ngx_string("mtls_only"), 2 },
+    { ngx_null_string, 0 }
+};
+#endif
+
+
 static ngx_conf_post_t  ngx_http_ssl_conf_command_post =
     { ngx_http_ssl_conf_command_check };
 
@@ -313,6 +323,50 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       offsetof(ngx_http_ssl_srv_conf_t, reject_handshake),
       NULL },
 
+#if (NGX_RESTY_EXT)
+    { ngx_string("ssl_dyn_rec"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_enable),
+      NULL },
+
+    { ngx_string("ssl_dyn_rec_timeout"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_msec_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_timeout),
+      NULL },
+
+    { ngx_string("ssl_dyn_rec_size_lo"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_size_lo),
+      NULL },
+
+    { ngx_string("ssl_dyn_rec_size_hi"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_size_hi),
+      NULL },
+
+    { ngx_string("ssl_dyn_rec_threshold"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_threshold),
+      NULL },
+
+    { ngx_string("ssl_strict_server_name"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_enum_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, strict_server_name),
+      &ngx_http_ssl_strict_server_name },
+#endif
+
       ngx_null_command
 };
 
@@ -437,6 +491,17 @@ static ngx_http_variable_t  ngx_http_ssl_vars[] = {
 
     { ngx_string("ssl_client_sigalg"), NULL, ngx_http_ssl_variable,
       (uintptr_t) ngx_ssl_get_client_sigalg, NGX_HTTP_VAR_CHANGEABLE, 0 },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("ssl_handshake_time"), NULL, ngx_http_ssl_variable,
+      (uintptr_t) ngx_ssl_get_handshake_time, NGX_HTTP_VAR_CHANGEABLE, 0 },
+
+    { ngx_string("ssl_handshake_start_msec"), NULL, ngx_http_ssl_variable,
+      (uintptr_t) ngx_ssl_get_handshake_start_msec, NGX_HTTP_VAR_CHANGEABLE, 0 },
+
+    { ngx_string("ssl_handshake_end_msec"), NULL, ngx_http_ssl_variable,
+      (uintptr_t) ngx_ssl_get_handshake_end_msec, NGX_HTTP_VAR_CHANGEABLE, 0 },
+#endif
 
       ngx_http_null_variable
 };
@@ -671,6 +736,14 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->ocsp_cache_zone = NGX_CONF_UNSET_PTR;
     sscf->stapling = NGX_CONF_UNSET;
     sscf->stapling_verify = NGX_CONF_UNSET;
+#if (NGX_RESTY_EXT)
+    sscf->dyn_rec_enable = NGX_CONF_UNSET;
+    sscf->dyn_rec_timeout = NGX_CONF_UNSET_MSEC;
+    sscf->dyn_rec_size_lo = NGX_CONF_UNSET_SIZE;
+    sscf->dyn_rec_size_hi = NGX_CONF_UNSET_SIZE;
+    sscf->dyn_rec_threshold = NGX_CONF_UNSET_UINT;
+    sscf->strict_server_name = NGX_CONF_UNSET_UINT;
+#endif
 
     return sscf;
 }
@@ -741,6 +814,25 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->stapling_file, prev->stapling_file, "");
     ngx_conf_merge_str_value(conf->stapling_responder,
                          prev->stapling_responder, "");
+
+#if (NGX_RESTY_EXT)
+    ngx_conf_merge_value(conf->dyn_rec_enable, prev->dyn_rec_enable, 0);
+    ngx_conf_merge_msec_value(conf->dyn_rec_timeout, prev->dyn_rec_timeout,
+                             1000);
+    /* Default sizes for the dynamic record sizes are defined to fit maximal
+       TLS + IPv6 overhead in a single TCP segment for lo and 3 segments for hi:
+       1369 = 1500 - 40 (IP) - 20 (TCP) - 10 (Time) - 61 (Max TLS overhead) */
+    ngx_conf_merge_size_value(conf->dyn_rec_size_lo, prev->dyn_rec_size_lo,
+                             1369);
+    /* 4229 = (1500 - 40 - 20 - 10) * 3  - 61 */
+    ngx_conf_merge_size_value(conf->dyn_rec_size_hi, prev->dyn_rec_size_hi,
+                             4229);
+    ngx_conf_merge_uint_value(conf->dyn_rec_threshold, prev->dyn_rec_threshold,
+                             40);
+
+    ngx_conf_merge_uint_value(conf->strict_server_name,
+        prev->strict_server_name, 2);
+#endif
 
     conf->ssl.log = cf->log;
 
@@ -964,6 +1056,30 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     if (ngx_ssl_conf_commands(cf, &conf->ssl, conf->conf_commands) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
+
+#if (NGX_RESTY_EXT)
+    if (conf->dyn_rec_enable) {
+        conf->ssl.dyn_rec.timeout = conf->dyn_rec_timeout;
+        conf->ssl.dyn_rec.threshold = conf->dyn_rec_threshold;
+
+        if (conf->buffer_size > conf->dyn_rec_size_lo) {
+            conf->ssl.dyn_rec.size_lo = conf->dyn_rec_size_lo;
+
+        } else {
+            conf->ssl.dyn_rec.size_lo = conf->buffer_size;
+        }
+
+        if (conf->buffer_size > conf->dyn_rec_size_hi) {
+            conf->ssl.dyn_rec.size_hi = conf->dyn_rec_size_hi;
+
+        } else {
+            conf->ssl.dyn_rec.size_hi = conf->buffer_size;
+        }
+
+    } else {
+        conf->ssl.dyn_rec.timeout = 0;
+    }
+#endif
 
     return NGX_CONF_OK;
 }

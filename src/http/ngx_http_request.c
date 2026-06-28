@@ -679,6 +679,9 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
     ssize_t                    n;
     ngx_err_t                  err;
     ngx_int_t                  rc;
+#if (NGX_RESTY_EXT)
+    ngx_time_t                *tp;
+#endif
     ngx_connection_t          *c;
     ngx_http_connection_t     *hc;
     ngx_http_ssl_srv_conf_t   *sscf;
@@ -785,6 +788,11 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
                 return;
             }
 
+#if (NGX_RESTY_EXT)
+            tp = ngx_timeofday();
+            c->ssl->handshake_start_msec = tp->sec * 1000 + tp->msec;
+#endif
+
             ngx_reusable_connection(c, 0);
 
             rc = ngx_ssl_handshake(c);
@@ -809,6 +817,12 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, rev->log, 0, "plain http");
 
         c->log->action = "waiting for request";
+
+#if (NGX_RESTY_EXT && NGX_HTTP_SSL)
+        if (hc->addr_conf->https_allow_http) {
+            hc->ssl = 0;
+        }
+#endif
 
         rev->handler = ngx_http_wait_request_handler;
         ngx_http_wait_request_handler(rev);
@@ -1560,6 +1574,10 @@ ngx_http_process_request_headers(ngx_event_t *rev)
                            "http header done");
 
             r->request_length += r->header_in->pos - r->header_name_start;
+
+#if (NGX_RESTY_EXT)
+            r->request_header_length = r->request_length;
+#endif
 
             r->http_state = NGX_HTTP_PROCESS_REQUEST_STATE;
 
@@ -2528,7 +2546,13 @@ ngx_http_set_virtual_server(ngx_http_request_t *r, ngx_str_t *host)
 
         sscf = ngx_http_get_module_srv_conf(cscf->ctx, ngx_http_ssl_module);
 
+#if (NGX_RESTY_EXT)
+        if ((sscf->strict_server_name == 2 && sscf->verify)
+            || sscf->strict_server_name == 1)
+        {
+#else
         if (sscf->verify) {
+#endif
             ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
                           "client attempted to request the server name "
                           "different from the one that was negotiated");
@@ -4136,6 +4160,10 @@ ngx_http_log_error(ngx_log_t *log, u_char *buf, size_t len)
     ngx_http_request_t  *r;
     ngx_http_log_ctx_t  *ctx;
 
+#if (NGX_RESTY_EXT)
+    ngx_str_t            request_id;
+#endif
+
     if (log->action) {
         p = ngx_snprintf(buf, len, " while %s", log->action);
         len -= p - buf;
@@ -4150,6 +4178,19 @@ ngx_http_log_error(ngx_log_t *log, u_char *buf, size_t len)
     r = ctx->request;
 
     if (r) {
+
+#if (NGX_RESTY_EXT)
+        if (ngx_http_get_request_id(r, &request_id) != NGX_OK
+            || request_id.len == 0)
+        {
+            return r->log_handler(r, ctx->current_request, p, len);
+        }
+
+        buf = p;
+        p = ngx_snprintf(buf, len, ", request_id: %V", &request_id);
+        len -= p - buf;
+#endif
+
         return r->log_handler(r, ctx->current_request, p, len);
 
     } else {
