@@ -1,5 +1,6 @@
 
 /*
+ * Copyright (C) 2026 Web Server LLC
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
@@ -35,6 +36,10 @@ static ngx_int_t ngx_http_rewrite_init(ngx_conf_t *cf);
 static char *ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+#if (NGX_RESTY_EXT)
+static char *ngx_http_rewrite_goto(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+#endif
 static char *ngx_http_rewrite_break(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd,
@@ -76,6 +81,16 @@ static ngx_command_t  ngx_http_rewrite_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("goto"),
+      NGX_HTTP_SRV_CONF|NGX_HTTP_SIF_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
+                       |NGX_CONF_TAKE1,
+      ngx_http_rewrite_goto,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+#endif
 
     { ngx_string("break"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_SIF_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
@@ -217,6 +232,13 @@ ngx_http_rewrite_handler(ngx_http_request_t *r)
         code = *(ngx_http_script_code_pt *) e->ip;
         code(e);
     }
+
+#if (NGX_RESTY_EXT)
+    if (e->finalize) {
+        ngx_http_finalize_request(r, e->status);
+        return NGX_DONE;
+    }
+#endif
 
     return e->status;
 }
@@ -546,6 +568,39 @@ ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     return NGX_CONF_OK;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static char *
+ngx_http_rewrite_goto(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_rewrite_loc_conf_t  *lcf = conf;
+
+    ngx_str_t                    *value;
+    ngx_http_script_goto_code_t  *code;
+
+    value = cf->args->elts;
+
+    if (value[1].len < 2 || value[1].data[0] != '@') {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "invalid named location \"%V\"", &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    code = ngx_http_script_start_code(cf->pool, &lcf->codes,
+                                      sizeof(ngx_http_script_goto_code_t));
+    if (code == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    code->code = ngx_http_script_goto_code;
+    code->name = value[1];
+
+    return NGX_CONF_OK;
+}
+
+#endif
 
 
 static char *
