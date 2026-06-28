@@ -241,6 +241,12 @@ parse:
         return ngx_http_range_multipart_header(r, ctx);
 
     case NGX_HTTP_RANGE_NOT_SATISFIABLE:
+#if (NGX_RESTY_EXT)
+        if (clcf->ignore_invalid_range == 1) {
+            goto next_filter;
+        }
+
+#endif
         return ngx_http_range_not_satisfiable(r);
 
     case NGX_ERROR:
