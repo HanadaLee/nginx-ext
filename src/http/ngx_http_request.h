@@ -417,6 +417,11 @@ struct ngx_http_request_s {
     time_t                            start_sec;
     ngx_msec_t                        start_msec;
 
+#if (NGX_RESTY_EXT)
+    time_t                            header_sent_sec;
+    ngx_msec_t                        header_sent_msec;
+#endif
+
     ngx_uint_t                        method;
     ngx_uint_t                        http_version;
 
@@ -429,6 +434,10 @@ struct ngx_http_request_s {
     ngx_str_t                         method_name;
     ngx_str_t                         http_protocol;
     ngx_str_t                         schema;
+
+#if (NGX_RESTY_EXT)
+    ngx_str_t                         request_id;
+#endif
 
     ngx_chain_t                      *out;
     ngx_http_request_t               *main;
@@ -456,6 +465,9 @@ struct ngx_http_request_s {
     size_t                            header_size;
 
     off_t                             request_length;
+#if (NGX_RESTY_EXT)
+    off_t                             request_header_length;
+#endif
 
     ngx_uint_t                        err_status;
 
