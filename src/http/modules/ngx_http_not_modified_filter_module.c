@@ -54,6 +54,10 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_int_t
 ngx_http_not_modified_header_filter(ngx_http_request_t *r)
 {
+#if (NGX_RESTY_EXT)
+    ngx_http_core_loc_conf_t  *clcf;
+#endif
+
     if (r->headers_out.status != NGX_HTTP_OK
         || r != r->main
         || r->disable_not_modified)
@@ -61,7 +65,14 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
+#if (NGX_RESTY_EXT)
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+#endif
+
     if (r->headers_in.if_unmodified_since
+#if (NGX_RESTY_EXT)
+        && !clcf->ignore_if_unmodified_since
+#endif
         && !ngx_http_test_if_unmodified(r))
     {
         return ngx_http_filter_finalize_request(r, NULL,
@@ -69,6 +80,9 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
     }
 
     if (r->headers_in.if_match
+#if (NGX_RESTY_EXT)
+        && !clcf->ignore_if_match
+#endif
         && !ngx_http_test_if_match(r, r->headers_in.if_match, 0))
     {
         return ngx_http_filter_finalize_request(r, NULL,
@@ -76,6 +90,10 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
     }
 
     if (r->headers_in.if_modified_since || r->headers_in.if_none_match) {
+
+#if (NGX_RESTY_EXT)
+        if (clcf->not_modified_check == NGX_HTTP_NMC_STRICT) {
+#endif
 
         if (r->headers_in.if_modified_since
             && ngx_http_test_if_modified(r))
@@ -88,6 +106,46 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
         {
             return ngx_http_next_header_filter(r);
         }
+
+#if (NGX_RESTY_EXT)
+        } else if (clcf->not_modified_check == NGX_HTTP_NMC_PREFER_INM) {
+
+            if (r->headers_in.if_none_match) {
+                if (ngx_http_test_if_match(r, r->headers_in.if_none_match, 1)) {
+                    goto not_modified;
+                }
+
+                return ngx_http_next_header_filter(r);
+            }
+
+            if (r->headers_in.if_modified_since
+                && ngx_http_test_if_modified(r))
+            {
+                return ngx_http_next_header_filter(r);
+            }
+
+        } else if (clcf->not_modified_check == NGX_HTTP_NMC_ANY) {
+
+            if (r->headers_in.if_modified_since
+                && !ngx_http_test_if_modified(r))
+            {
+                goto not_modified;
+            }
+
+            if (r->headers_in.if_none_match
+                && ngx_http_test_if_match(r, r->headers_in.if_none_match, 1))
+            {
+                goto not_modified;
+            }
+
+            return ngx_http_next_header_filter(r);
+
+        } else { /* NGX_HTTP_NMC_OFF */
+            return ngx_http_next_header_filter(r);
+        }
+
+not_modified:
+#endif
 
         /* not modified */
 
