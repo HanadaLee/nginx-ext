@@ -15,6 +15,9 @@
 
 typedef struct {
     ngx_flag_t           enable;
+#if (NGX_RESTY_EXT)
+    ngx_array_t         *force;
+#endif
     ngx_bufs_t           bufs;
 } ngx_http_gunzip_conf_t;
 
@@ -70,6 +73,15 @@ static ngx_command_t  ngx_http_gunzip_filter_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_gunzip_conf_t, enable),
       NULL },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("gunzip_force"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_http_set_predicate_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_gunzip_conf_t, force),
+      NULL },
+#endif
 
     { ngx_string("gunzip_buffers"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
@@ -138,6 +150,28 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
+#if (NGX_RESTY_EXT)
+    switch (ngx_http_test_predicates(r, conf->force)) {
+
+    case NGX_ERROR:
+        return NGX_ERROR;
+
+    case NGX_OK:
+        r->gzip_vary = 1;
+
+        if (!r->gzip_tested) {
+            if (ngx_http_gzip_ok(r) == NGX_OK) {
+                return ngx_http_next_header_filter(r);
+            }
+
+        } else if (r->gzip_ok) {
+            return ngx_http_next_header_filter(r);
+        }
+        break;
+
+    default: /* NGX_DECLINED */
+        break;
+#else
     r->gzip_vary = 1;
 
     if (!r->gzip_tested) {
@@ -147,6 +181,7 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
 
     } else if (r->gzip_ok) {
         return ngx_http_next_header_filter(r);
+#endif
     }
 
     ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_gunzip_ctx_t));
@@ -665,6 +700,10 @@ ngx_http_gunzip_create_conf(ngx_conf_t *cf)
 
     conf->enable = NGX_CONF_UNSET;
 
+#if (NGX_RESTY_EXT)
+    conf->force  = NGX_CONF_UNSET_PTR;
+#endif
+
     return conf;
 }
 
@@ -676,6 +715,10 @@ ngx_http_gunzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_gunzip_conf_t *conf = child;
 
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
+
+#if (NGX_RESTY_EXT)
+    ngx_conf_merge_ptr_value(conf->force, prev->force, NULL);
+#endif
 
     ngx_conf_merge_bufs_value(conf->bufs, prev->bufs,
                               (128 * 1024) / ngx_pagesize, ngx_pagesize);
