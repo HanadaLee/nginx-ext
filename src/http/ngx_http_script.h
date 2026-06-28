@@ -34,6 +34,10 @@ typedef struct {
 
     ngx_int_t                   status;
     ngx_http_request_t         *request;
+
+#if (NGX_RESTY_EXT)
+    unsigned                    if_matched:1;
+#endif
 } ngx_http_script_engine_t;
 
 
@@ -72,6 +76,10 @@ typedef struct {
 
     union {
         size_t                  size;
+#if (NGX_RESTY_EXT)
+        ngx_msec_t              msec;
+        time_t                  sec;
+#endif
     } u;
 } ngx_http_complex_value_t;
 
@@ -187,6 +195,23 @@ typedef struct {
 } ngx_http_script_file_code_t;
 
 
+#if (NGX_RESTY_EXT)
+
+typedef enum {
+    ngx_http_script_if_invalid = -1,
+    ngx_http_script_if_and = 0,
+    ngx_http_script_if_or
+} ngx_http_script_if_op_e;
+
+
+typedef struct {
+    ngx_http_script_code_pt     code;
+    uintptr_t                   op;
+} ngx_http_script_if_op_code_t;
+
+#endif
+
+
 typedef struct {
     ngx_http_script_code_pt     code;
     uintptr_t                   next;
@@ -213,12 +238,31 @@ typedef struct {
 } ngx_http_script_value_code_t;
 
 
+#if (NGX_RESTY_EXT)
+typedef struct {
+    u_char                     *integer;
+    size_t                      integer_len;
+    u_char                     *fraction;
+    size_t                      fraction_len;
+    ngx_uint_t                  negative;
+} ngx_http_script_number_t;
+#endif
+
+
 void ngx_http_script_flush_complex_value(ngx_http_request_t *r,
     ngx_http_complex_value_t *val);
 ngx_int_t ngx_http_complex_value(ngx_http_request_t *r,
     ngx_http_complex_value_t *val, ngx_str_t *value);
 size_t ngx_http_complex_value_size(ngx_http_request_t *r,
     ngx_http_complex_value_t *val, size_t default_value);
+
+#if (NGX_RESTY_EXT)
+ngx_msec_t ngx_http_complex_value_msec(ngx_http_request_t *r,
+    ngx_http_complex_value_t *val, ngx_msec_t default_value);
+time_t ngx_http_complex_value_sec(ngx_http_request_t *r,
+    ngx_http_complex_value_t *val, time_t default_value);
+#endif
+
 ngx_int_t ngx_http_compile_complex_value(ngx_http_compile_complex_value_t *ccv);
 char *ngx_http_set_complex_value_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
@@ -227,6 +271,12 @@ char *ngx_http_set_complex_value_zero_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 char *ngx_http_set_complex_value_size_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 
+#if (NGX_RESTY_EXT)
+char *ngx_http_set_complex_value_msec_slot(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+char *ngx_http_set_complex_value_sec_slot(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+#endif
 
 ngx_int_t ngx_http_test_predicates(ngx_http_request_t *r,
     ngx_array_t *predicates);
@@ -264,6 +314,10 @@ void ngx_http_script_regex_end_code(ngx_http_script_engine_t *e);
 void ngx_http_script_return_code(ngx_http_script_engine_t *e);
 void ngx_http_script_break_code(ngx_http_script_engine_t *e);
 void ngx_http_script_if_code(ngx_http_script_engine_t *e);
+#if (NGX_RESTY_EXT)
+void ngx_http_script_elif_code(ngx_http_script_engine_t *e);
+void ngx_http_script_else_code(ngx_http_script_engine_t *e);
+#endif
 void ngx_http_script_equal_code(ngx_http_script_engine_t *e);
 void ngx_http_script_not_equal_code(ngx_http_script_engine_t *e);
 void ngx_http_script_file_code(ngx_http_script_engine_t *e);
@@ -274,6 +328,16 @@ void ngx_http_script_set_var_code(ngx_http_script_engine_t *e);
 void ngx_http_script_var_set_handler_code(ngx_http_script_engine_t *e);
 void ngx_http_script_var_code(ngx_http_script_engine_t *e);
 void ngx_http_script_nop_code(ngx_http_script_engine_t *e);
-
+#if (NGX_RESTY_EXT)
+void ngx_http_script_if_op_code(ngx_http_script_engine_t *e);
+ngx_int_t ngx_http_script_compare_number(u_char *data1, size_t len1,
+    u_char *data2, size_t len2, ngx_int_t *cmp);
+void ngx_http_script_greater_than_code(ngx_http_script_engine_t *e);
+void ngx_http_script_greater_equal_code(ngx_http_script_engine_t *e);
+void ngx_http_script_less_than_code(ngx_http_script_engine_t *e);
+void ngx_http_script_less_equal_code(ngx_http_script_engine_t *e);
+void ngx_http_script_start_with_code(ngx_http_script_engine_t *e);
+void ngx_http_script_not_start_with_code(ngx_http_script_engine_t *e);
+#endif
 
 #endif /* _NGX_HTTP_SCRIPT_H_INCLUDED_ */
