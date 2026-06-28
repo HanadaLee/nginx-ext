@@ -2349,6 +2349,31 @@ ngx_http_file_cache_set_watermark(ngx_http_file_cache_t *cache)
 }
 
 
+#if (NGX_RESTY_EXT)
+
+time_t
+ngx_http_file_cache_valid(ngx_http_request_t *r, ngx_array_t *cache_valid,
+    ngx_uint_t status)
+{
+    ngx_uint_t               i;
+    ngx_http_cache_valid_t  *valid;
+
+    if (cache_valid == NULL) {
+        return 0;
+    }
+
+    valid = cache_valid->elts;
+    for (i = 0; i < cache_valid->nelts; i++) {
+        if (valid[i].status == 0 || valid[i].status == status) {
+            return ngx_http_complex_value_sec(r, valid[i].valid, 0);
+        }
+    }
+
+    return 0;
+}
+
+#else
+
 time_t
 ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status)
 {
@@ -2361,7 +2386,6 @@ ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status)
 
     valid = cache_valid->elts;
     for (i = 0; i < cache_valid->nelts; i++) {
-
         if (valid[i].status == 0) {
             return valid[i].valid;
         }
@@ -2373,6 +2397,8 @@ ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status)
 
     return 0;
 }
+
+#endif
 
 
 char *
@@ -2728,6 +2754,16 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 {
     char  *p = conf;
 
+#if (NGX_RESTY_EXT)
+    ngx_str_t                         *value;
+    ngx_int_t                          status;
+    ngx_uint_t                         i, n;
+    ngx_array_t                      **a;
+    ngx_http_cache_valid_t            *v;
+    static ngx_uint_t                  statuses[] = { 200, 301, 302 };
+    ngx_http_complex_value_t          *valid_cv;
+    ngx_http_compile_complex_value_t   valid_ccv;
+#else
     time_t                    valid;
     ngx_str_t                *value;
     ngx_int_t                 status;
@@ -2735,6 +2771,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     ngx_array_t             **a;
     ngx_http_cache_valid_t   *v;
     static ngx_uint_t         statuses[] = { 200, 301, 302 };
+#endif
 
     a = (ngx_array_t **) (p + cmd->offset);
 
@@ -2748,12 +2785,37 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     value = cf->args->elts;
     n = cf->args->nelts - 1;
 
+#if (NGX_RESTY_EXT)
+    valid_cv = ngx_palloc(cf->pool, sizeof(ngx_http_complex_value_t));
+    if (valid_cv == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_memzero(&valid_ccv, sizeof(ngx_http_compile_complex_value_t));
+    valid_ccv.cf = cf;
+    valid_ccv.value = &value[n];
+    valid_ccv.complex_value = valid_cv;
+
+    if (ngx_http_compile_complex_value(&valid_ccv) != NGX_OK) {
+        return NGX_CONF_ERROR;
+    }
+
+    if (valid_cv->lengths == NULL) {
+        valid_cv->u.sec = ngx_parse_time(&valid_cv->value, 1);
+        if (valid_cv->u.sec == (time_t) NGX_ERROR) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "invalid time value \"%V\"", &valid_cv->value);
+            return NGX_CONF_ERROR;
+        }
+    }
+#else
     valid = ngx_parse_time(&value[n], 1);
     if (valid == (time_t) NGX_ERROR) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid time value \"%V\"", &value[n]);
         return NGX_CONF_ERROR;
     }
+#endif
 
     if (n == 1) {
 
@@ -2764,7 +2826,11 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
             }
 
             v->status = statuses[i];
+#if (NGX_RESTY_EXT)
+            v->valid = valid_cv;
+#else
             v->valid = valid;
+#endif
         }
 
         return NGX_CONF_OK;
@@ -2792,7 +2858,11 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
         }
 
         v->status = status;
+#if (NGX_RESTY_EXT)
+        v->valid = valid_cv;
+#else
         v->valid = valid;
+#endif
     }
 
     return NGX_CONF_OK;
