@@ -73,7 +73,11 @@ static ngx_str_t ngx_http_status_lines[] = {
     /* ngx_null_string, */  /* "300 Multiple Choices" */
 
     ngx_string("301 Moved Permanently"),
+#if (NGX_RESTY_EXT)
+    ngx_string("302 Found"),
+#else
     ngx_string("302 Moved Temporarily"),
+#endif
     ngx_string("303 See Other"),
     ngx_string("304 Not Modified"),
     ngx_null_string,  /* "305 Use Proxy" */
@@ -89,18 +93,35 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("402 Payment Required"),
     ngx_string("403 Forbidden"),
     ngx_string("404 Not Found"),
+#if (NGX_RESTY_EXT)
+    ngx_string("405 Method Not Allowed"),
+#else
     ngx_string("405 Not Allowed"),
+#endif
     ngx_string("406 Not Acceptable"),
     ngx_string("407 Proxy Authentication Required"),
+#if (NGX_RESTY_EXT)
+    ngx_string("408 Request Timeout"),
+#else
     ngx_string("408 Request Time-out"),
+#endif
     ngx_string("409 Conflict"),
     ngx_string("410 Gone"),
     ngx_string("411 Length Required"),
     ngx_string("412 Precondition Failed"),
+#if (NGX_RESTY_EXT)
+    ngx_string("413 Content Too Large"),
+    ngx_string("414 URI Too Long"),
+#else
     ngx_string("413 Request Entity Too Large"),
     ngx_string("414 Request-URI Too Large"),
+#endif
     ngx_string("415 Unsupported Media Type"),
+#if (NGX_RESTY_EXT)
+    ngx_string("416 Range Not Satisfiable"),
+#else
     ngx_string("416 Requested Range Not Satisfiable"),
+#endif
     ngx_null_string,  /* "417 Expectation Failed" */
     ngx_null_string,  /* "418 unused" */
     ngx_null_string,  /* "419 unused" */
@@ -121,8 +142,13 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("500 Internal Server Error"),
     ngx_string("501 Not Implemented"),
     ngx_string("502 Bad Gateway"),
+#if (NGX_RESTY_EXT)
+    ngx_string("503 Service Unavailable"),
+    ngx_string("504 Gateway Timeout"),
+#else
     ngx_string("503 Service Temporarily Unavailable"),
     ngx_string("504 Gateway Time-out"),
+#endif
     ngx_string("505 HTTP Version Not Supported"),
     ngx_null_string,        /* "506 Variant Also Negotiates" */
     ngx_string("507 Insufficient Storage"),
@@ -171,6 +197,9 @@ ngx_http_header_filter(ngx_http_request_t *r)
     ngx_connection_t          *c;
     ngx_http_core_loc_conf_t  *clcf;
     ngx_http_core_srv_conf_t  *cscf;
+#if (NGX_RESTY_EXT)
+    ngx_time_t                *tp;
+#endif
     u_char                     addr[NGX_SOCKADDR_STRLEN];
 
     if (r->header_sent) {
@@ -178,6 +207,12 @@ ngx_http_header_filter(ngx_http_request_t *r)
     }
 
     r->header_sent = 1;
+
+#if (NGX_RESTY_EXT)
+    tp = ngx_timeofday();
+    r->header_sent_sec = tp->sec;
+    r->header_sent_msec = tp->msec;
+#endif
 
     if (r != r->main) {
         return NGX_OK;
