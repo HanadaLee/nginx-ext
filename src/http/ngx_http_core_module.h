@@ -60,6 +60,18 @@ typedef struct ngx_thread_pool_s  ngx_thread_pool_t;
 #define NGX_HTTP_SERVER_TOKENS_BUILD    2
 
 
+#if (NGX_RESTY_EXT)
+#define NGX_HTTP_REQUEST_ID_HEXID       1
+#define NGX_HTTP_REQUEST_ID_TRACEID     2
+
+
+#define NGX_HTTP_NMC_OFF                0
+#define NGX_HTTP_NMC_ANY                1
+#define NGX_HTTP_NMC_STRICT             2
+#define NGX_HTTP_NMC_PREFER_INM         3
+#endif
+
+
 typedef struct ngx_http_location_tree_node_s  ngx_http_location_tree_node_t;
 typedef struct ngx_http_core_loc_conf_s  ngx_http_core_loc_conf_t;
 
@@ -83,6 +95,9 @@ typedef struct {
     unsigned                   reuseport:1;
     unsigned                   so_keepalive:2;
     unsigned                   proxy_protocol:1;
+#if (NGX_RESTY_EXT && NGX_HTTP_SSL)
+    unsigned                   https_allow_http:1;
+#endif
 
     int                        backlog;
     int                        rcvbuf;
@@ -245,6 +260,9 @@ struct ngx_http_addr_conf_s {
     unsigned                   http2:1;
     unsigned                   quic:1;
     unsigned                   proxy_protocol:1;
+#if (NGX_RESTY_EXT && NGX_HTTP_SSL)
+    unsigned                   https_allow_http:1;
+#endif
 };
 
 
@@ -306,6 +324,12 @@ typedef struct {
     ngx_int_t                  overwrite;
     ngx_http_complex_value_t   value;
     ngx_str_t                  args;
+
+#if (NGX_RESTY_EXT)
+    ngx_http_complex_value_t  *filter;
+    ngx_int_t                  negative;
+#endif
+
 } ngx_http_err_page_t;
 
 
@@ -390,6 +414,9 @@ struct ngx_http_core_loc_conf_s {
     ngx_uint_t    lingering_close;         /* lingering_close */
     ngx_uint_t    if_modified_since;       /* if_modified_since */
     ngx_uint_t    max_ranges;              /* max_ranges */
+#if (NGX_RESTY_EXT)
+    ngx_flag_t    ignore_invalid_range;    /* ignore_invalid_range */
+#endif
     ngx_uint_t    client_body_in_file_only; /* client_body_in_file_only */
 
     ngx_flag_t    client_body_in_single_buffer;
@@ -453,6 +480,18 @@ struct ngx_http_core_loc_conf_s {
 
     ngx_queue_t  *locations;
 
+#if (NGX_RESTY_EXT)
+    ngx_uint_t    request_id_algorithm;    /* request_id_algorithm */
+    ngx_str_t     request_id_header;       /* request_id_header */
+
+    ngx_flag_t    error_page_server_info;  /* error_page_server_info */
+    ngx_int_t     error_page_client_ip_var_index; /* error_page_client_ip */
+
+    ngx_flag_t    ignore_if_unmodified_since; /* ignore_if_unmodified_since */
+    ngx_flag_t    ignore_if_match;         /* ignore_if_match */
+    ngx_uint_t    not_modified_check;      /* not_modified_check */
+#endif
+
 #if 0
     ngx_http_core_loc_conf_t  *prev_location;
 #endif
@@ -513,6 +552,9 @@ u_char *ngx_http_map_uri_to_path(ngx_http_request_t *r, ngx_str_t *name,
 ngx_int_t ngx_http_auth_basic_user(ngx_http_request_t *r);
 #if (NGX_HTTP_GZIP)
 ngx_int_t ngx_http_gzip_ok(ngx_http_request_t *r);
+#endif
+#if (NGX_RESTY_EXT)
+ngx_int_t ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id);
 #endif
 
 

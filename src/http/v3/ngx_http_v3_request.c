@@ -552,6 +552,10 @@ ngx_http_v3_process_request(ngx_event_t *rev)
         r->request_length += b->pos - p;
         h3c->total_bytes += b->pos - p;
 
+#if (NGX_RESTY_EXT)
+        r->request_header_length = r->request_length;
+#endif
+
         if (ngx_http_v3_check_flood(c) != NGX_OK) {
             ngx_http_close_request(r, NGX_HTTP_CLOSE);
             break;
