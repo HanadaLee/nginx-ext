@@ -1618,3 +1618,5 @@ cat << END                                    >> $NGX_MODULES_C
 };
 
 END
+
+have=NGX_RESTY_EXT . auto/have
