@@ -17,6 +17,11 @@
 typedef struct {
     ngx_http_complex_value_t  *realm;
     ngx_http_complex_value_t  *user_file;
+
+#if (NGX_RESTY_EXT)
+    ngx_array_t               *users;
+#endif
+
 } ngx_http_auth_basic_loc_conf_t;
 
 
@@ -31,6 +36,10 @@ static char *ngx_http_auth_basic_merge_loc_conf(ngx_conf_t *cf,
 static ngx_int_t ngx_http_auth_basic_init(ngx_conf_t *cf);
 static char *ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+#if (NGX_RESTY_EXT)
+static char *ngx_http_auth_basic_add_user(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+#endif
 
 
 static ngx_command_t  ngx_http_auth_basic_commands[] = {
@@ -50,6 +59,16 @@ static ngx_command_t  ngx_http_auth_basic_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_auth_basic_loc_conf_t, user_file),
       NULL },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("auth_basic_user"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF
+                        |NGX_CONF_TAKE1,
+      ngx_http_auth_basic_add_user,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_auth_basic_loc_conf_t, users),
+      NULL },
+#endif
 
       ngx_null_command
 };
@@ -98,6 +117,11 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
     ngx_uint_t                       i, level, login, left, passwd;
     ngx_file_t                       file;
     ngx_http_auth_basic_loc_conf_t  *alcf;
+#if (NGX_RESTY_EXT)
+    ngx_str_t                       *u;
+    u_char                          *colon;
+    size_t                           login_len;
+#endif
     u_char                           buf[NGX_HTTP_AUTH_BUF_SIZE];
     enum {
         sw_login,
@@ -107,9 +131,21 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
 
     alcf = ngx_http_get_module_loc_conf(r, ngx_http_auth_basic_module);
 
+#if (NGX_RESTY_EXT)
+    if (alcf->realm == NULL) {
+        return NGX_DECLINED;
+    }
+
+    if (alcf->user_file == NULL
+        && (alcf->users == NULL || alcf->users->nelts == 0))
+    {
+        return NGX_DECLINED;
+    }
+#else
     if (alcf->realm == NULL || alcf->user_file == NULL) {
         return NGX_DECLINED;
     }
+#endif
 
     if (ngx_http_complex_value(r, alcf->realm, &realm) != NGX_OK) {
         return NGX_ERROR;
@@ -132,6 +168,47 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
     if (rc == NGX_ERROR) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+
+#if (NGX_RESTY_EXT)
+    if (alcf->users && alcf->users->nelts > 0) {
+        u = alcf->users->elts;
+
+        for (i = 0; i < alcf->users->nelts; i++) {
+
+            colon = (u_char *) ngx_strlchr(u[i].data,
+                        u[i].data + u[i].len, ':');
+            if (colon == NULL) {
+                continue;
+            }
+
+            login_len = (size_t) (colon - u[i].data);
+
+            if (r->headers_in.user.len != login_len) {
+                continue;
+            }
+
+            if (ngx_strncmp(r->headers_in.user.data, u[i].data,
+                login_len) != 0)
+            {
+                continue;
+            }
+
+            pwd.data = colon + 1;
+            pwd.len  = u[i].len - (pwd.data - u[i].data);
+
+            rc = ngx_http_auth_basic_crypt_handler(r, &pwd, &realm);
+
+            return rc;
+        }
+
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "user \"%V\" was not found in "
+                      "auth_basic_user directives",
+                      &r->headers_in.user);
+
+        return ngx_http_auth_basic_set_realm(r, &realm);
+    }
+#endif
 
     if (ngx_http_complex_value(r, alcf->user_file, &user_file) != NGX_OK) {
         return NGX_ERROR;
@@ -369,6 +446,9 @@ ngx_http_auth_basic_create_loc_conf(ngx_conf_t *cf)
 
     conf->realm = NGX_CONF_UNSET_PTR;
     conf->user_file = NGX_CONF_UNSET_PTR;
+#if (NGX_RESTY_EXT)
+    conf->users = NGX_CONF_UNSET_PTR;
+#endif
 
     return conf;
 }
@@ -381,7 +461,23 @@ ngx_http_auth_basic_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_auth_basic_loc_conf_t  *conf = child;
 
     ngx_conf_merge_ptr_value(conf->realm, prev->realm, NULL);
+
+#if (NGX_RESTY_EXT)
+    if (conf->users == NGX_CONF_UNSET_PTR
+        && conf->user_file == NGX_CONF_UNSET_PTR)
+    {
+        ngx_conf_merge_ptr_value(conf->user_file, prev->user_file, NULL);
+        conf->users = (prev->users == NGX_CONF_UNSET_PTR) ? NULL : prev->users;
+
+    } else if (conf->users == NGX_CONF_UNSET_PTR) {
+        conf->users = NULL;
+
+    } else if (conf->user_file == NGX_CONF_UNSET_PTR) {
+        conf->user_file = NULL;
+    }
+#else
     ngx_conf_merge_ptr_value(conf->user_file, prev->user_file, NULL);
+#endif
 
     return NGX_CONF_OK;
 }
@@ -418,6 +514,12 @@ ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "is duplicate";
     }
 
+#if (NGX_RESTY_EXT)
+    if (alcf->users != NGX_CONF_UNSET_PTR) {
+        return "is incompatible with \"auth_basic_user\"";
+    }
+#endif
+
     alcf->user_file = ngx_palloc(cf->pool, sizeof(ngx_http_complex_value_t));
     if (alcf->user_file == NULL) {
         return NGX_CONF_ERROR;
@@ -439,3 +541,76 @@ ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     return NGX_CONF_OK;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static char *
+ngx_http_auth_basic_add_user(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_auth_basic_loc_conf_t *alcf = conf;
+
+    ngx_str_t                      *value;
+    ngx_str_t                      *user;
+    ngx_uint_t                      colons;
+    ngx_uint_t                      i;
+    ngx_uint_t                      len;
+
+    if (alcf->user_file != NGX_CONF_UNSET_PTR) {
+        return "is incompatible with \"auth_basic_user_file\"";
+    }
+
+    if (alcf->users == NGX_CONF_UNSET_PTR || alcf->users == NULL) {
+        alcf->users = ngx_array_create(cf->pool, 1,
+            sizeof(ngx_str_t));
+        if (alcf->users == NULL) {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    value = cf->args->elts;
+
+    colons = 0;
+    len = value[1].len;
+    for (i = 0; i < value[1].len; i++) {
+        if (value[1].data[i] == ':') {
+            colons++;
+            if (colons == 2) {
+                len = i;
+                break;
+            }
+        }
+    }
+
+    if (colons < 1) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+            "auth_basic_user must contain at least one colon");
+        return NGX_CONF_ERROR;
+    }
+
+    user = ngx_array_push(alcf->users);
+    if (user == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_memzero(user, sizeof(*user));
+
+    if (colons > 1) {
+        user->len = len;
+
+        user->data = ngx_pnalloc(cf->pool, len + 1);
+        if (user->data == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memcpy(user->data, value[1].data, len);
+        user->data[len] = '\0';
+
+    } else {
+        *user = value[1];
+    }
+
+    return NGX_CONF_OK;
+}
+
+#endif

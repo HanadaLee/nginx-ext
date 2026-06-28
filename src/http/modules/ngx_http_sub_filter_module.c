@@ -43,6 +43,10 @@ typedef struct {
     ngx_flag_t                 once;
     ngx_flag_t                 last_modified;
 
+#if (NGX_RESTY_EXT)
+    ngx_array_t               *bypass;
+#endif
+
     ngx_array_t               *types_keys;
     ngx_array_t               *matches;
 } ngx_http_sub_loc_conf_t;
@@ -106,6 +110,15 @@ static ngx_command_t  ngx_http_sub_filter_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("sub_filter_bypass"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_http_set_predicate_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_sub_loc_conf_t, bypass),
+      NULL },
+#endif
 
     { ngx_string("sub_filter_types"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
@@ -185,6 +198,20 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
     {
         return ngx_http_next_header_filter(r);
     }
+
+#if (NGX_RESTY_EXT)
+    switch (ngx_http_test_predicates(r, slcf->bypass)) {
+
+    case NGX_ERROR:
+        return NGX_ERROR;
+
+    case NGX_DECLINED:
+        return ngx_http_next_header_filter(r);
+
+    default: /* NGX_OK */
+        break;
+    }
+#endif
 
     ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_sub_ctx_t));
     if (ctx == NULL) {
@@ -882,6 +909,10 @@ ngx_http_sub_create_conf(ngx_conf_t *cf)
     slcf->once = NGX_CONF_UNSET;
     slcf->last_modified = NGX_CONF_UNSET;
 
+#if (NGX_RESTY_EXT)
+    slcf->bypass = NGX_CONF_UNSET_PTR;
+#endif
+
     return slcf;
 }
 
@@ -897,6 +928,10 @@ ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->once, prev->once, 1);
     ngx_conf_merge_value(conf->last_modified, prev->last_modified, 0);
+
+#if (NGX_RESTY_EXT)
+    ngx_conf_merge_ptr_value(conf->bypass, prev->bypass, NULL);
+#endif
 
     if (ngx_http_merge_types(cf, &conf->types_keys, &conf->types,
                              &prev->types_keys, &prev->types,
