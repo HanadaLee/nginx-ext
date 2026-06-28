@@ -13,6 +13,10 @@
 static ngx_int_t ngx_stream_upstream_add_variables(ngx_conf_t *cf);
 static ngx_int_t ngx_stream_upstream_addr_variable(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data);
+#if (NGX_RESTY_EXT)
+static ngx_int_t ngx_stream_upstream_status_variable(ngx_stream_session_t *s,
+    ngx_stream_variable_value_t *v, uintptr_t data);
+#endif
 static ngx_int_t ngx_stream_upstream_response_time_variable(
     ngx_stream_session_t *s, ngx_stream_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_stream_upstream_bytes_variable(ngx_stream_session_t *s,
@@ -102,6 +106,12 @@ static ngx_stream_variable_t  ngx_stream_upstream_vars[] = {
     { ngx_string("upstream_addr"), NULL,
       ngx_stream_upstream_addr_variable, 0,
       NGX_STREAM_VAR_NOCACHEABLE, 0 },
+
+#if (NGX_RESTY_EXT)
+     { ngx_string("upstream_status"), NULL,
+       ngx_stream_upstream_status_variable, 0,
+       NGX_STREAM_VAR_NOCACHEABLE, 0 },
+#endif
 
     { ngx_string("upstream_bytes_sent"), NULL,
       ngx_stream_upstream_bytes_variable, 0,
@@ -201,6 +211,62 @@ ngx_stream_upstream_addr_variable(ngx_stream_session_t *s,
 
     return NGX_OK;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static ngx_int_t
+ngx_stream_upstream_status_variable(ngx_stream_session_t *s,
+    ngx_stream_variable_value_t *v, uintptr_t data)
+{
+    u_char                       *p;
+    size_t                        len;
+    ngx_uint_t                    i;
+    ngx_stream_upstream_state_t  *state;
+
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+
+    if (s->upstream_states == NULL || s->upstream_states->nelts == 0) {
+        v->not_found = 1;
+        return NGX_OK;
+    }
+
+    len = s->upstream_states->nelts * (3 + 2);
+
+    p = ngx_pnalloc(s->connection->pool, len);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    v->data = p;
+
+    i = 0;
+    state = s->upstream_states->elts;
+
+    for ( ;; ) {
+        if (state[i].status) {
+            p = ngx_sprintf(p, "%ui", state[i].status);
+
+        } else {
+            *p++ = '-';
+        }
+
+        if (++i == s->upstream_states->nelts) {
+            break;
+        }
+
+        *p++ = ',';
+        *p++ = ' ';
+    }
+
+    v->len = p - v->data;
+
+    return NGX_OK;
+}
+
+#endif
 
 
 static ngx_int_t

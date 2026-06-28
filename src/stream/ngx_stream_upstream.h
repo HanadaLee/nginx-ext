@@ -94,11 +94,18 @@ struct ngx_stream_upstream_srv_conf_s {
 
 
 typedef struct {
+#if (NGX_RESTY_EXT)
+    ngx_uint_t                         status;
+#endif
     ngx_msec_t                         response_time;
     ngx_msec_t                         connect_time;
     ngx_msec_t                         first_byte_time;
     off_t                              bytes_sent;
     off_t                              bytes_received;
+
+#if (NGX_RESTY_EXT)
+    ngx_msec_t                         start_msec;
+#endif
 
     ngx_str_t                         *peer;
 
