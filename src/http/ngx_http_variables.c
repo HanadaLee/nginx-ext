@@ -2294,6 +2294,29 @@ ngx_http_variable_request_time(ngx_http_request_t *r,
 }
 
 
+#if (NGX_RESTY_EXT)
+
+static ngx_int_t
+ngx_http_variable_request_id(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    ngx_str_t id;
+
+    if (ngx_http_get_request_id(r, &id) != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+    v->len = id.len;
+    v->data = id.data;
+
+    return NGX_OK;
+}
+
+#else
+
 static ngx_int_t
 ngx_http_variable_request_id(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
@@ -2337,6 +2360,8 @@ ngx_http_variable_request_id(ngx_http_request_t *r,
 
     return NGX_OK;
 }
+
+#endif
 
 
 static ngx_int_t
