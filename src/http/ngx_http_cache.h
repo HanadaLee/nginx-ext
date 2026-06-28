@@ -32,7 +32,11 @@
 
 typedef struct {
     ngx_uint_t                       status;
+#if (NGX_RESTY_EXT)
+    ngx_http_complex_value_t        *valid;
+#else
     time_t                           valid;
+#endif
 } ngx_http_cache_valid_t;
 
 
@@ -196,7 +200,12 @@ void ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf);
 void ngx_http_file_cache_update_header(ngx_http_request_t *r);
 ngx_int_t ngx_http_cache_send(ngx_http_request_t *);
 void ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf);
+#if (NGX_RESTY_EXT)
+time_t ngx_http_file_cache_valid(ngx_http_request_t *r,
+    ngx_array_t *cache_valid, ngx_uint_t status);
+#else
 time_t ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status);
+#endif
 
 char *ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
