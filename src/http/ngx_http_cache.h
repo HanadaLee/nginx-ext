@@ -29,6 +29,18 @@
 
 #define NGX_HTTP_CACHE_VERSION       5
 
+#if (NGX_RESTY_EXT)
+/*
+ * Cache header version 5 has no dedicated flags field for response
+ * Cache-Control metadata.  valid_msec is stored as u_short on disk, but the
+ * actual millisecond value is always 0..999.  Reuse the high bit to persist
+ * "must-revalidate/proxy-revalidate" without changing the cache file layout
+ * or bumping NGX_HTTP_CACHE_VERSION.  Any code that reads valid_msec from
+ * disk must mask this bit out before using it as a time value.
+ */
+#define NGX_HTTP_CACHE_MUST_REVALIDATE  0x8000
+#endif
+
 
 typedef struct {
     ngx_uint_t                       status;
@@ -126,6 +138,9 @@ struct ngx_http_cache_s {
 
     unsigned                         stale_updating:1;
     unsigned                         stale_error:1;
+#if (NGX_RESTY_EXT)
+    unsigned                         must_revalidate:1;
+#endif
 };
 
 
