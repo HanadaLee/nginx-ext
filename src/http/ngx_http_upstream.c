@@ -557,8 +557,8 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[] = {
     { ngx_string("s-maxage"), NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE },
     { ngx_string("stale-while-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR },
     { ngx_string("stale-if-error"), NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE },
-    { ngx_string("must-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_MUST_REVAL },
-    { ngx_string("proxy-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_PROXY_REVAL },
+    { ngx_string("must-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_MUSTREVAL },
+    { ngx_string("proxy-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_PROXYREVAL },
     { ngx_null_string, 0 }
 };
 #endif
@@ -5354,12 +5354,12 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
                           15 - 1)
          != NULL
          && !(u->conf->ignore_cache_control
-              & NGX_HTTP_UPSTREAM_IGN_CC_MUST_REVAL))
+              & NGX_HTTP_UPSTREAM_IGN_CC_MUSTREVAL))
         || (ngx_strlcasestrn(start, last, (u_char *) "proxy-revalidate",
                              16 - 1)
             != NULL
             && !(u->conf->ignore_cache_control
-                 & NGX_HTTP_UPSTREAM_IGN_CC_PROXY_REVAL)))
+                 & NGX_HTTP_UPSTREAM_IGN_CC_PROXYREVAL)))
     {
         must_revalidate = 1;
     }
