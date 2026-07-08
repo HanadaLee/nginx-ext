@@ -623,7 +623,19 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
     c->error_sec = h->error_sec;
     c->last_modified = h->last_modified;
     c->date = h->date;
+#if (NGX_RESTY_EXT)
+    /*
+     * NGX_HTTP_CACHE_MUST_REVALIDATE is encoded in the high bit of the
+     * on-disk valid_msec field. The real millisecond value is 0..999, so
+     * the flag must be extracted first and then cleared before valid_msec is
+     * used by the normal cache freshness code.
+     */
+    c->must_revalidate = (h->valid_msec
+                          & NGX_HTTP_CACHE_MUST_REVALIDATE) != 0;
+    c->valid_msec = h->valid_msec & ~NGX_HTTP_CACHE_MUST_REVALIDATE;
+#else
     c->valid_msec = h->valid_msec;
+#endif
     c->body_start = h->body_start;
     c->etag.len = h->etag_len;
     c->etag.data = h->etag;
@@ -1324,6 +1336,16 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
     h->date = c->date;
     h->crc32 = c->crc32;
     h->valid_msec = (u_short) c->valid_msec;
+#if (NGX_RESTY_EXT)
+    /*
+     * Keep the cache header layout and version unchanged: only the on-disk
+     * valid_msec copy carries this flag. c->valid_msec remains a plain
+     * millisecond value in memory and is masked back on cache reads.
+     */
+    if (c->must_revalidate) {
+        h->valid_msec |= NGX_HTTP_CACHE_MUST_REVALIDATE;
+    }
+#endif
     h->header_start = (u_short) c->header_start;
     h->body_start = (u_short) c->body_start;
 
@@ -1588,6 +1610,16 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
     h.date = c->date;
     h.crc32 = c->crc32;
     h.valid_msec = (u_short) c->valid_msec;
+#if (NGX_RESTY_EXT)
+    /*
+     * Preserve the same high-bit encoding when a 304 response refreshes only
+     * the cache file header.  The flag continues to live solely in the
+     * serialized valid_msec field, not in the in-memory millisecond value.
+     */
+    if (c->must_revalidate) {
+        h.valid_msec |= NGX_HTTP_CACHE_MUST_REVALIDATE;
+    }
+#endif
     h.header_start = (u_short) c->header_start;
     h.body_start = (u_short) c->body_start;
 
