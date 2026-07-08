@@ -4167,7 +4167,9 @@ ngx_http_proxy_rewrite_cookie_values(ngx_http_request_t *r, ngx_array_t *attrs,
     ngx_array_t *values)
 {
     ngx_str_t                       pattern;
+#if (NGX_PCRE)
     ngx_int_t                       rc;
+#endif
     ngx_uint_t                      i;
     ngx_keyval_t                   *attr;
     ngx_http_proxy_cookie_value_t  *pcv;
@@ -4224,7 +4226,9 @@ ngx_http_proxy_rewrite_cookie_max_age(ngx_http_request_t *r,
     ngx_uint_t offset, ngx_int_t *rule)
 {
     ngx_str_t                         pattern, replacement;
+#if (NGX_PCRE)
     ngx_int_t                         rc;
+#endif
     ngx_uint_t                        i;
     ngx_keyval_t                     *attr;
     ngx_http_proxy_cookie_max_age_t  *pcm;
