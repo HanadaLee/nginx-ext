@@ -557,6 +557,8 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[] = {
     { ngx_string("s-maxage"), NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE },
     { ngx_string("stale-while-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR },
     { ngx_string("stale-if-error"), NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE },
+    { ngx_string("must-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_MUST_REVAL },
+    { ngx_string("proxy-revalidate"), NGX_HTTP_UPSTREAM_IGN_CC_PROXY_REVAL },
     { ngx_null_string, 0 }
 };
 #endif
@@ -1010,9 +1012,16 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     case NGX_HTTP_CACHE_STALE:
 
+#if (NGX_RESTY_EXT)
+        if (!c->must_revalidate
+            && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
+                || c->stale_updating) && !r->background
+            && u->conf->cache_background_update)
+#else
         if (((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
              || c->stale_updating) && !r->background
             && u->conf->cache_background_update)
+#endif
         {
             if (ngx_http_upstream_cache_background_update(r, u) == NGX_OK) {
                 r->cache->background = 1;
@@ -1028,8 +1037,14 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     case NGX_HTTP_CACHE_UPDATING:
 
+#if (NGX_RESTY_EXT)
+        if (!c->must_revalidate
+            && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
+                || c->stale_updating) && !r->background)
+#else
         if (((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
              || c->stale_updating) && !r->background)
+#endif
         {
             u->cache_status = rc;
             rc = NGX_OK;
@@ -2936,6 +2951,9 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 #if (NGX_HTTP_CACHE)
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
+#if (NGX_RESTY_EXT)
+            && !r->cache->must_revalidate
+#endif
             && (u->conf->cache_use_stale & un->mask))
         {
             ngx_int_t  rc;
@@ -4892,6 +4910,9 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 #if (NGX_HTTP_CACHE)
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
+#if (NGX_RESTY_EXT)
+            && !r->cache->must_revalidate
+#endif
             && ((u->conf->cache_use_stale & ft_type) || r->cache->stale_error))
         {
             ngx_int_t  rc;
@@ -5312,6 +5333,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     ngx_int_t   n;
 #if (NGX_RESTY_EXT)
     time_t      val;
+    ngx_int_t   must_revalidate;
 #endif
 
     if (u->conf->ignore_headers & NGX_HTTP_UPSTREAM_IGN_CACHE_CONTROL) {
@@ -5325,23 +5347,48 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     start = h->value.data;
     last = start + h->value.len;
 
+#if (NGX_RESTY_EXT)
+    must_revalidate = 0;
+
+    if ((ngx_strlcasestrn(start, last, (u_char *) "must-revalidate",
+                          15 - 1)
+         != NULL
+         && !(u->conf->ignore_cache_control
+              & NGX_HTTP_UPSTREAM_IGN_CC_MUST_REVAL))
+        || (ngx_strlcasestrn(start, last, (u_char *) "proxy-revalidate",
+                             16 - 1)
+            != NULL
+            && !(u->conf->ignore_cache_control
+                 & NGX_HTTP_UPSTREAM_IGN_CC_PROXY_REVAL)))
+    {
+        must_revalidate = 1;
+    }
+#endif
+
     if (r->cache->valid_sec != 0 && u->headers_in.x_accel_expires != NULL) {
         goto extensions;
     }
 
 #if (NGX_RESTY_EXT)
-    if ((ngx_strlcasestrn(start, last, (u_char *) "no-cache", 8 - 1) != NULL
+    if ((ngx_strlcasestrn(start, last, (u_char *) "no-store", 8 - 1) != NULL
          && !(u->conf->ignore_cache_control
-              & NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE))
-        || (ngx_strlcasestrn(start, last, (u_char *) "no-store", 8 - 1) != NULL
-            && !(u->conf->ignore_cache_control
-                 & NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE))
+              & NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE))
         || (ngx_strlcasestrn(start, last, (u_char *) "private", 7 - 1) != NULL
             && !(u->conf->ignore_cache_control
                  & NGX_HTTP_UPSTREAM_IGN_CC_PRIVATE)))
     {
         u->headers_in.no_cache = 1;
         return NGX_OK;
+    }
+
+    if (ngx_strlcasestrn(start, last, (u_char *) "no-cache", 8 - 1) != NULL
+        && !(u->conf->ignore_cache_control
+             & NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE))
+    {
+        r->cache->valid_sec = ngx_time() - 1;
+        u->headers_in.expired = 0;
+        must_revalidate = 1;
+        goto extensions;
     }
 #else
     if (ngx_strlcasestrn(start, last, (u_char *) "no-cache", 8 - 1) != NULL
@@ -5359,6 +5406,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
                & NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE))
     {
         offset = 9;
+        must_revalidate = 1;
 
     } else if (!(u->conf->ignore_cache_control
                  & NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE))
@@ -5387,8 +5435,14 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
         }
 
         if (n == 0) {
+#if (NGX_RESTY_EXT)
+            r->cache->valid_sec = ngx_time() - 1;
+            u->headers_in.expired = 0;
+            goto extensions;
+#else
             u->headers_in.no_cache = 1;
             return NGX_OK;
+#endif
         }
 
 #if (NGX_RESTY_EXT)
@@ -5410,6 +5464,19 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     }
 
 extensions:
+
+#if (NGX_RESTY_EXT)
+    if (must_revalidate) {
+        /*
+         * must-revalidate/proxy-revalidate forbid serving stale, so skip
+         * stale-* response extensions and configured stale defaults.
+         */
+        r->cache->must_revalidate = 1;
+        r->cache->updating_sec = 0;
+        r->cache->error_sec = 0;
+        return NGX_OK;
+    }
+#endif
 
     p = ngx_strlcasestrn(start, last, (u_char *) "stale-while-revalidate=",
                          23 - 1);
