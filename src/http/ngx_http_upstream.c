@@ -9,6 +9,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_http_condition_module.h>
+#endif
+
 
 #if (NGX_HTTP_CACHE)
 static ngx_int_t ngx_http_upstream_cache(ngx_http_request_t *r,
@@ -3067,10 +3071,6 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
     ngx_http_err_page_t       *err_page;
     ngx_http_core_loc_conf_t  *clcf;
 
-#if (NGX_RESTY_EXT)
-    ngx_str_t                  val;
-#endif
-
     status = u->headers_in.status_n;
 
     if (status == NGX_HTTP_NOT_FOUND && u->conf->intercept_404) {
@@ -3093,24 +3093,11 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
 
         if (err_page[i].status == status) {
 
-#if (NGX_RESTY_EXT)
-            if (err_page[i].filter) {
-                if (ngx_http_complex_value(r, err_page[i].filter, &val)
-                        != NGX_OK)
-                {
-                    return NGX_ERROR;
-                }
-
-                if (val.len == 0 || (val.len == 1 && val.data[0] == '0')) {
-                    if (!err_page[i].negative) {
-                        continue;
-                    }
-
-                } else {
-                    if (err_page[i].negative) {
-                        continue;
-                    }
-                }
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+            if (ngx_http_condition_get_expr_result(r, err_page[i].expr_id)
+                != NGX_CONDITION_EXPR_HIT)
+            {
+                continue;
             }
 #endif
 
