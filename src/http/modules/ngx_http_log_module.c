@@ -9,6 +9,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_http_condition_module.h>
+#endif
+
 #if (NGX_ZLIB)
 #include <zlib.h>
 #endif
@@ -68,9 +72,11 @@ typedef struct {
     time_t                      error_log_time;
     ngx_syslog_peer_t          *syslog_peer;
     ngx_http_log_fmt_t         *format;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_flag_t                  off;
+    ngx_condition_expr_id_t     expr_id;
+#else
     ngx_http_complex_value_t   *filter;
-#if (NGX_RESTY_EXT)
-    ngx_uint_t                  negative;
 #endif
 } ngx_http_log_t;
 
@@ -84,7 +90,9 @@ typedef struct {
 
     ngx_flag_t                  escape_non_ascii;
 
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     ngx_uint_t                  off;        /* unsigned  off:1 */
+#endif
 } ngx_http_log_loc_conf_t;
 
 
@@ -182,6 +190,10 @@ static ngx_command_t  ngx_http_log_commands[] = {
 
     { ngx_string("access_log"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
                         |NGX_HTTP_LMT_CONF|NGX_CONF_1MORE,
       ngx_http_log_set_log,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -272,7 +284,9 @@ ngx_http_log_handler(ngx_http_request_t *r)
     u_char                   *line, *p, *end;
     size_t                    len, size;
     ssize_t                   n;
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     ngx_str_t                 val;
+#endif
     ngx_uint_t                i, l;
     ngx_http_log_t           *log;
     ngx_http_log_op_t        *op;
@@ -284,32 +298,36 @@ ngx_http_log_handler(ngx_http_request_t *r)
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_log_module);
 
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     if (lcf->off) {
         return NGX_OK;
     }
+#endif
 
     log = lcf->logs->elts;
     for (l = 0; l < lcf->logs->nelts; l++) {
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+        if (ngx_http_condition_get_expr_result(r, log[l].expr_id)
+            != NGX_CONDITION_EXPR_HIT)
+        {
+            continue;
+        }
+
+        if (log[l].off) {
+            return NGX_OK;
+        }
+#else
         if (log[l].filter) {
             if (ngx_http_complex_value(r, log[l].filter, &val) != NGX_OK) {
                 return NGX_ERROR;
             }
 
             if (val.len == 0 || (val.len == 1 && val.data[0] == '0')) {
-#if (NGX_RESTY_EXT)
-                if (!log[l].negative) {
-                    continue;
-                }
-            } else {
-                if (log[l].negative) {
-                    continue;
-                }
-#else
                 continue;
-#endif
             }
         }
+#endif
 
         if (ngx_time() == log[l].disk_full_time) {
 
@@ -1349,6 +1367,17 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (conf->logs) {
+        return NGX_CONF_OK;
+    }
+
+    conf->logs = prev->logs;
+
+    if (conf->logs) {
+        return NGX_CONF_OK;
+    }
+#else
     if (conf->logs || conf->off) {
         return NGX_CONF_OK;
     }
@@ -1359,6 +1388,7 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (conf->logs || conf->off) {
         return NGX_CONF_OK;
     }
+#endif
 
     conf->logs = ngx_array_create(cf->pool, 2, sizeof(ngx_http_log_t));
     if (conf->logs == NULL) {
@@ -1404,11 +1434,39 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_log_fmt_t                *fmt;
     ngx_http_log_main_conf_t          *lmcf;
     ngx_http_script_compile_t          sc;
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     ngx_http_compile_complex_value_t   ccv;
+#endif
 
     value = cf->args->elts;
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+        if (cf->args->nelts != 2) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "invalid parameter \"%V\"", &value[2]);
+            return NGX_CONF_ERROR;
+        }
+
+        if (llcf->logs == NULL) {
+            llcf->logs = ngx_array_create(cf->pool, 2,
+                                          sizeof(ngx_http_log_t));
+            if (llcf->logs == NULL) {
+                return NGX_CONF_ERROR;
+            }
+        }
+
+        log = ngx_array_push(llcf->logs);
+        if (log == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memzero(log, sizeof(ngx_http_log_t));
+        log->off = 1;
+        log->expr_id = ngx_condition_get_associated_expr_id(cf);
+
+        return NGX_CONF_OK;
+#else
         llcf->off = 1;
         if (cf->args->nelts == 2) {
             return NGX_CONF_OK;
@@ -1417,6 +1475,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[2]);
         return NGX_CONF_ERROR;
+#endif
     }
 
     if (llcf->logs == NULL) {
@@ -1434,6 +1493,9 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     ngx_memzero(log, sizeof(ngx_http_log_t));
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    log->expr_id = ngx_condition_get_associated_expr_id(cf);
+#endif
 
 
     if (ngx_strncmp(value[1].data, "syslog:", 7) == 0) {
@@ -1584,23 +1646,10 @@ process_formats:
 #endif
         }
 
-#if (NGX_RESTY_EXT)
-        if (ngx_strncmp(value[i].data, "if=", 3) == 0
-            || ngx_strncmp(value[i].data, "if!=", 4) == 0)
-        {
-            if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
-                s.len = value[i].len - 3;
-                s.data = value[i].data + 3;
-            } else {
-                s.len = value[i].len - 4;
-                s.data = value[i].data + 4;
-                log->negative = 1;
-            }
-#else
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
         if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
             s.len = value[i].len - 3;
             s.data = value[i].data + 3;
-#endif
 
             ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
 
@@ -1620,6 +1669,7 @@ process_formats:
 
             continue;
         }
+#endif
 
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[i]);
