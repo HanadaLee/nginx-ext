@@ -9,6 +9,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_http_condition_module.h>
+#endif
+
 
 typedef struct {
     u_char    *name;
@@ -733,6 +737,10 @@ static ngx_command_t  ngx_http_core_commands[] = {
 
     { ngx_string("error_page"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
                         |NGX_CONF_2MORE,
       ngx_http_core_error_page,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -5286,15 +5294,6 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_complex_value_t           cv;
     ngx_http_compile_complex_value_t   ccv;
 
-#if (NGX_RESTY_EXT)
-    ngx_str_t                          s;
-    ngx_http_complex_value_t          *filter;
-    ngx_int_t                          negative;
-
-    filter = NULL;
-    negative = 0;
-#endif
-
     if (clcf->error_pages == NULL) {
         return "conflicts with \"no_error_pages\"";
     }
@@ -5310,40 +5309,6 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     value = cf->args->elts;
 
     i = cf->args->nelts - 2;
-
-#if (NGX_RESTY_EXT)
-    if (ngx_strncmp(value[i + 1].data, "if=", 3) == 0
-        || ngx_strncmp(value[i + 1].data, "if!=", 4) == 0)
-    {
-        if (ngx_strncmp(value[i + 1].data, "if=", 3) == 0) {
-            s.len = value[i + 1].len - 3;
-            s.data = value[i + 1].data + 3;
-
-        } else {
-            s.len = value[i + 1].len - 4;
-            s.data = value[i + 1].data + 4;
-            negative = 1;
-        }
-
-        ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
-
-        ccv.cf = cf;
-        ccv.value = &s;
-        ccv.complex_value = ngx_palloc(cf->pool,
-                                       sizeof(ngx_http_complex_value_t));
-        if (ccv.complex_value == NULL) {
-            return NGX_CONF_ERROR;
-        }
-
-        if (ngx_http_compile_complex_value(&ccv) != NGX_OK) {
-            return NGX_CONF_ERROR;
-        }
-
-        filter = ccv.complex_value;
-
-        i--;
-    }
-#endif
 
     if (value[i].data[0] == '=') {
         if (i == 1) {
@@ -5373,13 +5338,6 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     uri = value[cf->args->nelts - 1];
-
-#if (NGX_RESTY_EXT)
-    if (filter != NULL) {
-        uri = value[cf->args->nelts - 2];
-        n++;
-    }
-#endif
 
     ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
 
@@ -5440,9 +5398,8 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         err->value = cv;
         err->args = args;
-#if (NGX_RESTY_EXT)
-        err->filter = filter;
-        err->negative = negative;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+        err->expr_id = ngx_condition_get_associated_expr_id(cf);
 #endif
     }
 
