@@ -9,6 +9,10 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_stream_condition_module.h>
+#endif
+
 #if (NGX_ZLIB)
 #include <zlib.h>
 #endif
@@ -67,7 +71,11 @@ typedef struct {
     time_t                       error_log_time;
     ngx_syslog_peer_t           *syslog_peer;
     ngx_stream_log_fmt_t        *format;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_condition_expr_id_t      expr_id;
+#else
     ngx_stream_complex_value_t  *filter;
+#endif
 } ngx_stream_log_t;
 
 
@@ -155,7 +163,11 @@ static ngx_command_t  ngx_stream_log_commands[] = {
       NULL },
 
     { ngx_string("access_log"),
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_1MORE,
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
+#endif
+                          |NGX_CONF_1MORE,
       ngx_stream_log_set_log,
       NGX_STREAM_SRV_CONF_OFFSET,
       0,
@@ -206,7 +218,9 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
     u_char                     *line, *p, *end;
     size_t                      len, size;
     ssize_t                     n;
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     ngx_str_t                   val;
+#endif
     ngx_uint_t                  i, l;
     ngx_stream_log_t           *log;
     ngx_stream_log_op_t        *op;
@@ -225,6 +239,13 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
     log = lscf->logs->elts;
     for (l = 0; l < lscf->logs->nelts; l++) {
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+        if (ngx_stream_condition_get_expr_result(s, log[l].expr_id)
+            != NGX_CONDITION_EXPR_HIT)
+        {
+            continue;
+        }
+#else
         if (log[l].filter) {
             if (ngx_stream_complex_value(s, log[l].filter, &val) != NGX_OK) {
                 return NGX_ERROR;
@@ -234,6 +255,7 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
                 continue;
             }
         }
+#endif
 
         if (ngx_time() == log[l].disk_full_time) {
 
@@ -1051,11 +1073,24 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_stream_log_fmt_t                *fmt;
     ngx_stream_script_compile_t          sc;
     ngx_stream_log_main_conf_t          *lmcf;
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     ngx_stream_compile_complex_value_t   ccv;
+#endif
 
     value = cf->args->elts;
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+        if (ngx_condition_get_associated_expr_id(cf)
+            != NGX_CONDITION_NO_EXPR_ID)
+        {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "\"access_log off\" is not allowed "
+                               "inside \"when\"");
+            return NGX_CONF_ERROR;
+        }
+#endif
+
         lscf->off = 1;
         if (cf->args->nelts == 2) {
             return NGX_CONF_OK;
@@ -1081,6 +1116,9 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     ngx_memzero(log, sizeof(ngx_stream_log_t));
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    log->expr_id = ngx_condition_get_associated_expr_id(cf);
+#endif
 
 
     if (ngx_strncmp(value[1].data, "syslog:", 7) == 0) {
@@ -1228,6 +1266,7 @@ process_formats:
 #endif
         }
 
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
         if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
             s.len = value[i].len - 3;
             s.data = value[i].data + 3;
@@ -1250,6 +1289,7 @@ process_formats:
 
             continue;
         }
+#endif
 
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[i]);
