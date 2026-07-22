@@ -10,6 +10,10 @@
 #include <ngx_http.h>
 #include <nginx.h>
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_http_condition_module.h>
+#endif
+
 
 static ngx_int_t ngx_http_send_error_page(ngx_http_request_t *r,
     ngx_http_err_page_t *err_page);
@@ -759,10 +763,6 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
     ngx_http_err_page_t       *err_page;
     ngx_http_core_loc_conf_t  *clcf;
 
-#if (NGX_RESTY_EXT)
-    ngx_str_t                  val;
-#endif
-
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http special response: %i, \"%V?%V\"",
                    error, &r->uri, &r->args);
@@ -808,23 +808,11 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
         for (i = 0; i < clcf->error_pages->nelts; i++) {
             if (err_page[i].status == error) {
 
-#if (NGX_RESTY_EXT)
-                if (err_page[i].filter) {
-                    if (ngx_http_complex_value(r, err_page[i].filter, &val)
-                            != NGX_OK)
-                    {
-                        return NGX_ERROR;
-                    }
-    
-                    if (val.len == 0 || (val.len == 1 && val.data[0] == '0')) {
-                        if (!err_page[i].negative) {
-                            continue;
-                        }
-                    } else {
-                        if (err_page[i].negative) {
-                            continue;
-                        }
-                    }
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+                if (ngx_http_condition_get_expr_result(r, err_page[i].expr_id)
+                    != NGX_CONDITION_EXPR_HIT)
+                {
+                    continue;
                 }
 #endif
 
