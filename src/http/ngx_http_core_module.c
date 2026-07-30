@@ -25,6 +25,15 @@ typedef struct {
 #define NGX_HTTP_REQUEST_BODY_FILE_CLEAN  2
 
 
+#if (NGX_RESTY_EXT)
+
+#define NGX_HTTP_AUTO_REDIRECT_OFF      0
+#define NGX_HTTP_AUTO_REDIRECT_ON       1
+#define NGX_HTTP_AUTO_REDIRECT_DEFAULT  2
+
+#endif
+
+
 static ngx_int_t ngx_http_core_auth_delay(ngx_http_request_t *r);
 static void ngx_http_core_auth_delay_handler(ngx_http_request_t *r);
 
@@ -169,6 +178,14 @@ static ngx_conf_enum_t  ngx_http_core_not_modified_check[] = {
 static ngx_conf_enum_t  ngx_http_core_request_id_algorithm[] = {
     { ngx_string("hexid"), NGX_HTTP_REQUEST_ID_HEXID },
     { ngx_string("traceid"), NGX_HTTP_REQUEST_ID_TRACEID },
+    { ngx_null_string, 0 }
+};
+
+
+static ngx_conf_enum_t  ngx_http_core_auto_redirect[] = {
+    { ngx_string("off"), NGX_HTTP_AUTO_REDIRECT_OFF },
+    { ngx_string("on"), NGX_HTTP_AUTO_REDIRECT_ON },
+    { ngx_string("default"), NGX_HTTP_AUTO_REDIRECT_DEFAULT },
     { ngx_null_string, 0 }
 };
 
@@ -727,6 +744,15 @@ static ngx_command_t  ngx_http_core_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_core_loc_conf_t, etag),
       NULL },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("auto_redirect"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_enum_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, set_auto_redirect),
+      &ngx_http_core_auto_redirect },
+#endif
 
     { ngx_string("early_hints"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
@@ -3986,6 +4012,9 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->recursive_error_pages = NGX_CONF_UNSET;
     clcf->chunked_transfer_encoding = NGX_CONF_UNSET;
     clcf->etag = NGX_CONF_UNSET;
+#if (NGX_RESTY_EXT)
+    clcf->set_auto_redirect = NGX_CONF_UNSET_UINT;
+#endif
     clcf->server_tokens = NGX_CONF_UNSET_UINT;
     clcf->early_hints = NGX_CONF_UNSET_PTR;
     clcf->types_hash_max_size = NGX_CONF_UNSET_UINT;
@@ -4277,6 +4306,17 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->chunked_transfer_encoding,
                               prev->chunked_transfer_encoding, 1);
     ngx_conf_merge_value(conf->etag, prev->etag, 1);
+
+#if (NGX_RESTY_EXT)
+    ngx_conf_merge_uint_value(conf->set_auto_redirect,
+                              prev->set_auto_redirect,
+                              NGX_HTTP_AUTO_REDIRECT_DEFAULT);
+
+    if (conf->set_auto_redirect != NGX_HTTP_AUTO_REDIRECT_DEFAULT) {
+        /* overriding value set by some directives */
+        conf->auto_redirect = conf->set_auto_redirect;
+    }
+#endif
 
     ngx_conf_merge_uint_value(conf->server_tokens, prev->server_tokens,
                               NGX_HTTP_SERVER_TOKENS_ON);
