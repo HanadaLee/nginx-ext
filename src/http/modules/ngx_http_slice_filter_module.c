@@ -9,13 +9,22 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_http_condition_module.h>
+#endif
+
 
 typedef struct {
     size_t               size;
 #if (NGX_RESTY_EXT)
-    ngx_uint_t           allow_methods;
-    ngx_flag_t           check_etag;
-    ngx_flag_t           check_last_modified;
+#if (NGX_CONDITION)
+    ngx_array_t         *enable;
+#else
+    ngx_flag_t           enable;
+#endif
+    ngx_array_t         *bypass;
+    ngx_flag_t           verify_etag;
+    ngx_flag_t           verify_last_modified;
 #endif
 } ngx_http_slice_loc_conf_t;
 
@@ -56,56 +65,58 @@ static ngx_int_t ngx_http_slice_add_variables(ngx_conf_t *cf);
 static ngx_int_t ngx_http_slice_init(ngx_conf_t *cf);
 
 
-#if (NGX_RESTY_EXT)
-static ngx_conf_bitmask_t  ngx_http_slice_allow_methods_mask[] = {
-    { ngx_string("GET"),      NGX_HTTP_GET },
-    { ngx_string("HEAD"),     NGX_HTTP_HEAD },
-    { ngx_string("POST"),     NGX_HTTP_POST },
-    { ngx_string("PUT"),      NGX_HTTP_PUT },
-    { ngx_string("DELETE"),   NGX_HTTP_DELETE },
-    { ngx_string("MKCOL"),    NGX_HTTP_MKCOL },
-    { ngx_string("COPY"),     NGX_HTTP_COPY },
-    { ngx_string("MOVE"),     NGX_HTTP_MOVE },
-    { ngx_string("OPTIONS"),  NGX_HTTP_OPTIONS },
-    { ngx_string("PROPFIND"), NGX_HTTP_PROPFIND },
-    { ngx_string("LOCK"),     NGX_HTTP_LOCK },
-    { ngx_string("UNLOCK"),   NGX_HTTP_UNLOCK },
-    { ngx_string("PATCH"),    NGX_HTTP_PATCH },
-    { ngx_string("TRACE"),    NGX_HTTP_TRACE },
-    { ngx_null_string, 0 }
-};
-#endif
-
-
 static ngx_command_t  ngx_http_slice_filter_commands[] = {
 
+#if (NGX_RESTY_EXT)
     { ngx_string("slice"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_FLAG,
+#if (NGX_CONDITION)
+      ngx_conf_set_conditional_flag_slot,
+#else
+      ngx_conf_set_flag_slot,
+#endif
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_slice_loc_conf_t, enable),
+      NULL },
+
+    { ngx_string("slice_size"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_slice_loc_conf_t, size),
       NULL },
 
-#if (NGX_RESTY_EXT)
-    { ngx_string("slice_allow_methods"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
-      ngx_conf_set_bitmask_slot,
+    { ngx_string("slice_bypass"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_http_set_predicate_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_slice_loc_conf_t, allow_methods),
-      &ngx_http_slice_allow_methods_mask },
-
-    { ngx_string("slice_check_etag"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_slice_loc_conf_t, check_etag),
+      offsetof(ngx_http_slice_loc_conf_t, bypass),
       NULL },
 
-    { ngx_string("slice_check_last_modified"),
+    { ngx_string("slice_verify_etag"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_slice_loc_conf_t, check_last_modified),
+      offsetof(ngx_http_slice_loc_conf_t, verify_etag),
+      NULL },
+
+    { ngx_string("slice_verify_last_modified"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_slice_loc_conf_t, verify_last_modified),
+      NULL },
+#else
+    { ngx_string("slice"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_slice_loc_conf_t, size),
       NULL },
 #endif
 
@@ -165,13 +176,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
-#if (NGX_RESTY_EXT)
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
-
-    if (!(r->method & slcf->allow_methods)) {
-        return ngx_http_next_header_filter(r);
-    }
-#endif
 
     if (r->headers_out.status != NGX_HTTP_PARTIAL_CONTENT) {
         if (r == r->main) {
@@ -186,46 +191,9 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT)
-    if (slcf->check_etag) {
-        h = r->headers_out.etag;
+    if (slcf->verify_etag) {
+#endif
 
-        if (ctx->etag.len) {
-            if (h == NULL
-                || h->value.len != ctx->etag.len
-                || ngx_strncmp(h->value.data, ctx->etag.data, ctx->etag.len)
-                != 0)
-            {
-                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                            "etag mismatch in slice response");
-                return NGX_ERROR;
-            }
-        }
-
-        if (h) {
-            ctx->etag = h->value;
-        }
-    }
-
-    if (slcf->check_last_modified) {
-        h = r->headers_out.last_modified;
-
-        if (ctx->last_modified.len) {
-            if (h == NULL
-                || h->value.len != ctx->last_modified.len
-                || ngx_strncmp(h->value.data, ctx->last_modified.data, ctx->last_modified.len)
-                != 0)
-            {
-                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                            "last_modified mismatch in slice response");
-                return NGX_ERROR;
-            }
-        }
-
-        if (h) {
-            ctx->last_modified = h->value;
-        }
-    }
-#else
     h = r->headers_out.etag;
 
     if (ctx->etag.len) {
@@ -242,6 +210,30 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
 
     if (h) {
         ctx->etag = h->value;
+    }
+
+#if (NGX_RESTY_EXT)
+    }
+
+    if (slcf->verify_last_modified) {
+        h = r->headers_out.last_modified;
+
+        if (ctx->last_modified.len) {
+            if (h == NULL
+                || h->value.len != ctx->last_modified.len
+                || ngx_strncmp(h->value.data, ctx->last_modified.data,
+                               ctx->last_modified.len)
+                   != 0)
+            {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                              "last modified mismatch in slice response");
+                return NGX_ERROR;
+            }
+        }
+
+        if (h) {
+            ctx->last_modified = h->value;
+        }
     }
 #endif
 
@@ -260,10 +252,6 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http slice response range: %O-%O/%O",
                    cr.start, cr.end, cr.complete_length);
-
-#if !(NGX_RESTY_EXT)
-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
-#endif
 
     end = ngx_min(cr.start + (off_t) slcf->size, cr.complete_length);
 
@@ -332,14 +320,6 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         return ngx_http_next_body_filter(r, in);
     }
 
-#if (NGX_RESTY_EXT)
-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
-
-    if (!(r->method & slcf->allow_methods)) {
-        return ngx_http_next_body_filter(r, in);
-    }
-#endif
-
     for (cl = in; cl; cl = cl->next) {
         if (cl->buf->last_buf) {
             cl->buf->last_buf = 0;
@@ -384,9 +364,7 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     ngx_http_set_ctx(ctx->sr, ctx, ngx_http_slice_filter_module);
 
-#if !(NGX_RESTY_EXT)
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
-#endif
 
     ctx->range.len = ngx_sprintf(ctx->range.data, "bytes=%O-%O", ctx->start,
                                  ctx->start + (off_t) slcf->size - 1)
@@ -512,14 +490,8 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
     u_char                     *p;
     ngx_http_slice_ctx_t       *ctx;
     ngx_http_slice_loc_conf_t  *slcf;
-
 #if (NGX_RESTY_EXT)
-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
-
-    if (!(r->method & slcf->allow_methods)) {
-        v->not_found = 1;
-        return NGX_OK;
-    }
+    ngx_int_t                   rc;
 #endif
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
@@ -530,14 +502,36 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
             return NGX_OK;
         }
 
-#if !(NGX_RESTY_EXT)
         slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+
+#if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+        if (!ngx_http_get_conditional_flag_value(r, slcf->enable)) {
+#else
+        if (!slcf->enable) {
+#endif
+            v->not_found = 1;
+            return NGX_OK;
+        }
 #endif
 
         if (slcf->size == 0) {
             v->not_found = 1;
             return NGX_OK;
         }
+
+#if (NGX_RESTY_EXT)
+        rc = ngx_http_test_predicates(r, slcf->bypass);
+
+        if (rc == NGX_ERROR) {
+            return NGX_ERROR;
+        }
+
+        if (rc == NGX_DECLINED) {
+            v->not_found = 1;
+            return NGX_OK;
+        }
+#endif
 
         ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_slice_ctx_t));
         if (ctx == NULL) {
@@ -631,9 +625,14 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
     slcf->size = NGX_CONF_UNSET_SIZE;
 
 #if (NGX_RESTY_EXT)
-    slcf->allow_methods = 0;
-    slcf->check_etag = NGX_CONF_UNSET;
-    slcf->check_last_modified = NGX_CONF_UNSET;
+#if (NGX_CONDITION)
+    slcf->enable = NGX_CONF_UNSET_PTR;
+#else
+    slcf->enable = NGX_CONF_UNSET;
+#endif
+    slcf->bypass = NGX_CONF_UNSET_PTR;
+    slcf->verify_etag = NGX_CONF_UNSET;
+    slcf->verify_last_modified = NGX_CONF_UNSET;
 #endif
 
     return slcf;
@@ -649,14 +648,21 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->size, prev->size, 0);
 
 #if (NGX_RESTY_EXT)
-    if (conf->allow_methods == 0) {
-        conf->allow_methods = prev->allow_methods;
+#if (NGX_CONDITION)
+    if (ngx_conf_merge_conditional_flag_value(cf, &conf->enable,
+            prev->enable, 0) != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
     }
-    conf->allow_methods |= NGX_HTTP_GET|NGX_HTTP_HEAD;
+#else
+    ngx_conf_merge_value(conf->enable, prev->enable, 0);
+#endif
 
-    ngx_conf_merge_off_value(conf->check_etag, prev->check_etag, 1);
+    ngx_conf_merge_ptr_value(conf->bypass, prev->bypass, NULL);
 
-    ngx_conf_merge_off_value(conf->check_last_modified, prev->check_last_modified, 0);
+    ngx_conf_merge_value(conf->verify_etag, prev->verify_etag, 1);
+    ngx_conf_merge_value(conf->verify_last_modified,
+                         prev->verify_last_modified, 0);
 #endif
 
     return NGX_CONF_OK;
