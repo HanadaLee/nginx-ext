@@ -5088,7 +5088,7 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
                     conf->host_set = 1;
                     goto push_pseudo_headers;
                 }
-                
+
                 if (src[i].key.len == 7
                     && ngx_strncasecmp(src[i].key.data, (u_char *) ":method",
                                        7) == 0)
