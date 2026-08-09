@@ -3141,7 +3141,7 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
 
                     if (valid == 0) {
 #if (NGX_RESTY_EXT)
-                        valid = ngx_http_file_cache_valid(r, 
+                        valid = ngx_http_file_cache_valid(r,
                                                           u->conf->cache_valid,
                                                           status);
 #else
