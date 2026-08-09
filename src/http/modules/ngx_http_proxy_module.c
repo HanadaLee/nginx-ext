@@ -1432,8 +1432,13 @@ ngx_http_proxy_build_uri(ngx_http_request_t *r, ngx_str_t *uri)
 static ngx_int_t
 ngx_http_proxy_create_request(ngx_http_request_t *r)
 {
+#if (NGX_RESTY_EXT)
+    size_t                        len, uri_len, loc_len, body_len, key_len,
+                                  val_len;
+#else
     size_t                        len, uri_len, loc_len, body_len, headers_len,
                                   key_len, val_len;
+#endif
     uintptr_t                     escape;
     ngx_buf_t                    *b;
     ngx_str_t                     method, host;
@@ -1532,7 +1537,9 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
     loc_len = 0;
     unparsed_uri = 0;
     body_len = 0;
+#if !(NGX_RESTY_EXT)
     headers_len = 0;
+#endif
 
     if (plcf->proxy_lengths && ctx->vars.uri.len) {
         uri_len = ctx->vars.uri.len;

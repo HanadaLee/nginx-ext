@@ -2652,7 +2652,7 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
     }
 
     tp = ngx_timeofday();
-    p = ngx_sprintf(buf, "%xT_%*s_%P-%uA-%ui", 
+    p = ngx_sprintf(buf, "%xT_%*s_%P-%uA-%ui",
                     tp->sec, ngx_cycle->hostname.len, ngx_cycle->hostname.data,
                     ngx_pid, r->connection->number, r->connection->requests);
 
@@ -4364,7 +4364,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->ignore_if_unmodified_since,
                          prev->ignore_if_unmodified_since, 0);
 
-    ngx_conf_merge_value(conf->ignore_if_match, 
+    ngx_conf_merge_value(conf->ignore_if_match,
                          prev->ignore_if_match, 0);
 
     ngx_conf_merge_uint_value(conf->not_modified_check,
@@ -5632,7 +5632,7 @@ ngx_http_core_error_page_client_ip(ngx_conf_t *cf, ngx_command_t *cmd,
     ngx_http_core_loc_conf_t  *clcf = conf;
 
     ngx_str_t  *value;
-    
+
     value = cf->args->elts;
 
     if (value[1].data[0] != '$') {
