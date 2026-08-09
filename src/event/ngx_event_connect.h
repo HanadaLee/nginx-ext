@@ -59,10 +59,6 @@ struct ngx_peer_connection_s {
     int                              rcvbuf;
     int                              sndbuf;
 
-#if (NGX_RESTY_EXT)
-    int                              sndbuf;
-#endif
-
     ngx_log_t                       *log;
 
 #if (NGX_HTTP_UPSTREAM_SID || NGX_COMPAT)
