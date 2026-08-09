@@ -2537,10 +2537,9 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
     ngx_list_part_t            *part;
     ngx_table_elt_t            *header;
     ngx_uint_t                  i;
+    uint64_t                    random_bytes[2];
 
-#if (NGX_OPENSSL)
-    u_char                      random_bytes[16];
-#endif
+    static uint64_t             counter, key[2];
 
     if (r->request_id.len > 0) {
         *id = r->request_id;
@@ -2594,21 +2593,29 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
         r->request_id.data = buf;
         *id = r->request_id;
 
+        if (counter == 0) {
 #if (NGX_OPENSSL)
-
-        if (RAND_bytes(random_bytes, 16) == 1) {
-            ngx_hex_dump(buf, random_bytes, 16);
-            return NGX_OK;
+            if (RAND_bytes((u_char *) key, 16) != 1)
+#endif
+            {
+                key[0] = ((uint64_t) ngx_random() << 32)
+                         | (uint32_t) ngx_random();
+                key[1] = ((uint64_t) ngx_random() << 32)
+                         | (uint32_t) ngx_random();
+                key[0] ^= (uint64_t) ngx_pid << 16;
+                key[1] ^= (uint64_t) ngx_time();
+            }
         }
 
-        ngx_ssl_error(NGX_LOG_ERR, r->connection->log, 0,
-                                                "RAND_bytes() failed");
+        counter++;
+        random_bytes[0] = ngx_siphash(key[0], key[1],
+                                      (u_char *) &counter, 8);
 
-#endif
+        counter++;
+        random_bytes[1] = ngx_siphash(key[0], key[1],
+                                      (u_char *) &counter, 8);
 
-        ngx_sprintf(buf, "%08xD%08xD%08xD%08xD",
-                    (uint32_t) ngx_random(), (uint32_t) ngx_random(),
-                    (uint32_t) ngx_random(), (uint32_t) ngx_random());
+        ngx_hex_dump(buf, (u_char *) random_bytes, 16);
 
         return NGX_OK;
     }
