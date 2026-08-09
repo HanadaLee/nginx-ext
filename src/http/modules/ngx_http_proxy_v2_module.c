@@ -509,6 +509,12 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         tmp_len = 0;
 
     } else {
+        if (method.len > NGX_HTTP_V2_MAX_FIELD) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too long http2 method: \"%V\"", &method);
+            return NGX_ERROR;
+        }
+
         method_len = 1 + NGX_HTTP_V2_INT_OCTETS + method.len;
         tmp_len = method.len;
     }
@@ -927,6 +933,12 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             method_len = 1;
 
         } else {
+            if (method.len > NGX_HTTP_V2_MAX_FIELD) {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                              "too long http2 method: \"%V\"", &method);
+                return NGX_ERROR;
+            }
+
             method_len = 1 + NGX_HTTP_V2_INT_OCTETS + method.len;
 
             if (tmp_len < method.len) {
@@ -941,6 +953,12 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         if (u->uri.len == 0) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "zero length URI to proxy");
+            return NGX_ERROR;
+        }
+
+        if (u->uri.len > NGX_HTTP_V2_MAX_FIELD) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too long http2 URI");
             return NGX_ERROR;
         }
 
@@ -972,6 +990,20 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
         if (header[i].hash == 0) {
             continue;
+        }
+
+        if (header[i].key.len > NGX_HTTP_V2_MAX_FIELD) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too long http2 header name: \"%V\"",
+                          &header[i].key);
+            return NGX_ERROR;
+        }
+
+        if (header[i].value.len > NGX_HTTP_V2_MAX_FIELD) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too long http2 header value: \"%V: %V\"",
+                          &header[i].key, &header[i].value);
+            return NGX_ERROR;
         }
 
         len += 1 + NGX_HTTP_V2_INT_OCTETS + header[i].key.len

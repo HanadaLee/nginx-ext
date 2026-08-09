@@ -646,7 +646,7 @@ ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 #if (NGX_RESTY_EXT)
     ngx_str_t                    *value;
-    
+
     value = cf->args->elts;
 #endif
 
@@ -1390,7 +1390,7 @@ ngx_http_rewrite_parse_if_condition(ngx_conf_t *cf,
             value[index].data[value[index].len] = '\0';
             value[index].len--;
         }
-    
+
         /* the matching bracket is at the end of the tokens */
         rv = ngx_http_rewrite_parse_if_condition(cf, lcf, value, begin, index);
 
