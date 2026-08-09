@@ -28,8 +28,9 @@ typedef struct {
     ngx_uint_t                 host_set;
 
 #if (NGX_RESTY_EXT)
-    ngx_uint_t                 method_set;
-    ngx_uint_t                 path_set;
+    ngx_http_complex_value_t  *method;
+    ngx_str_t                  uri;
+    ngx_str_t                  location;
 #endif
 
     ngx_array_t               *grpc_lengths;
@@ -136,6 +137,10 @@ typedef struct {
     ngx_http_request_t        *request;
 
     ngx_str_t                  host;
+
+#if (NGX_RESTY_EXT)
+    ngx_str_t                  uri;
+#endif
 } ngx_http_grpc_ctx_t;
 
 
@@ -154,6 +159,11 @@ typedef struct {
 
 static ngx_int_t ngx_http_grpc_eval(ngx_http_request_t *r,
     ngx_http_grpc_ctx_t *ctx, ngx_http_grpc_loc_conf_t *glcf);
+#if (NGX_RESTY_EXT)
+static ngx_int_t ngx_http_grpc_build_uri(ngx_http_request_t *r,
+    ngx_http_grpc_ctx_t *ctx, ngx_http_grpc_loc_conf_t *glcf,
+    ngx_str_t *uri);
+#endif
 static ngx_int_t ngx_http_grpc_create_request(ngx_http_request_t *r);
 static ngx_int_t ngx_http_grpc_reinit_request(ngx_http_request_t *r);
 static ngx_int_t ngx_http_grpc_body_output_filter(void *data, ngx_chain_t *in);
@@ -364,6 +374,13 @@ static ngx_command_t  ngx_http_grpc_commands[] = {
       NULL },
 
 #if (NGX_RESTY_EXT)
+    { ngx_string("grpc_method"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_http_set_complex_value_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_grpc_loc_conf_t, method),
+      NULL },
+
     { ngx_string("grpc_set_header_inherit"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -606,6 +623,10 @@ ngx_http_grpc_handler(ngx_http_request_t *r)
     if (glcf->grpc_lengths == NULL) {
         ctx->host = glcf->host;
 
+#if (NGX_RESTY_EXT)
+        ctx->uri = glcf->uri;
+#endif
+
 #if (NGX_HTTP_SSL)
         u->ssl = glcf->ssl;
 
@@ -705,6 +726,10 @@ ngx_http_grpc_eval(ngx_http_request_t *r, ngx_http_grpc_ctx_t *ctx,
 
     url.no_resolve = 1;
 
+#if (NGX_RESTY_EXT)
+    url.uri_part = 1;
+#endif
+
     if (ngx_parse_url(r->pool, &url) != NGX_OK) {
         if (url.err) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
@@ -744,8 +769,79 @@ ngx_http_grpc_eval(ngx_http_request_t *r, ngx_http_grpc_ctx_t *ctx,
         ngx_str_set(&ctx->host, "localhost");
     }
 
+#if (NGX_RESTY_EXT)
+    ctx->uri = url.uri;
+#endif
+
     return NGX_OK;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static ngx_int_t
+ngx_http_grpc_build_uri(ngx_http_request_t *r, ngx_http_grpc_ctx_t *ctx,
+    ngx_http_grpc_loc_conf_t *glcf, ngx_str_t *uri)
+{
+    u_char     *p;
+    size_t      len, loc_len;
+    uintptr_t   escape;
+
+    if (glcf->grpc_lengths && ctx->uri.len) {
+        *uri = ctx->uri;
+        return NGX_OK;
+    }
+
+    if (ctx->uri.len == 0 && r->valid_unparsed_uri) {
+        *uri = r->unparsed_uri;
+        return NGX_OK;
+    }
+
+    loc_len = (r->valid_location && ctx->uri.len)
+              ? ngx_min(glcf->location.len, r->uri.len) : 0;
+
+    if (r->quoted_uri || r->internal) {
+        escape = 2 * ngx_escape_uri(NULL, r->uri.data + loc_len,
+                                    r->uri.len - loc_len, NGX_ESCAPE_URI);
+
+    } else {
+        escape = 0;
+    }
+
+    len = ctx->uri.len + r->uri.len - loc_len + escape
+          + sizeof("?") - 1 + r->args.len;
+
+    p = ngx_pnalloc(r->pool, len);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    uri->data = p;
+
+    if (r->valid_location) {
+        p = ngx_copy(p, ctx->uri.data, ctx->uri.len);
+    }
+
+    if (escape) {
+        ngx_escape_uri(p, r->uri.data + loc_len,
+                       r->uri.len - loc_len, NGX_ESCAPE_URI);
+        p += r->uri.len - loc_len + escape;
+
+    } else {
+        p = ngx_copy(p, r->uri.data + loc_len, r->uri.len - loc_len);
+    }
+
+    if (r->args.len > 0) {
+        *p++ = '?';
+        p = ngx_copy(p, r->args.data, r->args.len);
+    }
+
+    uri->len = p - uri->data;
+
+    return NGX_OK;
+}
+
+#endif
 
 
 static ngx_int_t
@@ -755,7 +851,9 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
                                  *headers_end;
     size_t                        len, headers_len, tmp_len,
                                   key_len, val_len, uri_len;
+#if !(NGX_RESTY_EXT)
     uintptr_t                     escape;
+#endif
     ngx_buf_t                    *b;
     ngx_uint_t                    i, next;
     ngx_chain_t                  *cl, *body;
@@ -768,6 +866,9 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     ngx_http_grpc_loc_conf_t     *glcf;
     ngx_http_script_engine_t      e, le;
     ngx_http_script_len_code_pt   lcode;
+#if (NGX_RESTY_EXT)
+    ngx_str_t                     method, uri;
+#endif
 
     u = r->upstream;
 
@@ -784,19 +885,40 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT)
 
-    if (!glcf->method_set) {
-
-        if (r->method == NGX_HTTP_GET || r->method == NGX_HTTP_POST) {
-            len += 1;
-            tmp_len = 0;
-
-        } else {
-            len += 1 + NGX_HTTP_V2_INT_OCTETS + r->method_name.len;
-            tmp_len = r->method_name.len;
+    if (glcf->method) {
+        if (ngx_http_complex_value(r, glcf->method, &method) != NGX_OK) {
+            return NGX_ERROR;
         }
 
+        u->method = method;
+
     } else {
+        method = u->method;
+    }
+
+    if (method.len == 0 || method.data == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "invalid grpc method");
+        return NGX_ERROR;
+    }
+
+    if (method.len > NGX_HTTP_V2_MAX_FIELD) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "too long http2 method: \"%V\"", &method);
+        return NGX_ERROR;
+    }
+
+    if ((method.len == 3
+         && ngx_strncmp(method.data, "GET", 3) == 0)
+        || (method.len == 4
+            && ngx_strncmp(method.data, "POST", 4) == 0))
+    {
+        len += 1;
         tmp_len = 0;
+
+    } else {
+        len += 1 + NGX_HTTP_V2_INT_OCTETS + method.len;
+        tmp_len = method.len;
     }
 
 #else
@@ -826,26 +948,22 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT)
 
-    if (!glcf->path_set) {
+    if (ngx_http_grpc_build_uri(r, ctx, glcf, &uri) != NGX_OK) {
+        return NGX_ERROR;
+    }
 
-        if (r->valid_unparsed_uri) {
-            escape = 0;
-            uri_len = r->unparsed_uri.len;
+    uri_len = uri.len;
 
-        } else {
-            escape = 2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len,
-                                        NGX_ESCAPE_URI);
-            uri_len = r->uri.len + escape + sizeof("?") - 1 + r->args.len;
-        }
+    if (uri_len > NGX_HTTP_V2_MAX_FIELD) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "too long http2 URI");
+        return NGX_ERROR;
+    }
 
-        len += 1 + NGX_HTTP_V2_INT_OCTETS + uri_len;
+    len += 1 + NGX_HTTP_V2_INT_OCTETS + uri_len;
 
-        if (tmp_len < uri_len) {
-            tmp_len = uri_len;
-        }
-
-    } else {
-        escape = 0;
+    if (tmp_len < uri_len) {
+        tmp_len = uri_len;
     }
 
 #else
@@ -1039,29 +1157,22 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT)
 
-    if (!glcf->method_set) {
+    if (method.len == 3 && ngx_strncmp(method.data, "GET", 3) == 0) {
+        *b->last++ = ngx_http_v2_indexed(NGX_HTTP_V2_METHOD_GET_INDEX);
 
-        if (r->method == NGX_HTTP_GET) {
-            *b->last++ = ngx_http_v2_indexed(NGX_HTTP_V2_METHOD_GET_INDEX);
+    } else if (method.len == 4
+               && ngx_strncmp(method.data, "POST", 4) == 0)
+    {
+        *b->last++ = ngx_http_v2_indexed(NGX_HTTP_V2_METHOD_POST_INDEX);
 
-            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "grpc header: \":method: GET\"");
-
-        } else if (r->method == NGX_HTTP_POST) {
-            *b->last++ = ngx_http_v2_indexed(NGX_HTTP_V2_METHOD_POST_INDEX);
-
-            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "grpc header: \":method: POST\"");
-
-        } else {
-            *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_METHOD_INDEX);
-            b->last = ngx_http_v2_write_value(b->last, r->method_name.data,
-                                            r->method_name.len, tmp);
-
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "grpc header: \":method: %V\"", &r->method_name);
-        }
+    } else {
+        *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_METHOD_INDEX);
+        b->last = ngx_http_v2_write_value(b->last, method.data,
+                                          method.len, tmp);
     }
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "grpc header: \":method: %V\"", &method);
 
 #else
 
@@ -1105,68 +1216,18 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT)
 
-    if (!glcf->path_set) {
+    if (uri.len == 1 && uri.data[0] == '/') {
+        *b->last++ = ngx_http_v2_indexed(NGX_HTTP_V2_PATH_ROOT_INDEX);
 
-        if (r->valid_unparsed_uri) {
-
-            if (r->unparsed_uri.len == 1 && r->unparsed_uri.data[0] == '/') {
-                *b->last++ = ngx_http_v2_indexed(NGX_HTTP_V2_PATH_ROOT_INDEX);
-
-            } else {
-                *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_PATH_INDEX);
-                b->last = ngx_http_v2_write_value(b->last,
-                                                  r->unparsed_uri.data,
-                                                  r->unparsed_uri.len, tmp);
-            }
-
-            u->uri = r->unparsed_uri;
-
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "grpc header: \":path: %V\"", &r->unparsed_uri);
-
-        } else if (escape || r->args.len > 0) {
-            p = val_tmp;
-
-            if (escape) {
-                p = (u_char *) ngx_escape_uri(p, r->uri.data, r->uri.len,
-                                            NGX_ESCAPE_URI);
-
-            } else {
-                p = ngx_copy(p, r->uri.data, r->uri.len);
-            }
-
-            if (r->args.len > 0) {
-                *p++ = '?';
-                p = ngx_copy(p, r->args.data, r->args.len);
-            }
-
-            *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_PATH_INDEX);
-            b->last = ngx_http_v2_write_value(b->last, val_tmp, p - val_tmp,
-                                              tmp);
-
-            u->uri.data = ngx_pnalloc(r->pool, p - val_tmp);
-            if (u->uri.data == NULL) {
-                return NGX_ERROR;
-            }
-
-            ngx_memcpy(u->uri.data, val_tmp, p - val_tmp);
-            u->uri.len = p - val_tmp;
-
-            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                           "grpc header: \":path: %*s\"", p - val_tmp,
-                           val_tmp);
-
-        } else {
-            *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_PATH_INDEX);
-            b->last = ngx_http_v2_write_value(b->last, r->uri.data,
-                                              r->uri.len, tmp);
-
-            u->uri = r->uri;
-
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                           "grpc header: \":path: %V\"", &r->uri);
-        }
+    } else {
+        *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_PATH_INDEX);
+        b->last = ngx_http_v2_write_value(b->last, uri.data, uri.len, tmp);
     }
+
+    u->uri = uri;
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "grpc header: \":path: %V\"", &uri);
 
 #else
 
@@ -1314,31 +1375,6 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         }
 
         b->last = ngx_http_v2_write_value(b->last, val_tmp, val_len, tmp);
-
-#if (NGX_RESTY_EXT)
-        if (glcf->method_set && key_len == 7
-            && ngx_strncasecmp(key_tmp, (u_char *) ":method", 7) == 0)
-        {
-            u->method.data = ngx_pnalloc(r->pool, val_len);
-            if (u->method.data == NULL) {
-                return NGX_ERROR;
-            }
-
-            ngx_memcpy(u->method.data, val_tmp, val_len);
-            u->method.len = val_len;
-
-        } else if (glcf->path_set && key_len == 5
-            && ngx_strncasecmp(key_tmp, (u_char *) ":path", 5) == 0)
-        {
-            u->uri.data = ngx_pnalloc(r->pool, val_len);
-            if (u->uri.data == NULL) {
-                return NGX_ERROR;
-            }
-
-            ngx_memcpy(u->uri.data, val_tmp, val_len);
-            u->uri.len = val_len;
-        }
-#endif
 
 #if (NGX_DEBUG)
         if (r->connection->log->log_level & NGX_LOG_DEBUG_HTTP) {
@@ -4731,6 +4767,7 @@ ngx_http_grpc_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.intercept_errors = NGX_CONF_UNSET;
 
 #if (NGX_RESTY_EXT)
+    conf->method = NGX_CONF_UNSET_PTR;
     conf->headers_inherit = NGX_CONF_UNSET;
 #endif
 
@@ -4838,6 +4875,7 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.intercept_errors, 0);
 
 #if (NGX_RESTY_EXT)
+    ngx_conf_merge_ptr_value(conf->method, prev->method, NULL);
     ngx_conf_merge_value(conf->headers_inherit,
                               prev->headers_inherit, 0);
 #endif
@@ -4911,6 +4949,11 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->upstream.upstream = prev->upstream.upstream;
         conf->host = prev->host;
 
+#if (NGX_RESTY_EXT)
+        conf->uri = prev->uri;
+        conf->location = prev->location;
+#endif
+
         conf->grpc_lengths = prev->grpc_lengths;
         conf->grpc_values = prev->grpc_values;
 
@@ -4931,9 +4974,6 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->headers = prev->headers;
         conf->host_set = prev->host_set;
 #if (NGX_RESTY_EXT)
-        conf->method_set = prev->method_set;
-        conf->path_set = prev->path_set;
-
     } else if (conf->headers_inherit
                && conf->headers_source
                && prev->headers_source
@@ -5002,10 +5042,6 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     {
         prev->headers = conf->headers;
         prev->host_set = conf->host_set;
-#if (NGX_RESTY_EXT)
-        prev->method_set = conf->method_set;
-        prev->path_set = conf->path_set;
-#endif
     }
 
     return NGX_CONF_OK;
@@ -5093,16 +5129,20 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
                     && ngx_strncasecmp(src[i].key.data, (u_char *) ":method",
                                        7) == 0)
                 {
-                    conf->method_set = 1;
-                    goto push_pseudo_headers;
+                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                                       "\":method\" is not allowed "
+                                       "for \"grpc_set_header\"");
+                    return NGX_ERROR;
                 }
 
                 if (src[i].key.len == 5
                     && ngx_strncasecmp(src[i].key.data, (u_char *) ":path",
                                        5) == 0)
                 {
-                    conf->path_set = 1;
-                    goto push_pseudo_headers;
+                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                                       "\":path\" is not allowed "
+                                       "for \"grpc_set_header\"");
+                    return NGX_ERROR;
                 }
 
                 if (src[i].key.len == 7
@@ -5367,6 +5407,9 @@ ngx_http_grpc_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     u.url.len = url->len - add;
     u.url.data = url->data + add;
+#if (NGX_RESTY_EXT)
+    u.uri_part = 1;
+#endif
     u.no_resolve = 1;
 
     glcf->upstream.upstream = ngx_http_upstream_add(cf, &u, 0);
@@ -5387,6 +5430,30 @@ ngx_http_grpc_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     } else {
         ngx_str_set(&glcf->host, "localhost");
     }
+
+#if (NGX_RESTY_EXT)
+    glcf->uri = u.uri;
+    glcf->location = clcf->name;
+
+    if (clcf->named
+#if (NGX_PCRE)
+        || clcf->regex
+#endif
+        || clcf->noname)
+    {
+        if (glcf->uri.len) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "\"grpc_pass\" cannot have URI part in "
+                               "location given by regular expression, "
+                               "or inside named location, "
+                               "or inside \"if\" statement, "
+                               "or inside \"limit_except\" block");
+            return NGX_CONF_ERROR;
+        }
+
+        glcf->location.len = 0;
+    }
+#endif
 
     return NGX_CONF_OK;
 }
