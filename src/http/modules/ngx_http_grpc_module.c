@@ -25,7 +25,11 @@ typedef struct {
     ngx_array_t               *headers_source;
 
     ngx_str_t                  host;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_http_complex_value_t  *host_value;
+#else
     ngx_uint_t                 host_set;
+#endif
 
 #if (NGX_RESTY_EXT)
     ngx_http_complex_value_t  *method;
@@ -866,6 +870,9 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     ngx_http_grpc_loc_conf_t     *glcf;
     ngx_http_script_engine_t      e, le;
     ngx_http_script_len_code_pt   lcode;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_str_t                     host;
+#endif
 #if (NGX_RESTY_EXT)
     ngx_str_t                     method, uri;
 #endif
@@ -994,6 +1001,31 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
     /* :authority header */
 
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    host.len = 0;
+
+    if (glcf->host_value
+        && ngx_http_complex_value(r, glcf->host_value, &host) != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
+    if (host.len == 0) {
+        host = ctx->host;
+    }
+
+    if (host.len > NGX_HTTP_V2_MAX_FIELD) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "too long http2 host: \"%V\"", &host);
+        return NGX_ERROR;
+    }
+
+    len += 1 + NGX_HTTP_V2_INT_OCTETS + host.len;
+
+    if (tmp_len < host.len) {
+        tmp_len = host.len;
+    }
+#else
     if (!glcf->host_set) {
         if (ctx->host.len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
@@ -1007,6 +1039,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
             tmp_len = ctx->host.len;
         }
     }
+#endif
 
     /* other headers */
 
@@ -1278,6 +1311,13 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
 #endif
 
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_AUTHORITY_INDEX);
+    b->last = ngx_http_v2_write_value(b->last, host.data, host.len, tmp);
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "grpc header: \":authority: %V\"", &host);
+#else
     if (!glcf->host_set) {
         *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_AUTHORITY_INDEX);
         b->last = ngx_http_v2_write_value(b->last, ctx->host.data,
@@ -1286,6 +1326,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                        "grpc header: \":authority: %V\"", &ctx->host);
     }
+#endif
 
     ngx_memzero(&e, sizeof(ngx_http_script_engine_t));
 
@@ -4741,7 +4782,6 @@ ngx_http_grpc_create_loc_conf(ngx_conf_t *cf)
      *     conf->headers.values = NULL;
      *     conf->headers.hash = { NULL, 0 };
      *     conf->host = { 0, NULL };
-     *     conf->host_set = 0;
      *     conf->ssl = 0;
      *     conf->ssl_protocols = 0;
      *     conf->ssl_ciphers = { 0, NULL };
@@ -4972,7 +5012,11 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->headers_source == prev->headers_source) {
         conf->headers = prev->headers;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+        conf->host_value = prev->host_value;
+#else
         conf->host_set = prev->host_set;
+#endif
 #if (NGX_RESTY_EXT)
 
     } else if (conf->headers_inherit
@@ -5042,7 +5086,11 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         && conf->headers_source == prev->headers_source)
     {
         prev->headers = conf->headers;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+        prev->host_value = conf->host_value;
+#else
         prev->host_set = conf->host_set;
+#endif
     }
 
     return NGX_CONF_OK;
@@ -5063,9 +5111,8 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
     ngx_hash_init_t               hash;
     ngx_http_script_compile_t     sc;
     ngx_http_script_copy_code_t  *copy;
-
-#if (NGX_RESTY_EXT)
-    ngx_array_t                   pseudo_headers, regular_headers;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_http_compile_complex_value_t  ccv;
 #endif
 
     if (headers->hash.buckets) {
@@ -5095,122 +5142,33 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
     }
 
     if (conf->headers_source) {
-
-#if (NGX_RESTY_EXT)
-        if (ngx_array_init(&pseudo_headers, cf->temp_pool, 4,
-                           sizeof(ngx_keyval_t))
-            != NGX_OK)
-        {
-            return NGX_ERROR;
-        }
-
-        if (ngx_array_init(&regular_headers, cf->temp_pool, 4,
-                           sizeof(ngx_keyval_t))
-            != NGX_OK)
-        {
-            return NGX_ERROR;
-        }
-
         src = conf->headers_source->elts;
         for (i = 0; i < conf->headers_source->nelts; i++) {
-
-            if (src[i].key.len == 0) {
-                continue;
-            }
-
-            if (src[i].key.data[0] == ':') {
-
-                if (src[i].key.len == 10
-                    && ngx_strncasecmp(src[i].key.data,
-                                       (u_char *) ":authority", 10) == 0)
-                {
-                    conf->host_set = 1;
-                    goto push_pseudo_headers;
-                }
-
-                if (src[i].key.len == 7
-                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":method",
-                                       7) == 0)
-                {
-                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                       "\":method\" is not allowed "
-                                       "for \"grpc_set_header\"");
-                    return NGX_ERROR;
-                }
-
-                if (src[i].key.len == 5
-                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":path",
-                                       5) == 0)
-                {
-                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                       "\":path\" is not allowed "
-                                       "for \"grpc_set_header\"");
-                    return NGX_ERROR;
-                }
-
-                if (src[i].key.len == 7
-                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":scheme",
-                                       7) == 0)
-                {
-                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                       "\":scheme\" is not allowed "
-                                       "for \"grpc_set_header\"");
-                    return NGX_ERROR;
-                }
-
-push_pseudo_headers:
-
-                s = ngx_array_push(&pseudo_headers);
-                if (s == NULL) {
-                    return NGX_ERROR;
-                }
-
-                *s = src[i];
-
-                continue;
-            }
 
             if (src[i].key.len == 4
                 && ngx_strncasecmp(src[i].key.data, (u_char *) "Host", 4) == 0)
             {
-                conf->host_set = 1;
-            }
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+                conf->host_value = ngx_pcalloc(cf->pool,
+                                             sizeof(ngx_http_complex_value_t));
+                if (conf->host_value == NULL) {
+                    return NGX_ERROR;
+                }
 
-            s = ngx_array_push(&regular_headers);
-            if (s == NULL) {
-                return NGX_ERROR;
-            }
+                ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
 
-            *s = src[i];
-        }
+                ccv.cf = cf;
+                ccv.value = &src[i].value;
+                ccv.complex_value = conf->host_value;
 
-        src = pseudo_headers.elts;
-        for (i = 0; i < pseudo_headers.nelts; i++) {
-            s = ngx_array_push(&headers_merged);
-            if (s == NULL) {
-                return NGX_ERROR;
-            }
+                if (ngx_http_compile_complex_value(&ccv) != NGX_OK) {
+                    return NGX_ERROR;
+                }
 
-            *s = src[i];
-        }
-
-        src = regular_headers.elts;
-        for (i = 0; i < regular_headers.nelts; i++) {
-            s = ngx_array_push(&headers_merged);
-            if (s == NULL) {
-                return NGX_ERROR;
-            }
-
-            *s = src[i];
-        }
+                continue;
 #else
-        src = conf->headers_source->elts;
-        for (i = 0; i < conf->headers_source->nelts; i++) {
-
-            if (src[i].key.len == 4
-                && ngx_strncasecmp(src[i].key.data, (u_char *) "Host", 4) == 0)
-            {
                 conf->host_set = 1;
+#endif
             }
 
             s = ngx_array_push(&headers_merged);
@@ -5220,7 +5178,6 @@ push_pseudo_headers:
 
             *s = src[i];
         }
-#endif
     }
 
     h = default_headers;

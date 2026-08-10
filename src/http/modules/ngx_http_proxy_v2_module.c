@@ -422,7 +422,11 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 #endif
     uintptr_t                     escape;
     ngx_buf_t                    *b;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_str_t                     method, host;
+#else
     ngx_str_t                     method, *host;
+#endif
     ngx_uint_t                    i, next, unparsed_uri;
     ngx_chain_t                  *cl, *body;
     ngx_list_part_t              *part;
@@ -592,6 +596,31 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
     /* :authority header */
 
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    host.len = 0;
+
+    if (plcf->host_value
+        && ngx_http_complex_value(r, plcf->host_value, &host) != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
+    if (host.len == 0) {
+        host = ctx->ctx.vars.host_header;
+    }
+
+    if (host.len > NGX_HTTP_V2_MAX_FIELD) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "too long http2 host: \"%V\"", &host);
+        return NGX_ERROR;
+    }
+
+    len += 1 + NGX_HTTP_V2_INT_OCTETS + host.len;
+
+    if (tmp_len < host.len) {
+        tmp_len = host.len;
+    }
+#else
     host = &ctx->ctx.vars.host_header;
 
     if (!plcf->host_set) {
@@ -607,6 +636,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             tmp_len = host->len;
         }
     }
+#endif
 
     /* other headers */
 
@@ -1158,6 +1188,13 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
     }
 #endif
 
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_AUTHORITY_INDEX);
+    b->last = ngx_http_v2_write_value(b->last, host.data, host.len, tmp);
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "http proxy header: \":authority: %V\"", &host);
+#else
     if (!plcf->host_set) {
         *b->last++ = ngx_http_v2_inc_indexed(NGX_HTTP_V2_AUTHORITY_INDEX);
         b->last = ngx_http_v2_write_value(b->last, host->data, host->len, tmp);
@@ -1165,6 +1202,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                        "http proxy header: \":authority: %V\"", host);
     }
+#endif
 
 #if (NGX_RESTY_EXT)
 

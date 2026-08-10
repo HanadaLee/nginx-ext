@@ -1592,3 +1592,4 @@ cat << END                                    >> $NGX_MODULES_C
 END
 
 have=NGX_RESTY_EXT . auto/have
+have=NGX_RESTY_EXT_1_31_4_BACKPORT . auto/have

@@ -2097,20 +2097,38 @@ ngx_http_script_complex_value_code(ngx_http_script_engine_t *e)
 
     e->pos = e->buf.data;
     e->end = e->buf.data + len;
+
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    e->sp->len = e->buf.len;
+    e->sp->data = e->buf.data;
+    e->sp++;
+#endif
 }
 
 
 void
 ngx_http_script_complex_value_end_code(ngx_http_script_engine_t *e)
 {
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_http_variable_value_t  *val;
+
+    val = e->sp - 1;
+#endif
+
     e->ip += sizeof(ngx_http_script_complex_value_end_code_t);
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                    "http script complex value end");
 
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    if (val->data == e->buf.data) {
+        val->len = e->pos - e->buf.data;
+    }
+#else
     e->sp->len = e->pos - e->buf.data;
     e->sp->data = e->buf.data;
     e->sp++;
+#endif
 }
 
 

@@ -49,7 +49,11 @@ typedef struct {
     ngx_http_proxy_headers_t       headers_cache;
 #endif
     ngx_array_t                   *headers_source;
+#if (NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_http_complex_value_t      *host_value;
+#else
     ngx_uint_t                     host_set;
+#endif
 
     ngx_array_t                   *proxy_lengths;
     ngx_array_t                   *proxy_values;
@@ -114,7 +118,9 @@ typedef struct {
     unsigned                       head:1;
     unsigned                       internal_chunked:1;
     unsigned                       header_sent:1;
+#if !(NGX_RESTY_EXT && NGX_RESTY_EXT_1_31_4_BACKPORT)
     unsigned                       legacy:1;
+#endif
 } ngx_http_proxy_ctx_t;
 
 
