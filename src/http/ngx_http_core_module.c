@@ -2651,9 +2651,10 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
 
 
     /* NGX_HTTP_REQUEST_ID_TRACEID */
-    buf = ngx_pnalloc(r->pool, NGX_TIME_T_LEN + ngx_cycle->hostname.len
-                              + NGX_INT64_LEN + NGX_ATOMIC_T_LEN
-                              + NGX_INT_T_LEN + 4);
+    buf = ngx_pnalloc(r->pool,
+                      NGX_TIME_T_LEN + ngx_cycle->hostname.len
+                      + NGX_INT64_LEN + NGX_ATOMIC_T_LEN
+                      + NGX_INT_T_LEN + 4);
     if (buf == NULL) {
         return NGX_ERROR;
     }
@@ -4214,7 +4215,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               NGX_MAX_INT32_VALUE);
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_value(conf->ignore_invalid_range,
-                              prev->ignore_invalid_range, 0);
+                         prev->ignore_invalid_range, 0);
 #endif
     ngx_conf_merge_uint_value(conf->client_body_in_file_only,
                               prev->client_body_in_file_only,
@@ -5644,7 +5645,7 @@ ngx_http_core_error_page_client_ip(ngx_conf_t *cf, ngx_command_t *cmd,
 
     if (value[1].data[0] != '$') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                        "invalid variable \"%V\"", &value[1]);
+                           "invalid variable \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
     }
 
