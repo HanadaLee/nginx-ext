@@ -624,7 +624,7 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
       ngx_http_set_complex_value_sec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t,
-                upstream.cache_stale_while_revalidate),
+               upstream.cache_stale_while_revalidate),
       NULL },
 
     { ngx_string("proxy_cache_vary"),
@@ -1640,6 +1640,7 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
             code = *(ngx_http_script_code_pt *) e.ip;
             code((ngx_http_script_engine_t *) &e);
         }
+
         e.ip += sizeof(uintptr_t);
 #endif
 
@@ -1687,6 +1688,7 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
         for (val_len = 0; *(uintptr_t *) le.ip; val_len += lcode(&le)) {
             lcode = *(ngx_http_script_len_code_pt *) le.ip;
         }
+
         le.ip += sizeof(uintptr_t);
 
         if (val_len == 0) {
@@ -1695,6 +1697,7 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
                 code = *(ngx_http_script_code_pt *) e.ip;
                 code((ngx_http_script_engine_t *) &e);
             }
+
             e.ip += sizeof(uintptr_t);
 
             e.skip = 0;
@@ -1722,6 +1725,7 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
             code = *(ngx_http_script_code_pt *) e.ip;
             code((ngx_http_script_engine_t *) &e);
         }
+
         e.ip += sizeof(uintptr_t);
 
         if (e.status) {
@@ -4262,7 +4266,7 @@ ngx_http_proxy_rewrite_cookie_values(ngx_http_request_t *r, ngx_array_t *attrs,
     }
 
     return pcv[i].pr->handler(r, &attr[0].value, 0, attr[0].value.len,
-                             pcv[i].pr);
+                              pcv[i].pr);
 }
 
 
@@ -4892,8 +4896,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_bitmask_value(conf->upstream.ignore_cache_control,
-                              prev->upstream.ignore_cache_control,
-                              NGX_CONF_BITMASK_SET);
+                                 prev->upstream.ignore_cache_control,
+                                 NGX_CONF_BITMASK_SET);
 #endif
 
     ngx_conf_merge_bitmask_value(conf->upstream.next_upstream,
@@ -5061,7 +5065,7 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 
     ngx_conf_merge_value(conf->headers_inherit,
-                              prev->headers_inherit, 0);
+                         prev->headers_inherit, 0);
 
 #endif
 
@@ -5207,7 +5211,7 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_ptr_value(conf->upstream.hide_cookies,
-                                prev->upstream.hide_cookies, NULL);
+                             prev->upstream.hide_cookies, NULL);
 #endif
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
@@ -5266,6 +5270,7 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
         conf->host_value = prev->host_value;
 #if (NGX_RESTY_EXT)
+
     } else if (conf->headers_inherit
                && conf->headers_source
                && prev->headers_source
@@ -6219,12 +6224,16 @@ ngx_http_proxy_cookie_value(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             value[2].len--;
             value[2].data++;
 
-            if (ngx_http_proxy_rewrite_regex(cf, pcv->pr, &value[2], 1) != NGX_OK) {
+            if (ngx_http_proxy_rewrite_regex(cf, pcv->pr, &value[2], 1)
+                != NGX_OK)
+            {
                 return NGX_CONF_ERROR;
             }
 
         } else {
-            if (ngx_http_proxy_rewrite_regex(cf, pcv->pr, &value[2], 0) != NGX_OK) {
+            if (ngx_http_proxy_rewrite_regex(cf, pcv->pr, &value[2], 0)
+                != NGX_OK)
+            {
                 return NGX_CONF_ERROR;
             }
         }
@@ -6296,7 +6305,7 @@ ngx_http_proxy_cookie_max_age(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (plcf->cookie_max_age == NGX_CONF_UNSET_PTR) {
         plcf->cookie_max_age = ngx_array_create(cf->pool, 1,
-                                        sizeof(ngx_http_proxy_cookie_max_age_t));
+                                                sizeof(*pcm));
         if (plcf->cookie_max_age == NULL) {
             return NGX_CONF_ERROR;
         }

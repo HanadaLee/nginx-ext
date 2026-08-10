@@ -687,6 +687,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             code = *(ngx_http_script_code_pt *) e.ip;
             code((ngx_http_script_engine_t *) &e);
         }
+
         e.ip += sizeof(uintptr_t);
 #endif
 
@@ -748,6 +749,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         for (val_len = 0; *(uintptr_t *) le.ip; val_len += lcode(&le)) {
             lcode = *(ngx_http_script_len_code_pt *) le.ip;
         }
+
         le.ip += sizeof(uintptr_t);
 
         if (val_len == 0) {
@@ -757,6 +759,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
                 code = *(ngx_http_script_code_pt *) e.ip;
                 code((ngx_http_script_engine_t *) &e);
             }
+
             e.ip += sizeof(uintptr_t);
 
             e.skip = 0;
@@ -783,6 +786,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             code = *(ngx_http_script_code_pt *) e.ip;
             code((ngx_http_script_engine_t *) &e);
         }
+
         e.ip += sizeof(uintptr_t);
 
         if (e.status) {
@@ -2406,7 +2410,9 @@ ngx_http_proxy_v2_non_buffered_filter(void *data, ssize_t bytes)
 
         if (rc == NGX_AGAIN) {
 #if (NGX_RESTY_EXT && NGX_HTTP_PROXY_FILTER)
-            if (*filter && ngx_http_proxy_filter_body_hook(r, filter) != NGX_OK) {
+            if (*filter
+                && ngx_http_proxy_filter_body_hook(r, filter) != NGX_OK)
+            {
                 return NGX_ERROR;
             }
 #endif
