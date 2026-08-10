@@ -176,7 +176,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
         for (i = 0; i < alcf->users->nelts; i++) {
 
             colon = (u_char *) ngx_strlchr(u[i].data,
-                        u[i].data + u[i].len, ':');
+                                           u[i].data + u[i].len, ':');
             if (colon == NULL) {
                 continue;
             }
@@ -562,7 +562,7 @@ ngx_http_auth_basic_add_user(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (alcf->users == NGX_CONF_UNSET_PTR || alcf->users == NULL) {
         alcf->users = ngx_array_create(cf->pool, 1,
-            sizeof(ngx_str_t));
+                                       sizeof(ngx_str_t));
         if (alcf->users == NULL) {
             return NGX_CONF_ERROR;
         }
@@ -584,7 +584,7 @@ ngx_http_auth_basic_add_user(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (colons < 1) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-            "auth_basic_user must contain at least one colon");
+                           "auth_basic_user must contain at least one colon");
         return NGX_CONF_ERROR;
     }
 

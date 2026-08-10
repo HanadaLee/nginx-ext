@@ -108,6 +108,7 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
         }
 
 #if (NGX_RESTY_EXT)
+
         } else if (clcf->not_modified_check == NGX_HTTP_NMC_PREFER_INM) {
 
             if (r->headers_in.if_none_match) {
@@ -145,6 +146,7 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
         }
 
 not_modified:
+
 #endif
 
         /* not modified */
