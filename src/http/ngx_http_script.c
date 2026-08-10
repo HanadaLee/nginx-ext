@@ -2245,7 +2245,8 @@ ngx_http_script_if_op_code(ngx_http_script_engine_t *e)
 
     if (op == ngx_http_script_if_and) {
         if ((val->len && (val->len != 1 || val->data[0] != '0'))
-            && (res->len && (res->len != 1 || res->data[0] != '0'))) {
+            && (res->len && (res->len != 1 || res->data[0] != '0')))
+        {
             *res = ngx_http_variable_true_value;
 
         } else {
@@ -2254,7 +2255,8 @@ ngx_http_script_if_op_code(ngx_http_script_engine_t *e)
 
     } else if (op == ngx_http_script_if_or) {
         if ((val->len && (val->len != 1 || val->data[0] != '0'))
-            || (res->len && (res->len != 1 || res->data[0] != '0'))) {
+            || (res->len && (res->len != 1 || res->data[0] != '0')))
+        {
             *res = ngx_http_variable_true_value;
 
         } else {

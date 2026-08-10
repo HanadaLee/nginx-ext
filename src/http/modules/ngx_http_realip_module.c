@@ -545,10 +545,13 @@ ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strcmp(value[1].data, "X-Real-IP") == 0) {
             header->type = NGX_HTTP_REALIP_XREALIP;
+
         } else if (ngx_strcmp(value[1].data, "X-Forwarded-For") == 0) {
             header->type = NGX_HTTP_REALIP_XFWD;
+
         } else if (ngx_strcmp(value[1].data, "proxy_protocol") == 0) {
             header->type = NGX_HTTP_REALIP_PROXY;
+
         } else {
             header->type = NGX_HTTP_REALIP_HEADER;
             header->hash = ngx_hash_strlow(value[i].data, value[i].data,
@@ -609,7 +612,7 @@ ngx_http_realip_create_loc_conf(ngx_conf_t *cf)
     conf->headers = ngx_array_create(cf->pool, 4,
                                      sizeof(ngx_http_realip_header_t));
     if (conf->headers == NULL) {
-        return NGX_CONF_ERROR;
+        return NULL;
     }
 #else
     conf->type = NGX_CONF_UNSET_UINT;
@@ -625,6 +628,9 @@ ngx_http_realip_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_http_realip_loc_conf_t  *prev = parent;
     ngx_http_realip_loc_conf_t  *conf = child;
+#if (NGX_RESTY_EXT)
+    ngx_http_realip_header_t    *header;
+#endif
 
     if (conf->from == NULL) {
         conf->from = prev->from;
@@ -639,11 +645,13 @@ ngx_http_realip_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
     if (conf->headers == NULL || conf->headers->nelts == 0) {
         if (prev->headers == NULL || prev->headers->nelts == 0) {
-            ngx_http_realip_header_t *header = ngx_array_push(conf->headers);
+            header = ngx_array_push(conf->headers);
             if (header == NULL) {
                 return NGX_CONF_ERROR;
             }
+
             header->type = NGX_HTTP_REALIP_XREALIP;
+
         } else {
             conf->headers = prev->headers;
         }

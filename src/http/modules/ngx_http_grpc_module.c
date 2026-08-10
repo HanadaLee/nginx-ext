@@ -4877,7 +4877,7 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_ptr_value(conf->method, prev->method, NULL);
     ngx_conf_merge_value(conf->headers_inherit,
-                              prev->headers_inherit, 0);
+                         prev->headers_inherit, 0);
 #endif
 
 #if (NGX_HTTP_SSL)
@@ -4974,6 +4974,7 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->headers = prev->headers;
         conf->host_set = prev->host_set;
 #if (NGX_RESTY_EXT)
+
     } else if (conf->headers_inherit
                && conf->headers_source
                && prev->headers_source
@@ -5096,13 +5097,15 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
     if (conf->headers_source) {
 
 #if (NGX_RESTY_EXT)
-        if (ngx_array_init(&pseudo_headers, cf->temp_pool, 4, sizeof(ngx_keyval_t))
+        if (ngx_array_init(&pseudo_headers, cf->temp_pool, 4,
+                           sizeof(ngx_keyval_t))
             != NGX_OK)
         {
             return NGX_ERROR;
         }
 
-        if (ngx_array_init(&regular_headers, cf->temp_pool, 4, sizeof(ngx_keyval_t))
+        if (ngx_array_init(&regular_headers, cf->temp_pool, 4,
+                           sizeof(ngx_keyval_t))
             != NGX_OK)
         {
             return NGX_ERROR;
@@ -5187,6 +5190,7 @@ push_pseudo_headers:
             if (s == NULL) {
                 return NGX_ERROR;
             }
+
             *s = src[i];
         }
 
