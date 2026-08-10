@@ -496,8 +496,9 @@ static ngx_http_variable_t  ngx_http_ssl_vars[] = {
     { ngx_string("ssl_handshake_time"), NULL, ngx_http_ssl_variable,
       (uintptr_t) ngx_ssl_get_handshake_time, NGX_HTTP_VAR_CHANGEABLE, 0 },
 
-    { ngx_string("ssl_handshake_start_msec"), NULL, ngx_http_ssl_variable,
-      (uintptr_t) ngx_ssl_get_handshake_start_msec, NGX_HTTP_VAR_CHANGEABLE, 0 },
+    { ngx_string("ssl_handshake_start_msec"), NULL,
+      ngx_http_ssl_variable, (uintptr_t) ngx_ssl_get_handshake_start_msec,
+      NGX_HTTP_VAR_CHANGEABLE, 0 },
 
     { ngx_string("ssl_handshake_end_msec"), NULL, ngx_http_ssl_variable,
       (uintptr_t) ngx_ssl_get_handshake_end_msec, NGX_HTTP_VAR_CHANGEABLE, 0 },
@@ -818,20 +819,26 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_value(conf->dyn_rec_enable, prev->dyn_rec_enable, 0);
     ngx_conf_merge_msec_value(conf->dyn_rec_timeout, prev->dyn_rec_timeout,
-                             1000);
-    /* Default sizes for the dynamic record sizes are defined to fit maximal
-       TLS + IPv6 overhead in a single TCP segment for lo and 3 segments for hi:
-       1369 = 1500 - 40 (IP) - 20 (TCP) - 10 (Time) - 61 (Max TLS overhead) */
+                              1000);
+
+    /*
+     * Default dynamic record sizes account for the maximum TLS and IPv6
+     * overhead: one TCP segment for the low size and three for the high size.
+     * 1369 = 1500 - 40 (IP) - 20 (TCP) - 10 (Time) - 61 (TLS overhead).
+     */
+
     ngx_conf_merge_size_value(conf->dyn_rec_size_lo, prev->dyn_rec_size_lo,
-                             1369);
+                              1369);
+
     /* 4229 = (1500 - 40 - 20 - 10) * 3  - 61 */
+
     ngx_conf_merge_size_value(conf->dyn_rec_size_hi, prev->dyn_rec_size_hi,
-                             4229);
+                              4229);
     ngx_conf_merge_uint_value(conf->dyn_rec_threshold, prev->dyn_rec_threshold,
-                             40);
+                              40);
 
     ngx_conf_merge_uint_value(conf->strict_server_name,
-        prev->strict_server_name, 2);
+                              prev->strict_server_name, 2);
 #endif
 
     conf->ssl.log = cf->log;

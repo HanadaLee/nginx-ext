@@ -358,7 +358,7 @@ static ngx_command_t ngx_http_scgi_commands[] = {
       ngx_http_set_complex_value_sec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_scgi_loc_conf_t,
-                upstream.cache_stale_while_revalidate),
+               upstream.cache_stale_while_revalidate),
       NULL },
 
     { ngx_string("scgi_cache_vary"),
@@ -1711,8 +1711,8 @@ ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 
     ngx_conf_merge_bitmask_value(conf->upstream.ignore_cache_control,
-                              prev->upstream.ignore_cache_control,
-                              NGX_CONF_BITMASK_SET);
+                                 prev->upstream.ignore_cache_control,
+                                 NGX_CONF_BITMASK_SET);
 
 #endif
 
@@ -1888,7 +1888,7 @@ ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_ptr_value(conf->upstream.hide_cookies,
-                                prev->upstream.hide_cookies, NULL);
+                             prev->upstream.hide_cookies, NULL);
 #endif
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
@@ -1915,6 +1915,7 @@ ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->params_source = prev->params_source;
 
 #if (NGX_RESTY_EXT)
+
     } else if (conf->params_inherit
                && conf->params_source
                && prev->params_source
