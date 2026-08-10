@@ -3634,7 +3634,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
                 ngx_str_null(&vary);
 
             } else if (ngx_http_complex_value(r, u->conf->cache_vary, &vary)
-                                              != NGX_OK)
+                       != NGX_OK)
             {
                 ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
                 return;
@@ -5522,7 +5522,7 @@ extensions:
 
     } else {
         val = ngx_http_complex_value_sec(r,
-            u->conf->cache_stale_if_error, 0);
+                                         u->conf->cache_stale_if_error, 0);
 
         if (val > 0) {
             r->cache->error_sec = val;

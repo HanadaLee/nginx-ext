@@ -3142,7 +3142,7 @@ ngx_ssl_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
            the process from the start. The actual parameters are
            configurable. If dyn_rec_timeout is 0, we assume dyn_rec is off. */
 
-        if (c->ssl->dyn_rec.timeout > 0 ) {
+        if (c->ssl->dyn_rec.timeout > 0) {
 
             if (ngx_current_msec - c->ssl->dyn_rec_last_write >
                 c->ssl->dyn_rec.timeout)

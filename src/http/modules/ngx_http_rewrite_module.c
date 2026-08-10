@@ -888,6 +888,7 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             if (p[0] == '!') {
                 regex->negative_test = 1;
             }
+
             regex->name = value[last];
 
             return NGX_CONF_OK;
@@ -900,7 +901,7 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             }
 
             code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                    sizeof(uintptr_t));
+                                              sizeof(uintptr_t));
 
             if (code == NULL) {
                 return NGX_CONF_ERROR;
@@ -918,7 +919,7 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             }
 
             code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                    sizeof(uintptr_t));
+                                              sizeof(uintptr_t));
 
             if (code == NULL) {
                 return NGX_CONF_ERROR;
@@ -928,15 +929,17 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             return NGX_CONF_OK;
         }
 
-        if (len == 2 && ((p[0] == '!' && p[1] == '<')
-                || (p[0] == '>' && p[1] == '='))) {
+        if (len == 2
+            && ((p[0] == '!' && p[1] == '<')
+                || (p[0] == '>' && p[1] == '=')))
+        {
 
             if (ngx_http_rewrite_value(cf, lcf, &value[last]) != NGX_CONF_OK) {
                 return NGX_CONF_ERROR;
             }
 
             code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                    sizeof(uintptr_t));
+                                              sizeof(uintptr_t));
 
             if (code == NULL) {
                 return NGX_CONF_ERROR;
@@ -946,15 +949,17 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             return NGX_CONF_OK;
         }
 
-        if (len == 2 && ((p[0] == '!' && p[1] == '>')
-                || (p[0] == '<' && p[1] == '='))) {
+        if (len == 2
+            && ((p[0] == '!' && p[1] == '>')
+                || (p[0] == '<' && p[1] == '=')))
+        {
 
             if (ngx_http_rewrite_value(cf, lcf, &value[last]) != NGX_CONF_OK) {
                 return NGX_CONF_ERROR;
             }
 
             code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                    sizeof(uintptr_t));
+                                              sizeof(uintptr_t));
 
             if (code == NULL) {
                 return NGX_CONF_ERROR;
@@ -972,7 +977,7 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             }
 
             code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                    sizeof(uintptr_t));
+                                              sizeof(uintptr_t));
 
             if (code == NULL) {
                 return NGX_CONF_ERROR;
@@ -989,7 +994,7 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             }
 
             code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                    sizeof(uintptr_t));
+                                              sizeof(uintptr_t));
 
             if (code == NULL) {
                 return NGX_CONF_ERROR;
@@ -1422,7 +1427,7 @@ ngx_http_rewrite_parse_if_condition(ngx_conf_t *cf,
 
             begin = index + 2;
             rv = ngx_http_rewrite_parse_if_condition(cf, lcf, value,
-                begin, last);
+                                                     begin, last);
             if (rv != NGX_CONF_OK) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "find parse if condition error "
@@ -1478,7 +1483,7 @@ ngx_http_rewrite_parse_if_condition(ngx_conf_t *cf,
         } else {
             /* find the op */
             rv = ngx_http_rewrite_if_logic_item(cf, lcf, begin,
-                op.index - 1);
+                                                op.index - 1);
             if (rv != NGX_CONF_OK) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "internal if logic subcondition "
@@ -1488,7 +1493,7 @@ ngx_http_rewrite_parse_if_condition(ngx_conf_t *cf,
 
             begin = op.index + 1;
             rv = ngx_http_rewrite_parse_if_condition(cf, lcf, value,
-                begin, last);
+                                                     begin, last);
             if (rv != NGX_CONF_OK) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "internal if logic subcondition "
