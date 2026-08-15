@@ -896,6 +896,10 @@ ngx_http_uwsgi_eval(ngx_http_request_t *r, ngx_http_uwsgi_loc_conf_t * uwcf)
 #else
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "suwsgi protocol requires SSL support");
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
         return NGX_ERROR;
 #endif
 
@@ -924,6 +928,9 @@ ngx_http_uwsgi_eval(ngx_http_request_t *r, ngx_http_uwsgi_loc_conf_t * uwcf)
                           "%s in upstream \"%V\"", url.err, &url.url);
         }
 
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
