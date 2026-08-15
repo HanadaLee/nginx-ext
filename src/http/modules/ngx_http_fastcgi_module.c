@@ -899,6 +899,9 @@ ngx_http_fastcgi_eval(ngx_http_request_t *r, ngx_http_fastcgi_loc_conf_t *flcf)
                           "%s in upstream \"%V\"", url.err, &url.url);
         }
 
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -1877,12 +1880,22 @@ ngx_http_fastcgi_process_header(ngx_http_request_t *r)
                               "upstream sent unexpected FastCGI record: %ui",
                               f->type);
 
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
+
                 return NGX_HTTP_UPSTREAM_INVALID_HEADER;
             }
 
             if (f->type == NGX_HTTP_FASTCGI_STDOUT && f->length == 0) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream prematurely closed FastCGI stdout");
+
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
 
                 return NGX_HTTP_UPSTREAM_INVALID_HEADER;
             }
@@ -2368,6 +2381,11 @@ ngx_http_fastcgi_input_filter(ngx_event_pipe_t *p, ngx_buf_t *buf)
                                   "upstream prematurely closed "
                                   "FastCGI stdout");
 
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
+
                     p->upstream_error = 1;
                     p->upstream_eof = 0;
                     f->closed = 1;
@@ -2391,6 +2409,11 @@ ngx_http_fastcgi_input_filter(ngx_event_pipe_t *p, ngx_buf_t *buf)
                     ngx_log_error(NGX_LOG_ERR, p->log, 0,
                                   "upstream prematurely closed "
                                   "FastCGI request");
+
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
 
                     p->upstream_error = 1;
                     p->upstream_eof = 0;
@@ -2675,6 +2698,11 @@ ngx_http_fastcgi_non_buffered_filter(void *data, ssize_t bytes)
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream prematurely closed "
                                   "FastCGI request");
+
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
                     u->error = 1;
                     break;
                 }
@@ -2856,6 +2884,10 @@ ngx_http_fastcgi_process_record(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent unsupported FastCGI "
                               "protocol version: %d", ch);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
             state = ngx_http_fastcgi_st_type;
@@ -2872,6 +2904,10 @@ ngx_http_fastcgi_process_record(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent invalid FastCGI "
                               "record type: %d", ch);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
 
             }
@@ -2885,6 +2921,10 @@ ngx_http_fastcgi_process_record(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent unexpected FastCGI "
                               "request id high byte: %d", ch);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
             state = ngx_http_fastcgi_st_request_id_lo;
@@ -2895,6 +2935,10 @@ ngx_http_fastcgi_process_record(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent unexpected FastCGI "
                               "request id low byte: %d", ch);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
             state = ngx_http_fastcgi_st_content_length_hi;
