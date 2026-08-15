@@ -1194,6 +1194,9 @@ ngx_http_proxy_eval(ngx_http_request_t *r, ngx_http_proxy_ctx_t *ctx,
                             plcf->proxy_values->elts)
         == NULL)
     {
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -1217,6 +1220,9 @@ ngx_http_proxy_eval(ngx_http_request_t *r, ngx_http_proxy_ctx_t *ctx,
     } else {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "invalid URL prefix in \"%V\"", &proxy);
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -1239,6 +1245,9 @@ ngx_http_proxy_eval(ngx_http_request_t *r, ngx_http_proxy_ctx_t *ctx,
                           "%s in upstream \"%V\"", url.err, &url.url);
         }
 
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -1584,6 +1593,9 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
     if (uri_len == 0) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "zero length URI to proxy");
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -1843,6 +1855,8 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
         if (u->method.len == 0 || u->method.data == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "invalid method to proxy");
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
             return NGX_ERROR;
         }
 
@@ -1862,6 +1876,7 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
         if (u->uri.len == 0) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "zero length URI to proxy");
+            ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
             return NGX_ERROR;
         }
 
@@ -3047,6 +3062,10 @@ ngx_http_proxy_chunked_filter(ngx_event_pipe_t *p, ngx_buf_t *buf)
         ngx_log_error(NGX_LOG_ERR, p->log, 0,
                       "upstream sent invalid chunked response");
 
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
+
         return NGX_ERROR;
     }
 
@@ -3319,6 +3338,10 @@ ngx_http_proxy_non_buffered_chunked_filter(void *data, ssize_t bytes)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "upstream sent invalid chunked response");
 
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
+
         return NGX_ERROR;
     }
 
@@ -3423,6 +3446,10 @@ ngx_http_proxy_process_trailer(ngx_http_request_t *r, ngx_buf_t *buf)
             if (b->last == b->end) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent too big trailers");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3435,6 +3462,11 @@ ngx_http_proxy_process_trailer(ngx_http_request_t *r, ngx_buf_t *buf)
                       "upstream sent invalid trailer: \"%*s\\x%02xd...\"",
                       r->header_end - r->header_name_start,
                       r->header_name_start, *r->header_end);
+
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r,
+                                    NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
 
         return NGX_ERROR;
     }
