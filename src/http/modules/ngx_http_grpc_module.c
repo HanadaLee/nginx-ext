@@ -686,6 +686,9 @@ ngx_http_grpc_eval(ngx_http_request_t *r, ngx_http_grpc_ctx_t *ctx,
                             glcf->grpc_values->elts)
         == NULL)
     {
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -704,6 +707,10 @@ ngx_http_grpc_eval(ngx_http_request_t *r, ngx_http_grpc_ctx_t *ctx,
 #else
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "grpcs protocol requires SSL support");
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
         return NGX_ERROR;
 #endif
 
@@ -736,6 +743,9 @@ ngx_http_grpc_eval(ngx_http_request_t *r, ngx_http_grpc_ctx_t *ctx,
                           "%s in upstream \"%V\"", url.err, &url.url);
         }
 
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -900,12 +910,16 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     if (method.len == 0 || method.data == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "invalid grpc method");
+        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
         return NGX_ERROR;
     }
 
     if (method.len > NGX_HTTP_V2_MAX_FIELD) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "too long http2 method: \"%V\"", &method);
+        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
         return NGX_ERROR;
     }
 
@@ -958,6 +972,8 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     if (uri_len > NGX_HTTP_V2_MAX_FIELD) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "too long http2 URI");
+        ngx_http_upstream_set_error(r,
+                                    NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
         return NGX_ERROR;
     }
 
@@ -1013,6 +1029,10 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     if (host.len > NGX_HTTP_V2_MAX_FIELD) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "too long http2 host: \"%V\"", &host);
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
         return NGX_ERROR;
     }
 
@@ -1048,12 +1068,20 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         if (key_len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header name");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
             return NGX_ERROR;
         }
 
         if (val_len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header value");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
             return NGX_ERROR;
         }
 
@@ -1097,6 +1125,10 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "too long http2 header name: \"%V\"",
                               &header[i].key);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -1104,6 +1136,10 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "too long http2 header value: \"%V: %V\"",
                               &header[i].key, &header[i].value);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -1347,6 +1383,10 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         code((ngx_http_script_engine_t *) &e);
 
         if (e.status) {
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
             return NGX_ERROR;
         }
 
@@ -1372,6 +1412,10 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         e.ip += sizeof(uintptr_t);
 
         if (e.status) {
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
             return NGX_ERROR;
         }
 
@@ -2041,6 +2085,10 @@ ngx_http_grpc_process_header(ngx_http_request_t *r)
                           "upstream rejected request with error %ui",
                           ctx->error);
 
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_CONNECTION_RESET);
+#endif
             return NGX_HTTP_UPSTREAM_INVALID_HEADER;
         }
 
@@ -2072,6 +2120,11 @@ ngx_http_grpc_process_header(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent goaway with error %ui",
                               ctx->error);
+
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
 
                 return NGX_HTTP_UPSTREAM_INVALID_HEADER;
             }
@@ -2277,6 +2330,10 @@ ngx_http_grpc_process_header(ngx_http_request_t *r)
                     if (ctx->end_stream) {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                       "upstream prematurely closed stream");
+#if (NGX_RESTY_EXT)
+                        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
                         return NGX_HTTP_UPSTREAM_INVALID_HEADER;
                     }
 
@@ -2350,6 +2407,10 @@ ngx_http_grpc_filter_init(void *data)
         if (ctx->length > 0) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream prematurely closed stream");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
             return NGX_ERROR;
         }
 
@@ -2403,6 +2464,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                     if (ctx->length > 0) {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                       "upstream prematurely closed stream");
+#if (NGX_RESTY_EXT)
+                        ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
                         return NGX_ERROR;
                     }
 
@@ -2436,6 +2501,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             }
 
             if (rc == NGX_ERROR) {
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2447,6 +2516,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent unexpected http2 frame: %d",
                               ctx->type);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2457,6 +2530,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                                   "upstream sent data frame "
                                   "for unknown stream %ui",
                                   ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2465,6 +2542,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                                   "upstream violated stream flow control, "
                                   "received %uz data frame with window %uz",
                                   ctx->rest, ctx->recv_window);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2473,6 +2554,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                                   "upstream violated connection flow control, "
                                   "received %uz data frame with window %uz",
                                   ctx->rest, ctx->connection->recv_window);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2495,6 +2580,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent frame for unknown stream %ui",
                               ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2505,6 +2594,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent frame for closed stream %ui",
                               ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2541,6 +2634,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             }
 
             if (rc == NGX_ERROR) {
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2548,6 +2645,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream rejected request with error %ui",
                               ctx->error);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_CONNECTION_RESET);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2555,6 +2656,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent frame for closed stream %ui",
                               ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2572,6 +2677,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             }
 
             if (rc == NGX_ERROR) {
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2592,6 +2701,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                               "upstream sent goaway with error %ui",
                               ctx->error);
 
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2609,6 +2722,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             }
 
             if (rc == NGX_ERROR) {
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2628,6 +2745,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             }
 
             if (rc == NGX_ERROR) {
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2647,6 +2768,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             }
 
             if (rc == NGX_ERROR) {
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2657,6 +2782,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
         if (ctx->type == NGX_HTTP_V2_PUSH_PROMISE_FRAME) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent unexpected push promise frame");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -2684,6 +2813,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                                       "upstream sent invalid "
                                       "trailer \"%V: %V\"",
                                       &ctx->name, &ctx->value);
+#if (NGX_RESTY_EXT)
+                        ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                         return NGX_ERROR;
                     }
 
@@ -2715,6 +2848,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent trailer without "
                                   "end stream flag");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2723,6 +2860,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent invalid trailer");
 
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2774,6 +2915,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
             if (ctx->rest == 0) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent too short http2 frame");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2790,6 +2935,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                               "upstream sent http2 frame with too long "
                               "padding: %d in frame %uz",
                               ctx->padding, ctx->rest);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2835,6 +2984,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent response body larger "
                                   "than indicated content length");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2854,6 +3007,10 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent response body larger "
                               "than indicated content length");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 

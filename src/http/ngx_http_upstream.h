@@ -55,7 +55,10 @@
 #define NGX_HTTP_UPSTREAM_IGN_XA_BUFFERING   0x00000080
 #define NGX_HTTP_UPSTREAM_IGN_XA_CHARSET     0x00000100
 #define NGX_HTTP_UPSTREAM_IGN_VARY           0x00000200
+
+
 #if (NGX_RESTY_EXT)
+
 #define NGX_HTTP_UPSTREAM_IGN_PRAGMA         0x00000400
 
 
@@ -68,8 +71,35 @@
 #define NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE    0x00000080
 #define NGX_HTTP_UPSTREAM_IGN_CC_MUSTREVAL   0x00000100
 #define NGX_HTTP_UPSTREAM_IGN_CC_PROXYREVAL  0x00000200
-#endif
 
+
+typedef enum {
+    NGX_HTTP_UPSTREAM_ERR_NONE = 0,
+    NGX_HTTP_UPSTREAM_ERR_UNDEFINED,
+    NGX_HTTP_UPSTREAM_ERR_INVALID_URL,
+    NGX_HTTP_UPSTREAM_ERR_NO_RESOLVER,
+    NGX_HTTP_UPSTREAM_ERR_SSL_CERT_LOAD_FAILED,
+    NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER,
+    NGX_HTTP_UPSTREAM_ERR_RESOLVE_TIMEOUT,
+    NGX_HTTP_UPSTREAM_ERR_RESOLVE_FAILED,
+    NGX_HTTP_UPSTREAM_ERR_NO_LIVE_PEER,
+    NGX_HTTP_UPSTREAM_ERR_CONNECT_TIMEOUT,
+    NGX_HTTP_UPSTREAM_ERR_CONNECT_FAILED,
+    NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_TIMEOUT,
+    NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED,
+    NGX_HTTP_UPSTREAM_ERR_INVALID_SSL_CERT,
+    NGX_HTTP_UPSTREAM_ERR_WRITE_TIMEOUT,
+    NGX_HTTP_UPSTREAM_ERR_WRITE_FAILED,
+    NGX_HTTP_UPSTREAM_ERR_READ_TIMEOUT,
+    NGX_HTTP_UPSTREAM_ERR_READ_FAILED,
+    NGX_HTTP_UPSTREAM_ERR_CONNECTION_RESET,
+    NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED,
+    NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER,
+    NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE,
+    NGX_HTTP_UPSTREAM_ERR_INTERNAL_ERROR
+} ngx_http_upstream_error_e;
+
+#endif
 
 #define NGX_HTTP_UPSTREAM_NOTIFY_HEADER      0x1
 
@@ -82,6 +112,7 @@ typedef struct {
     ngx_msec_t                       queue_time;
 
 #if (NGX_RESTY_EXT)
+    ngx_http_upstream_error_e        error;
     ngx_msec_t                       start_msec;
 
 #if (NGX_HTTP_SSL)
@@ -447,6 +478,10 @@ struct ngx_http_upstream_s {
 
     ngx_http_upstream_state_t       *state;
 
+#if (NGX_RESTY_EXT)
+    ngx_http_upstream_error_e        pending_error;
+#endif
+
     ngx_str_t                        method;
     ngx_str_t                        schema;
     ngx_str_t                        uri;
@@ -508,6 +543,10 @@ ngx_int_t ngx_http_upstream_hide_headers_hash(ngx_conf_t *cf,
 #if (NGX_HTTP_SSL)
 ngx_int_t ngx_http_upstream_merge_ssl_passwords(ngx_conf_t *cf,
     ngx_http_upstream_conf_t *conf, ngx_http_upstream_conf_t *prev);
+#endif
+#if (NGX_RESTY_EXT)
+void ngx_http_upstream_set_error(ngx_http_request_t *r,
+    ngx_http_upstream_error_e code);
 #endif
 
 
