@@ -512,6 +512,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         if (method.len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 method: \"%V\"", &method);
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
             return NGX_ERROR;
         }
 
@@ -575,12 +577,18 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
     if (uri_len == 0) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "zero length URI to proxy");
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
     if (uri_len > NGX_HTTP_V2_MAX_FIELD) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "too long http2 URI");
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
+#endif
         return NGX_ERROR;
     }
 
@@ -610,6 +618,10 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
     if (host.len > NGX_HTTP_V2_MAX_FIELD) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "too long http2 host: \"%V\"", &host);
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
+#endif
         return NGX_ERROR;
     }
 
@@ -798,12 +810,16 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         if (key_len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header name");
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
             return NGX_ERROR;
         }
 
         if (val_len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header value");
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
             return NGX_ERROR;
         }
 
@@ -866,6 +882,10 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "too long http2 header name: \"%V\"",
                               &header[i].key);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -873,6 +893,10 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "too long http2 header value: \"%V: %V\"",
                               &header[i].key, &header[i].value);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -920,6 +944,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         if (u->method.len == 0 || u->method.data == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "invalid method to proxy");
+            ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
             return NGX_ERROR;
         }
 
@@ -943,6 +969,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             if (method.len > NGX_HTTP_V2_MAX_FIELD) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "too long http2 method: \"%V\"", &method);
+                ngx_http_upstream_set_error(r,
+                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
                 return NGX_ERROR;
             }
 
@@ -960,12 +988,14 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         if (u->uri.len == 0) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "zero length URI to proxy");
+            ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
             return NGX_ERROR;
         }
 
         if (u->uri.len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 URI");
+            ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
             return NGX_ERROR;
         }
 
@@ -1003,6 +1033,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header name: \"%V\"",
                           &header[i].key);
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
             return NGX_ERROR;
         }
 
@@ -1010,6 +1042,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header value: \"%V: %V\"",
                           &header[i].key, &header[i].value);
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
             return NGX_ERROR;
         }
 
@@ -2150,6 +2184,10 @@ ngx_http_proxy_v2_process_header(ngx_http_request_t *r)
 
                 h = ngx_list_push(&u->headers_in.headers);
                 if (h == NULL) {
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2189,6 +2227,10 @@ ngx_http_proxy_v2_process_header(ngx_http_request_t *r)
                     if (ctx->end_stream) {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                       "upstream prematurely closed stream");
+#if (NGX_RESTY_EXT)
+                        ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
                         return NGX_HTTP_UPSTREAM_INVALID_HEADER;
                     }
 
@@ -2299,6 +2341,10 @@ ngx_http_proxy_v2_filter_init(void *data)
         if (ctx->length > 0) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream prematurely closed stream");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
             return NGX_ERROR;
         }
 
@@ -2394,6 +2440,10 @@ ngx_http_proxy_v2_non_buffered_filter(void *data, ssize_t bytes)
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent response body larger "
                                   "than indicated content length");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2526,6 +2576,10 @@ ngx_http_proxy_v2_body_filter(ngx_event_pipe_t *p, ngx_buf_t *b)
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent response body larger "
                                   "than indicated content length");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2617,6 +2671,10 @@ ngx_http_proxy_v2_process_control_frame(ngx_http_request_t *r,
                           "upstream sent goaway with error %ui",
                           ctx->error);
 
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -2683,6 +2741,9 @@ ngx_http_proxy_v2_process_control_frame(ngx_http_request_t *r,
     if (ctx->type == NGX_HTTP_V2_PUSH_PROMISE_FRAME) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "upstream sent unexpected push promise frame");
+#if (NGX_RESTY_EXT)
+        ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
         return NGX_ERROR;
     }
 
@@ -2730,6 +2791,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                     if (ctx->length > 0) {
                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                       "upstream prematurely closed stream");
+#if (NGX_RESTY_EXT)
+                        ngx_http_upstream_set_error(r,
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+#endif
                         return NGX_ERROR;
                     }
 
@@ -2772,6 +2837,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent unexpected http2 frame: %d",
                               ctx->type);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2782,6 +2851,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                                   "upstream sent data frame "
                                   "for unknown stream %ui",
                                   ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2822,6 +2895,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent frame for unknown stream %ui",
                               ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2832,6 +2909,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent frame for closed stream %ui",
                               ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2882,6 +2963,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent frame for closed stream %ui",
                               ctx->stream_id);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -2928,6 +3013,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                                       "upstream sent invalid "
                                       "trailer \"%V: %V\"",
                                       &ctx->name, &ctx->value);
+#if (NGX_RESTY_EXT)
+                        ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                         return NGX_ERROR;
                     }
 
@@ -2959,6 +3048,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent trailer without "
                                   "end stream flag");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -2967,6 +3060,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent invalid trailer");
 
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3014,6 +3111,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
             if (ctx->rest == 0) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent too short http2 frame");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3030,6 +3131,10 @@ ngx_http_proxy_v2_process_frames(ngx_http_request_t *r,
                               "upstream sent http2 frame with too long "
                               "padding: %d in frame %uz",
                               ctx->padding, ctx->rest);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3097,6 +3202,10 @@ ngx_http_proxy_v2_parse_frame(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent too large http2 frame: %uz",
                               ctx->rest);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3195,6 +3304,10 @@ ngx_http_proxy_v2_parse_header(ngx_http_request_t *r,
                               "upstream sent headers frame "
                               "with invalid length: %uz",
                               ctx->rest);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3310,6 +3423,10 @@ ngx_http_proxy_v2_parse_header(ngx_http_request_t *r,
                           "upstream sent http2 frame with too long "
                           "padding: %d in frame %uz",
                           ctx->padding, ctx->rest);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -3359,6 +3476,10 @@ ngx_http_proxy_v2_parse_header(ngx_http_request_t *r,
             if (ctx->fragment_state) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent truncated http2 header");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3446,6 +3567,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent invalid http2 "
                                   "table index: %ui", index);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -3490,6 +3615,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent invalid http2 "
                                   "table index: %ui", index);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -3524,6 +3653,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                                   "upstream sent invalid http2 "
                                   "dynamic table size update: %ui",
                                   size_update);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -3647,6 +3780,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent http2 table index "
                               "with continuation flag");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3654,6 +3791,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent invalid http2 "
                               "table index: %ui", ctx->index);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3676,6 +3817,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent zero http2 "
                               "header name length");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3711,6 +3856,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent too large http2 "
                               "header name length");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3726,6 +3875,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                               "upstream sent too large http2 "
                               "header name length: %uz",
                               ctx->name.len);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3763,6 +3916,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 {
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent invalid encoded header");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -3828,6 +3985,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent too large http2 "
                               "header value length");
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3843,6 +4004,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                               "upstream sent too large http2 "
                               "header value length: %uz",
                               ctx->value.len);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
 
@@ -3880,6 +4045,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 {
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                                   "upstream sent invalid encoded header");
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -3924,6 +4093,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent invalid header: \"%V: %V\"",
                               &ctx->name, &ctx->value);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
         }
@@ -3935,6 +4108,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream sent invalid header: \"%V: %V\"",
                               &ctx->name, &ctx->value);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
                 return NGX_ERROR;
             }
         }
@@ -3944,6 +4121,10 @@ ngx_http_proxy_v2_parse_fragment(ngx_http_request_t *r,
         if (len > ctx->header_limit) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent too large http2 header");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
             return NGX_ERROR;
         }
 
@@ -4035,6 +4216,10 @@ ngx_http_proxy_v2_parse_rst_stream(ngx_http_request_t *r,
                           "upstream sent rst stream frame "
                           "with invalid length: %uz",
                           ctx->rest);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
     }
@@ -4122,6 +4307,10 @@ ngx_http_proxy_v2_parse_goaway(ngx_http_request_t *r,
                           "upstream sent goaway frame "
                           "with non-zero stream id: %ui",
                           ctx->stream_id);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -4130,6 +4319,10 @@ ngx_http_proxy_v2_parse_goaway(ngx_http_request_t *r,
                           "upstream sent goaway frame "
                           "with invalid length: %uz",
                           ctx->rest);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
     }
@@ -4234,6 +4427,10 @@ ngx_http_proxy_v2_parse_window_update(ngx_http_request_t *r,
                           "upstream sent window update frame "
                           "with invalid length: %uz",
                           ctx->rest);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
     }
@@ -4296,6 +4493,10 @@ ngx_http_proxy_v2_parse_window_update(ngx_http_request_t *r,
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent too large window update");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -4308,6 +4509,10 @@ ngx_http_proxy_v2_parse_window_update(ngx_http_request_t *r,
         {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent too large window update");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -4350,6 +4555,10 @@ ngx_http_proxy_v2_parse_settings(ngx_http_request_t *r,
                           "upstream sent settings frame "
                           "with non-zero stream id: %ui",
                           ctx->stream_id);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -4362,6 +4571,10 @@ ngx_http_proxy_v2_parse_settings(ngx_http_request_t *r,
                               "upstream sent settings frame "
                               "with ack flag and non-zero length: %uz",
                               ctx->rest);
+#if (NGX_RESTY_EXT)
+                ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                 return NGX_ERROR;
             }
 
@@ -4375,12 +4588,20 @@ ngx_http_proxy_v2_parse_settings(ngx_http_request_t *r,
                           "upstream sent settings frame "
                           "with invalid length: %uz",
                           ctx->rest);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
         if (ctx->free == NULL && ctx->settings++ > 1000) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent too many settings frames");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
     }
@@ -4448,6 +4669,10 @@ ngx_http_proxy_v2_parse_settings(ngx_http_request_t *r,
                                   "upstream sent settings frame "
                                   "with too large initial window size: %ui",
                                   ctx->setting_value);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -4463,6 +4688,10 @@ ngx_http_proxy_v2_parse_settings(ngx_http_request_t *r,
                                   "upstream sent settings frame "
                                   "with too large initial window size: %ui",
                                   ctx->setting_value);
+#if (NGX_RESTY_EXT)
+                    ngx_http_upstream_set_error(r,
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
                     return NGX_ERROR;
                 }
 
@@ -4519,6 +4748,10 @@ ngx_http_proxy_v2_parse_ping(ngx_http_request_t *r,
                           "upstream sent ping frame "
                           "with non-zero stream id: %ui",
                           ctx->stream_id);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
@@ -4527,18 +4760,30 @@ ngx_http_proxy_v2_parse_ping(ngx_http_request_t *r,
                           "upstream sent ping frame "
                           "with invalid length: %uz",
                           ctx->rest);
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
         if (ctx->flags & NGX_HTTP_V2_ACK_FLAG) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent ping frame with ack flag");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
 
         if (ctx->free == NULL && ctx->pings++ > 1000) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "upstream sent too many ping frames");
+#if (NGX_RESTY_EXT)
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+#endif
             return NGX_ERROR;
         }
     }
