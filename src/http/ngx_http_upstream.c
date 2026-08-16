@@ -556,7 +556,7 @@ static ngx_str_t  ngx_http_upstream_errors[] = {
     ngx_string("ERR_CONNECT_FAILED"),
     ngx_string("ERR_SSL_HANDSHAKE_TIMEOUT"),
     ngx_string("ERR_SSL_HANDSHAKE_FAILED"),
-    ngx_string("ERR_INVALID_SSL_CERT"),
+    ngx_string("ERR_SSL_INVALID_CERT"),
     ngx_string("ERR_WRITE_TIMEOUT"),
     ngx_string("ERR_WRITE_FAILED"),
     ngx_string("ERR_READ_TIMEOUT"),
@@ -2109,7 +2109,7 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
                               rc, X509_verify_cert_error_string(rc));
 #if (NGX_RESTY_EXT)
                 ngx_http_upstream_set_error(r,
-                                       NGX_HTTP_UPSTREAM_ERR_INVALID_SSL_CERT);
+                                       NGX_HTTP_UPSTREAM_ERR_SSL_INVALID_CERT);
 #endif
                 goto failed;
             }
@@ -2120,7 +2120,7 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
                               &u->ssl_name);
 #if (NGX_RESTY_EXT)
                 ngx_http_upstream_set_error(r,
-                                       NGX_HTTP_UPSTREAM_ERR_INVALID_SSL_CERT);
+                                       NGX_HTTP_UPSTREAM_ERR_SSL_INVALID_CERT);
 #endif
                 goto failed;
             }
@@ -2878,7 +2878,7 @@ again:
                               "upstream sent too big header");
 #if (NGX_RESTY_EXT)
                 ngx_http_upstream_set_error(r,
-                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+                                        NGX_HTTP_UPSTREAM_ERR_HEADER_TOO_LARGE);
 #endif
 
                 ngx_http_upstream_next(r, u,
