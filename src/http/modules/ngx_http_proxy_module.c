@@ -3656,17 +3656,59 @@ static ngx_int_t
 ngx_http_proxy_http_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-    ngx_http_proxy_ctx_t  *ctx;
+    ngx_http_proxy_ctx_t       *ctx;
+    ngx_str_t                  *name = (ngx_str_t *) data;
+#if (NGX_RESTY_EXT_1_31_4_BACKPORT)
+    ngx_http_proxy_loc_conf_t  *plcf;
+    ngx_str_t                   host;
+#endif
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_proxy_module);
-
-    if (ctx == NULL || ctx->headers_in.pool == NULL) {
+    if (ctx == NULL) {
         v->not_found = 1;
         return NGX_OK;
     }
 
-    return ngx_http_variable_unknown_header(r, v, (ngx_str_t *) data,
-                                            &ctx->headers_in.part,
+#if (NGX_RESTY_EXT_1_31_4_BACKPORT)
+
+    if (name->len == sizeof("proxy_http_host") - 1
+        && ngx_strncasecmp(name->data, "proxy_http_host",
+                           sizeof("proxy_http_host") - 1) == 0)
+    {
+        v->valid = 1;
+        v->no_cacheable = 0;
+        v->not_found = 0;
+
+        plcf = ngx_http_get_module_loc_conf(r, ngx_http_proxy_module);
+
+        if (plcf->host_value) {
+            if (ngx_http_complex_value(r, plcf->host_value, &host)
+                != NGX_OK)
+            {
+                return NGX_ERROR;
+            }
+
+            if (host.len || plcf->http_version == NGX_HTTP_VERSION_10) {
+                v->len = host.len;
+                v->data = host.data;
+                return NGX_OK;
+            }
+        }
+
+        v->len = ctx->vars.host_header.len;
+        v->data = ctx->vars.host_header.data;
+
+        return NGX_OK;
+    }
+
+#endif
+
+    if (ctx->headers_in.pool == NULL) {
+        v->not_found = 1;
+        return NGX_OK;
+    }
+
+    return ngx_http_variable_unknown_header(r, v, name, &ctx->headers_in.part,
                                             sizeof("proxy_http_") - 1);
 }
 
