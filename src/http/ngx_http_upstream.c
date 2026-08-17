@@ -1310,6 +1310,10 @@ ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
                   "cache file \"%s\" contains invalid header",
                   c->file.name.data);
 
+#if (NGX_RESTY_EXT)
+    ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
+#endif
+
     /* TODO: delete file */
 
     return rc;
@@ -3152,10 +3156,6 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
             }
 
             if (rc == NGX_HTTP_UPSTREAM_INVALID_HEADER) {
-#if (NGX_RESTY_EXT)
-                ngx_http_upstream_set_error(r,
-                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
-#endif
                 rc = NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
 
@@ -3201,10 +3201,6 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
         }
 
         if (rc == NGX_HTTP_UPSTREAM_INVALID_HEADER) {
-#if (NGX_RESTY_EXT)
-            ngx_http_upstream_set_error(r,
-                                        NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
-#endif
             rc = NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
 
@@ -5156,10 +5152,6 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
             }
 
             if (rc == NGX_HTTP_UPSTREAM_INVALID_HEADER) {
-#if (NGX_RESTY_EXT)
-                ngx_http_upstream_set_error(r,
-                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
-#endif
                 rc = NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
 
