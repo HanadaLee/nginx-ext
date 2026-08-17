@@ -3672,7 +3672,7 @@ ngx_http_proxy_http_variable(ngx_http_request_t *r,
 #if (NGX_RESTY_EXT_1_31_4_BACKPORT)
 
     if (name->len == sizeof("proxy_http_host") - 1
-        && ngx_strncasecmp(name->data, "proxy_http_host",
+        && ngx_strncasecmp(name->data, (u_char *) "proxy_http_host",
                            sizeof("proxy_http_host") - 1) == 0)
     {
         v->valid = 1;
