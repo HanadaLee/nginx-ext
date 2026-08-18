@@ -3346,6 +3346,11 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
                 ngx_http_file_cache_free(r->cache, u->pipe->temp_file);
             }
 #endif
+
+#if (NGX_RESTY_EXT)
+            u->error_page = 1;
+#endif
+
             ngx_http_upstream_finalize_request(r, u, status);
 
             return NGX_OK;
@@ -5216,7 +5221,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
                    "finalize http upstream request: %i", rc);
 
 #if (NGX_RESTY_EXT)
-    if ((rc == NGX_HTTP_INTERNAL_SERVER_ERROR
+    if (((rc == NGX_HTTP_INTERNAL_SERVER_ERROR && !u->error_page)
          || (rc == NGX_ERROR
              && !r->filter_finalize
              && !r->connection->error
