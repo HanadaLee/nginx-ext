@@ -5212,7 +5212,8 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
                    "finalize http upstream request: %i", rc);
 
 #if (NGX_RESTY_EXT)
-    if ((rc == NGX_ERROR || rc == NGX_HTTP_INTERNAL_SERVER_ERROR)
+    if ((rc == NGX_HTTP_INTERNAL_SERVER_ERROR
+         || (rc == NGX_ERROR && !r->filter_finalize))
         && u->pending_error == NGX_HTTP_UPSTREAM_ERR_NONE
         && (u->state == NULL
             || u->state->error == NGX_HTTP_UPSTREAM_ERR_NONE))
