@@ -515,6 +515,9 @@ struct ngx_http_upstream_s {
     unsigned                         keepalive:1;
     unsigned                         upgrade:1;
     unsigned                         error:1;
+#if (NGX_RESTY_EXT)
+    unsigned                         error_page:1;
+#endif
 
     unsigned                         request_sent:1;
     unsigned                         request_body_sent:1;
