@@ -61,14 +61,21 @@ typedef struct ngx_thread_pool_s  ngx_thread_pool_t;
 
 
 #if (NGX_RESTY_EXT)
+
 #define NGX_HTTP_REQUEST_ID_HEXID       1
 #define NGX_HTTP_REQUEST_ID_TRACEID     2
+
+
+#define NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT  0
+#define NGX_HTTP_ERROR_PAGE_FORMAT_JSON     1
+#define NGX_HTTP_ERROR_PAGE_FORMAT_XML      2
 
 
 #define NGX_HTTP_NMC_OFF                0
 #define NGX_HTTP_NMC_ANY                1
 #define NGX_HTTP_NMC_STRICT             2
 #define NGX_HTTP_NMC_PREFER_INM         3
+
 #endif
 
 
@@ -488,6 +495,7 @@ struct ngx_http_core_loc_conf_s {
 
     ngx_flag_t    error_page_server_info;  /* error_page_server_info */
     ngx_int_t     error_page_client_ip_var_index; /* error_page_client_ip */
+    ngx_uint_t    error_page_format;       /* error_page_format */
 
     ngx_flag_t    ignore_if_unmodified_since; /* ignore_if_unmodified_since */
     ngx_flag_t    ignore_if_match;         /* ignore_if_match */
