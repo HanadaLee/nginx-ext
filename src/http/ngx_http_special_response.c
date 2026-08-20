@@ -962,20 +962,20 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     }
 
     if (clcf->error_page_format == NGX_HTTP_ERROR_PAGE_FORMAT_JSON) {
-        size = sizeof("{\"status\": ") - 1
+        size = sizeof("{\"status\":") - 1
                + status_len
-               + sizeof(", \"error\": \"") - 1
+               + sizeof(",\"error\":\"") - 1
                + error.len + ngx_escape_json(NULL, error.data, error.len)
-               + sizeof("\", \"message\": \"") - 1
+               + sizeof("\",\"message\":\"") - 1
                + message.len + ngx_escape_json(NULL, message.data, message.len)
                + sizeof("\"") - 1;
 
         for (i = 0; i < nfields; i++) {
-            size += sizeof(", \"") - 1
+            size += sizeof(",\"") - 1
                     + fields[i].name.len
                     + ngx_escape_json(NULL, fields[i].name.data,
                                       fields[i].name.len)
-                    + sizeof("\": \"") - 1
+                    + sizeof("\":\"") - 1
                     + values[i].len
                     + ngx_escape_json(NULL, values[i].data, values[i].len)
                     + sizeof("\"") - 1;
@@ -985,16 +985,16 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
 
     } else {
         size = sizeof("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" CRLF
-                      "<error>" CRLF "  <status>") - 1
+                      "<Error><Status>") - 1
                + status_len
-               + sizeof("</status>" CRLF "  <error>") - 1
+               + sizeof("</Status><Error>") - 1
                + error.len + ngx_escape_html(NULL, error.data, error.len)
-               + sizeof("</error>" CRLF "  <message>") - 1
+               + sizeof("</Error><Message>") - 1
                + message.len + ngx_escape_html(NULL, message.data, message.len)
-               + sizeof("</message>") - 1;
+               + sizeof("</Message>") - 1;
 
         for (i = 0; i < nfields; i++) {
-            size += sizeof(CRLF "  <") - 1
+            size += sizeof("<") - 1
                     + fields[i].name.len
                     + sizeof(">") - 1
                     + values[i].len
@@ -1004,7 +1004,7 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
                     + sizeof(">") - 1;
         }
 
-        size += sizeof(CRLF "</error>" CRLF) - 1;
+        size += sizeof("</Error>") - 1;
     }
 
     b = ngx_create_temp_buf(r->pool, size);
@@ -1013,21 +1013,21 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     }
 
     if (clcf->error_page_format == NGX_HTTP_ERROR_PAGE_FORMAT_JSON) {
-        p = ngx_cpymem(b->last, "{\"status\": ",
-                       sizeof("{\"status\": ") - 1);
+        p = ngx_cpymem(b->last, "{\"status\":",
+                       sizeof("{\"status\":") - 1);
         p = ngx_cpymem(p, status, status_len);
-        p = ngx_cpymem(p, ", \"error\": \"", sizeof(", \"error\": \"") - 1);
+        p = ngx_cpymem(p, ",\"error\":\"", sizeof(",\"error\":\"") - 1);
         p = (u_char *) ngx_escape_json(p, error.data, error.len);
-        p = ngx_cpymem(p, "\", \"message\": \"",
-                       sizeof("\", \"message\": \"") - 1);
+        p = ngx_cpymem(p, "\",\"message\":\"",
+                       sizeof("\",\"message\":\"") - 1);
         p = (u_char *) ngx_escape_json(p, message.data, message.len);
         *p++ = '"';
 
         for (i = 0; i < nfields; i++) {
-            p = ngx_cpymem(p, ", \"", sizeof(", \"") - 1);
+            p = ngx_cpymem(p, ",\"", sizeof(",\"") - 1);
             p = (u_char *) ngx_escape_json(p, fields[i].name.data,
                                            fields[i].name.len);
-            p = ngx_cpymem(p, "\": \"", sizeof("\": \"") - 1);
+            p = ngx_cpymem(p, "\":\"", sizeof("\":\"") - 1);
             p = (u_char *) ngx_escape_json(p, values[i].data, values[i].len);
             *p++ = '"';
         }
@@ -1040,20 +1040,20 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     } else {
         p = ngx_cpymem(b->last,
                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" CRLF
-                       "<error>" CRLF "  <status>",
+                       "<Error><Status>",
                        sizeof("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" CRLF
-                              "<error>" CRLF "  <status>") - 1);
+                              "<Error><Status>") - 1);
         p = ngx_cpymem(p, status, status_len);
-        p = ngx_cpymem(p, "</status>" CRLF "  <error>",
-                       sizeof("</status>" CRLF "  <error>") - 1);
+        p = ngx_cpymem(p, "</Status><Error>",
+                       sizeof("</Status><Error>") - 1);
         p = (u_char *) ngx_escape_html(p, error.data, error.len);
-        p = ngx_cpymem(p, "</error>" CRLF "  <message>",
-                       sizeof("</error>" CRLF "  <message>") - 1);
+        p = ngx_cpymem(p, "</Error><Message>",
+                       sizeof("</Error><Message>") - 1);
         p = (u_char *) ngx_escape_html(p, message.data, message.len);
-        p = ngx_cpymem(p, "</message>", sizeof("</message>") - 1);
+        p = ngx_cpymem(p, "</Message>", sizeof("</Message>") - 1);
 
         for (i = 0; i < nfields; i++) {
-            p = ngx_cpymem(p, CRLF "  <", sizeof(CRLF "  <") - 1);
+            *p++ = '<';
             p = ngx_cpymem(p, fields[i].name.data, fields[i].name.len);
             *p++ = '>';
             p = (u_char *) ngx_escape_html(p, values[i].data, values[i].len);
@@ -1062,8 +1062,7 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
             *p++ = '>';
         }
 
-        p = ngx_cpymem(p, CRLF "</error>" CRLF,
-                       sizeof(CRLF "</error>" CRLF) - 1);
+        p = ngx_cpymem(p, "</Error>", sizeof("</Error>") - 1);
 
         r->headers_out.content_type_len = sizeof("application/xml") - 1;
         ngx_str_set(&r->headers_out.content_type, "application/xml");
