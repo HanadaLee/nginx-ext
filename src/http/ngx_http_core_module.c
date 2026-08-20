@@ -3764,7 +3764,11 @@ ngx_http_core_init_main_conf(ngx_conf_t *cf, void *conf)
             ngx_align(cmcf->server_names_hash_bucket_size, ngx_cacheline_size);
 
 
+#if (NGX_RESTY_EXT)
+    ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 2048);
+#else
     ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 1024);
+#endif
     ngx_conf_init_uint_value(cmcf->variables_hash_bucket_size, 64);
 
     cmcf->variables_hash_bucket_size =
