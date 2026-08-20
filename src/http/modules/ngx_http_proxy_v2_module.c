@@ -722,8 +722,20 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         }
 
 #if !(NGX_RESTY_EXT)
-        len += 1 + NGX_HTTP_V2_INT_OCTETS + key_len
-                 + NGX_HTTP_V2_INT_OCTETS + val_len;
+        if (key_len > NGX_HTTP_V2_MAX_FIELD) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too long http2 header name");
+            return NGX_ERROR;
+        }
+
+        if (val_len > NGX_HTTP_V2_MAX_FIELD) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too long http2 header value");
+            return NGX_ERROR;
+        }
+
+        headers_len += 1 + NGX_HTTP_V2_INT_OCTETS + key_len
+                       + NGX_HTTP_V2_INT_OCTETS + val_len;
 #endif
 
         if (tmp_len < key_len) {
@@ -849,6 +861,10 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         th->hash = ngx_hash_key_lc(th->key.data, th->key.len);
         th->next = NULL;
     }
+
+#else
+
+    len += headers_len;
 
 #endif
 
