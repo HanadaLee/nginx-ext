@@ -27,9 +27,9 @@ typedef struct {
 
 #if (NGX_RESTY_EXT)
 
-#define NGX_HTTP_AUTO_REDIRECT_OFF      0
-#define NGX_HTTP_AUTO_REDIRECT_ON       1
-#define NGX_HTTP_AUTO_REDIRECT_DEFAULT  2
+#define NGX_HTTP_AUTO_REDIRECT_OFF        0
+#define NGX_HTTP_AUTO_REDIRECT_ON         1
+#define NGX_HTTP_AUTO_REDIRECT_DEFAULT    2
 
 #endif
 
@@ -90,7 +90,7 @@ static char *ngx_http_core_internal(ngx_conf_t *cf, ngx_command_t *cmd,
 static char *ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 #if (NGX_RESTY_EXT)
-static char *ngx_http_core_error_page_client_ip(ngx_conf_t *cf,
+static char *ngx_http_core_error_page_field(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
 #endif
 #if (NGX_HTTP_GZIP)
@@ -232,11 +232,6 @@ static ngx_str_t  ngx_http_gzip_no_cache = ngx_string("no-cache");
 static ngx_str_t  ngx_http_gzip_no_store = ngx_string("no-store");
 static ngx_str_t  ngx_http_gzip_private = ngx_string("private");
 
-#endif
-
-
-#if (NGX_RESTY_EXT)
-static ngx_str_t  ngx_http_remote_addr = ngx_string("remote_addr");
 #endif
 
 
@@ -862,16 +857,9 @@ static ngx_command_t  ngx_http_core_commands[] = {
       offsetof(ngx_http_core_loc_conf_t, request_id_header),
       NULL },
 
-    { ngx_string("error_page_server_info"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_core_loc_conf_t, error_page_server_info),
-      NULL },
-
-    { ngx_string("error_page_client_ip"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_http_core_error_page_client_ip,
+    { ngx_string("error_page_field"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
+      ngx_http_core_error_page_field,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
@@ -4004,8 +3992,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
 #if (NGX_RESTY_EXT)
     clcf->request_id_algorithm = NGX_CONF_UNSET_UINT;
 
-    clcf->error_page_server_info = NGX_CONF_UNSET;
-    clcf->error_page_client_ip_var_index = NGX_CONF_UNSET;
+    clcf->error_page_fields = NGX_CONF_UNSET_PTR;
     clcf->error_page_format = NGX_CONF_UNSET_UINT;
 
     clcf->ignore_if_unmodified_since = NGX_CONF_UNSET;
@@ -4323,23 +4310,12 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->request_id_header,
                              prev->request_id_header, "");
 
-    ngx_conf_merge_value(conf->error_page_server_info,
-                         prev->error_page_server_info, 1);
-
-    ngx_conf_merge_value(conf->error_page_client_ip_var_index,
-                         prev->error_page_client_ip_var_index, 0);
+    ngx_conf_merge_ptr_value(conf->error_page_fields,
+                             prev->error_page_fields, NULL);
 
     ngx_conf_merge_uint_value(conf->error_page_format,
                               prev->error_page_format,
                               NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT);
-
-    if (conf->error_page_client_ip_var_index == 0) {
-        conf->error_page_client_ip_var_index = ngx_http_get_variable_index(cf,
-                                                        &ngx_http_remote_addr);
-        if (conf->error_page_client_ip_var_index == NGX_ERROR) {
-            return NGX_CONF_ERROR;
-        }
-    }
 
     ngx_conf_merge_value(conf->ignore_if_unmodified_since,
                          prev->ignore_if_unmodified_since, 0);
@@ -5602,27 +5578,80 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 #if (NGX_RESTY_EXT)
 
 static char *
-ngx_http_core_error_page_client_ip(ngx_conf_t *cf, ngx_command_t *cmd,
+ngx_http_core_error_page_field(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf)
 {
-    ngx_http_core_loc_conf_t  *clcf = conf;
+    ngx_http_core_loc_conf_t     *clcf = conf;
 
-    ngx_str_t  *value;
+    u_char                       *p, *last;
+    ngx_str_t                    *value, name;
+    ngx_uint_t                    i;
+    ngx_http_error_page_field_t  *field;
 
     value = cf->args->elts;
 
-    if (value[1].data[0] != '$') {
+    if (value[1].len == 0
+        || !((value[1].data[0] >= 'A' && value[1].data[0] <= 'Z')
+             || (value[1].data[0] >= 'a' && value[1].data[0] <= 'z')
+             || value[1].data[0] == '_'))
+    {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "invalid variable \"%V\"", &value[1]);
+                           "invalid error page field name \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
     }
 
-    value[1].len--;
-    value[1].data++;
+    last = value[1].data + value[1].len;
 
-    clcf->error_page_client_ip_var_index =
-        ngx_http_get_variable_index(cf, &value[1]);
-    if (clcf->error_page_client_ip_var_index == NGX_ERROR) {
+    for (p = value[1].data + 1; p < last; p++) {
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z')
+            || (*p >= '0' && *p <= '9') || *p == '_'
+            || *p == '-' || *p == '.')
+        {
+            continue;
+        }
+
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "invalid error page field name \"%V\"", &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    if (value[2].len < 2 || value[2].data[0] != '$') {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "invalid variable \"%V\"", &value[2]);
+        return NGX_CONF_ERROR;
+    }
+
+    if (clcf->error_page_fields == NGX_CONF_UNSET_PTR) {
+        clcf->error_page_fields = ngx_array_create(cf->pool, 4,
+                                          sizeof(ngx_http_error_page_field_t));
+        if (clcf->error_page_fields == NULL) {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    field = clcf->error_page_fields->elts;
+
+    for (i = 0; i < clcf->error_page_fields->nelts; i++) {
+        if (field[i].name.len == value[1].len
+            && ngx_strncmp(field[i].name.data, value[1].data,
+                           value[1].len) == 0)
+        {
+            return "is duplicate";
+        }
+    }
+
+    field = ngx_array_push(clcf->error_page_fields);
+    if (field == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    field->name = value[1];
+
+    name.len = value[2].len - 1;
+    name.data = value[2].data + 1;
+
+    field->index = ngx_http_get_variable_index(cf, &name);
+    if (field->index == (ngx_uint_t) NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
 

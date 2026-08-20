@@ -339,6 +339,16 @@ typedef struct {
 } ngx_http_err_page_t;
 
 
+#if (NGX_RESTY_EXT)
+
+typedef struct {
+    ngx_str_t                  name;
+    ngx_uint_t                 index;
+} ngx_http_error_page_field_t;
+
+#endif
+
+
 struct ngx_http_core_loc_conf_s {
     ngx_str_t     name;          /* location name */
     ngx_str_t     escaped_name;
@@ -493,8 +503,7 @@ struct ngx_http_core_loc_conf_s {
     ngx_uint_t    request_id_algorithm;    /* request_id_algorithm */
     ngx_str_t     request_id_header;       /* request_id_header */
 
-    ngx_flag_t    error_page_server_info;  /* error_page_server_info */
-    ngx_int_t     error_page_client_ip_var_index; /* error_page_client_ip */
+    ngx_array_t  *error_page_fields;       /* error_page_field */
     ngx_uint_t    error_page_format;       /* error_page_format */
 
     ngx_flag_t    ignore_if_unmodified_since; /* ignore_if_unmodified_since */
