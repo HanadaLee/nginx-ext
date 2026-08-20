@@ -147,8 +147,13 @@ static ngx_int_t ngx_http_send_error_page(ngx_http_request_t *r,
 static ngx_int_t ngx_http_send_special_response(ngx_http_request_t *r,
     ngx_http_core_loc_conf_t *clcf, ngx_uint_t err);
 static ngx_int_t ngx_http_send_refresh(ngx_http_request_t *r);
+
 #if (NGX_RESTY_EXT)
-static ngx_buf_t *ngx_http_set_server_info(ngx_http_request_t *r);
+
+static ngx_str_t *ngx_http_get_error_page_field_values(ngx_http_request_t *r,
+    ngx_http_core_loc_conf_t *clcf);
+static ngx_buf_t *ngx_http_set_error_page_fields(ngx_http_request_t *r,
+    ngx_http_core_loc_conf_t *clcf);
 static ngx_int_t ngx_http_send_formatted_response(ngx_http_request_t *r,
     ngx_http_core_loc_conf_t *clcf, ngx_uint_t err);
 
@@ -157,6 +162,7 @@ static u_char ngx_http_error_head[] =
 "<!DOCTYPE html><html>" CRLF
 "<head>"
 ;
+
 #endif
 
 
@@ -194,6 +200,7 @@ static u_char ngx_http_error_tail[] =
 
 
 #if (NGX_RESTY_EXT)
+
 static u_char ngx_http_error_style[] =
 "<style>" CRLF
 "body{font-family:Arial,sans-serif;background-color:#f4f4f9;color:#333;"
@@ -215,46 +222,33 @@ static u_char ngx_http_error_style[] =
 ;
 
 
-static u_char ngx_http_error_server_info_head[] =
+static u_char ngx_http_error_fields_head[] =
 "<table><tbody>" CRLF
+;
+
+
+static u_char ngx_http_error_field_head[] =
 "<tr>" CRLF
-"<td>Date</td>" CRLF
 "<td>"
 ;
 
 
-static u_char ngx_http_error_server_info_ip[] =
+static u_char ngx_http_error_field_value[] =
 "</td>" CRLF
-"</tr>" CRLF
-"<tr>" CRLF
-"<td>Client IP</td>" CRLF
 "<td>"
 ;
 
 
-static u_char ngx_http_error_server_info_server[] =
+static u_char ngx_http_error_field_tail[] =
 "</td>" CRLF
 "</tr>" CRLF
-"<tr>" CRLF
-"<td>Server</td>" CRLF
-"<td>"
 ;
 
 
-static u_char ngx_http_error_server_info_id[] =
-"</td>" CRLF
-"</tr>" CRLF
-"<tr>" CRLF
-"<td>Request ID</td>" CRLF
-"<td>"
-;
-
-
-static u_char ngx_http_error_server_info_tail[] =
-"</td>" CRLF
-"</tr>" CRLF
+static u_char ngx_http_error_fields_tail[] =
 "</tbody></table>" CRLF
 ;
+
 #endif
 
 
@@ -936,15 +930,16 @@ static ngx_int_t
 ngx_http_send_formatted_response(ngx_http_request_t *r,
     ngx_http_core_loc_conf_t *clcf, ngx_uint_t err)
 {
-    ngx_buf_t                   *b;
-    ngx_chain_t                  out;
-    ngx_http_variable_value_t   *value;
-    ngx_str_t                    error, message, client_ip, request_id;
-    u_char                      *p, *status_end;
-    u_char                       status[NGX_INT_T_LEN];
-    size_t                       size, status_len;
-    ngx_uint_t                   info;
-    ngx_int_t                    rc;
+    u_char                             *p, *status_end;
+    u_char                              status[NGX_INT_T_LEN];
+    size_t                              size, status_len;
+    ngx_int_t                           rc;
+    ngx_uint_t                          i, nfields;
+    ngx_str_t                          *values;
+    ngx_str_t                           error, message;
+    ngx_buf_t                          *b;
+    ngx_chain_t                         out;
+    ngx_http_error_page_field_t        *fields;
 
     error = ngx_http_error_page_infos[err].reason;
     message = ngx_http_error_page_infos[err].message;
@@ -952,30 +947,18 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     status_end = ngx_sprintf(status, "%ui", r->err_status);
     status_len = status_end - status;
 
-    info = clcf->error_page_server_info && err >= NGX_HTTP_OFF_4XX;
+    fields = NULL;
+    values = NULL;
+    nfields = 0;
 
-    client_ip.data = (u_char *) "-";
-    client_ip.len = 1;
-    request_id.data = (u_char *) "-";
-    request_id.len = 1;
-
-    if (info) {
-        if (clcf->error_page_client_ip_var_index) {
-            value = ngx_http_get_indexed_variable(r,
-                         clcf->error_page_client_ip_var_index);
-
-            if (value && !value->not_found) {
-                client_ip.data = value->data;
-                client_ip.len = value->len;
-            }
+    if (err >= NGX_HTTP_OFF_4XX && clcf->error_page_fields) {
+        values = ngx_http_get_error_page_field_values(r, clcf);
+        if (values == NULL) {
+            return NGX_ERROR;
         }
 
-        if (ngx_http_get_request_id(r, &request_id) != NGX_OK
-            || request_id.len == 0)
-        {
-            request_id.data = (u_char *) "-";
-            request_id.len = 1;
-        }
+        fields = clcf->error_page_fields->elts;
+        nfields = clcf->error_page_fields->nelts;
     }
 
     if (clcf->error_page_format == NGX_HTTP_ERROR_PAGE_FORMAT_JSON) {
@@ -987,21 +970,14 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
                + message.len + ngx_escape_json(NULL, message.data, message.len)
                + sizeof("\"") - 1;
 
-        if (info) {
-            size += sizeof(", \"date\": \"") - 1
-                    + ngx_cached_http_time.len
-                    + ngx_escape_json(NULL, ngx_cached_http_time.data,
-                                      ngx_cached_http_time.len)
-                    + sizeof("\", \"client_ip\": \"") - 1
-                    + client_ip.len + ngx_escape_json(NULL, client_ip.data,
-                                                      client_ip.len)
-                    + sizeof("\", \"server\": \"") - 1
-                    + ngx_cycle->hostname.len
-                    + ngx_escape_json(NULL, ngx_cycle->hostname.data,
-                                      ngx_cycle->hostname.len)
-                    + sizeof("\", \"request_id\": \"") - 1
-                    + request_id.len + ngx_escape_json(NULL, request_id.data,
-                                                       request_id.len)
+        for (i = 0; i < nfields; i++) {
+            size += sizeof(", \"") - 1
+                    + fields[i].name.len
+                    + ngx_escape_json(NULL, fields[i].name.data,
+                                      fields[i].name.len)
+                    + sizeof("\": \"") - 1
+                    + values[i].len
+                    + ngx_escape_json(NULL, values[i].data, values[i].len)
                     + sizeof("\"") - 1;
         }
 
@@ -1017,22 +993,15 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
                + message.len + ngx_escape_html(NULL, message.data, message.len)
                + sizeof("</message>") - 1;
 
-        if (info) {
-            size += sizeof(CRLF "  <date>") - 1
-                    + ngx_cached_http_time.len
-                    + ngx_escape_html(NULL, ngx_cached_http_time.data,
-                                      ngx_cached_http_time.len)
-                    + sizeof("</date>" CRLF "  <client_ip>") - 1
-                    + client_ip.len + ngx_escape_html(NULL, client_ip.data,
-                                                      client_ip.len)
-                    + sizeof("</client_ip>" CRLF "  <server>") - 1
-                    + ngx_cycle->hostname.len
-                    + ngx_escape_html(NULL, ngx_cycle->hostname.data,
-                                      ngx_cycle->hostname.len)
-                    + sizeof("</server>" CRLF "  <request_id>") - 1
-                    + request_id.len + ngx_escape_html(NULL, request_id.data,
-                                                       request_id.len)
-                    + sizeof("</request_id>") - 1;
+        for (i = 0; i < nfields; i++) {
+            size += sizeof(CRLF "  <") - 1
+                    + fields[i].name.len
+                    + sizeof(">") - 1
+                    + values[i].len
+                    + ngx_escape_html(NULL, values[i].data, values[i].len)
+                    + sizeof("</") - 1
+                    + fields[i].name.len
+                    + sizeof(">") - 1;
         }
 
         size += sizeof(CRLF "</error>" CRLF) - 1;
@@ -1054,21 +1023,12 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
         p = (u_char *) ngx_escape_json(p, message.data, message.len);
         *p++ = '"';
 
-        if (info) {
-            p = ngx_cpymem(p, ", \"date\": \"",
-                           sizeof(", \"date\": \"") - 1);
-            p = (u_char *) ngx_escape_json(p, ngx_cached_http_time.data,
-                                           ngx_cached_http_time.len);
-            p = ngx_cpymem(p, "\", \"client_ip\": \"",
-                           sizeof("\", \"client_ip\": \"") - 1);
-            p = (u_char *) ngx_escape_json(p, client_ip.data, client_ip.len);
-            p = ngx_cpymem(p, "\", \"server\": \"",
-                           sizeof("\", \"server\": \"") - 1);
-            p = (u_char *) ngx_escape_json(p, ngx_cycle->hostname.data,
-                                           ngx_cycle->hostname.len);
-            p = ngx_cpymem(p, "\", \"request_id\": \"",
-                           sizeof("\", \"request_id\": \"") - 1);
-            p = (u_char *) ngx_escape_json(p, request_id.data, request_id.len);
+        for (i = 0; i < nfields; i++) {
+            p = ngx_cpymem(p, ", \"", sizeof(", \"") - 1);
+            p = (u_char *) ngx_escape_json(p, fields[i].name.data,
+                                           fields[i].name.len);
+            p = ngx_cpymem(p, "\": \"", sizeof("\": \"") - 1);
+            p = (u_char *) ngx_escape_json(p, values[i].data, values[i].len);
             *p++ = '"';
         }
 
@@ -1092,21 +1052,14 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
         p = (u_char *) ngx_escape_html(p, message.data, message.len);
         p = ngx_cpymem(p, "</message>", sizeof("</message>") - 1);
 
-        if (info) {
-            p = ngx_cpymem(p, CRLF "  <date>", sizeof(CRLF "  <date>") - 1);
-            p = (u_char *) ngx_escape_html(p, ngx_cached_http_time.data,
-                                           ngx_cached_http_time.len);
-            p = ngx_cpymem(p, "</date>" CRLF "  <client_ip>",
-                           sizeof("</date>" CRLF "  <client_ip>") - 1);
-            p = (u_char *) ngx_escape_html(p, client_ip.data, client_ip.len);
-            p = ngx_cpymem(p, "</client_ip>" CRLF "  <server>",
-                           sizeof("</client_ip>" CRLF "  <server>") - 1);
-            p = (u_char *) ngx_escape_html(p, ngx_cycle->hostname.data,
-                                           ngx_cycle->hostname.len);
-            p = ngx_cpymem(p, "</server>" CRLF "  <request_id>",
-                           sizeof("</server>" CRLF "  <request_id>") - 1);
-            p = (u_char *) ngx_escape_html(p, request_id.data, request_id.len);
-            p = ngx_cpymem(p, "</request_id>", sizeof("</request_id>") - 1);
+        for (i = 0; i < nfields; i++) {
+            p = ngx_cpymem(p, CRLF "  <", sizeof(CRLF "  <") - 1);
+            p = ngx_cpymem(p, fields[i].name.data, fields[i].name.len);
+            *p++ = '>';
+            p = (u_char *) ngx_escape_html(p, values[i].data, values[i].len);
+            p = ngx_cpymem(p, "</", sizeof("</") - 1);
+            p = ngx_cpymem(p, fields[i].name.data, fields[i].name.len);
+            *p++ = '>';
         }
 
         p = ngx_cpymem(p, CRLF "</error>" CRLF,
@@ -1119,7 +1072,7 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     b->last = p;
 
     r->headers_out.content_type_lowcase = NULL;
-    r->headers_out.content_length_n = size;
+    r->headers_out.content_length_n = b->last - b->pos;
 
     if (r->headers_out.content_length) {
         r->headers_out.content_length->hash = 0;
@@ -1454,8 +1407,8 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     }
 
 #if (NGX_RESTY_EXT)
-    if (clcf->error_page_server_info && err >= NGX_HTTP_OFF_4XX) {
-        ib = ngx_http_set_server_info(r);
+    if (err >= NGX_HTTP_OFF_4XX && clcf->error_page_fields) {
+        ib = ngx_http_set_error_page_fields(r, clcf);
         if (ib == NULL) {
             return NGX_ERROR;
         }
@@ -1700,80 +1653,97 @@ ngx_http_send_refresh(ngx_http_request_t *r)
 
 
 #if (NGX_RESTY_EXT)
-static ngx_buf_t *
-ngx_http_set_server_info(ngx_http_request_t *r)
+
+static ngx_str_t *
+ngx_http_get_error_page_field_values(ngx_http_request_t *r,
+    ngx_http_core_loc_conf_t *clcf)
 {
-    size_t                      size;
-    ngx_buf_t                  *b;
-    ngx_str_t                   client_ip, request_id;
-    ngx_http_variable_value_t  *value;
-    ngx_http_core_loc_conf_t   *clcf;
+    ngx_str_t                   *values;
+    ngx_uint_t                   i, n;
+    ngx_http_variable_value_t   *value;
+    ngx_http_error_page_field_t *fields;
 
-    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+    n = clcf->error_page_fields->nelts;
 
-    if (!clcf->error_page_client_ip_var_index) {
-        client_ip.data = (u_char *) "-";
-        client_ip.len = 1;
+    values = ngx_palloc(r->pool, n * sizeof(ngx_str_t));
+    if (values == NULL) {
+        return NULL;
+    }
 
-    } else {
-        value = ngx_http_get_indexed_variable(r,
-                    clcf->error_page_client_ip_var_index);
+    fields = clcf->error_page_fields->elts;
 
-        if (value == NULL || value->not_found) {
-            client_ip.data = (u_char *) "-";
-            client_ip.len = 1;
+    for (i = 0; i < n; i++) {
+        value = ngx_http_get_indexed_variable(r, fields[i].index);
+
+        if (value == NULL || value->not_found || value->len == 0) {
+            ngx_str_set(&values[i], "-");
 
         } else {
-            client_ip.data = value->data;
-            client_ip.len = value->len;
+            values[i].len = value->len;
+            values[i].data = value->data;
         }
     }
 
-    if (ngx_http_get_request_id(r, &request_id) != NGX_OK
-        || request_id.len == 0)
-    {
-        request_id.data = (u_char *) "-";
-        request_id.len = 1;
+    return values;
+}
+
+
+static ngx_buf_t *
+ngx_http_set_error_page_fields(ngx_http_request_t *r,
+    ngx_http_core_loc_conf_t *clcf)
+{
+    size_t                       size;
+    ngx_str_t                   *values;
+    ngx_uint_t                   i;
+    ngx_buf_t                   *b;
+    ngx_http_error_page_field_t *fields;
+
+    values = ngx_http_get_error_page_field_values(r, clcf);
+    if (values == NULL) {
+        return NULL;
     }
 
-    size = sizeof(ngx_http_error_server_info_head) - 1
-           + ngx_cached_http_time.len
-           + sizeof(ngx_http_error_server_info_ip) - 1
-           + client_ip.len
-           + sizeof(ngx_http_error_server_info_server) - 1
-           + ngx_cycle->hostname.len
-           + sizeof(ngx_http_error_server_info_id) - 1
-           + request_id.len
-           + sizeof(ngx_http_error_server_info_tail) - 1;
+    fields = clcf->error_page_fields->elts;
+
+    size = sizeof(ngx_http_error_fields_head) - 1
+           + sizeof(ngx_http_error_fields_tail) - 1;
+
+    for (i = 0; i < clcf->error_page_fields->nelts; i++) {
+        size += sizeof(ngx_http_error_field_head) - 1
+                + fields[i].name.len
+                + ngx_escape_html(NULL, fields[i].name.data,
+                                  fields[i].name.len)
+                + sizeof(ngx_http_error_field_value) - 1
+                + values[i].len
+                + ngx_escape_html(NULL, values[i].data, values[i].len)
+                + sizeof(ngx_http_error_field_tail) - 1;
+    }
 
     b = ngx_create_temp_buf(r->pool, size);
     if (b == NULL) {
         return NULL;
     }
 
-    b->last = ngx_cpymem(b->last, ngx_http_error_server_info_head,
-                         sizeof(ngx_http_error_server_info_head) - 1);
-    b->last = ngx_cpymem(b->last, ngx_cached_http_time.data,
-                         ngx_cached_http_time.len);
+    b->last = ngx_cpymem(b->last, ngx_http_error_fields_head,
+                         sizeof(ngx_http_error_fields_head) - 1);
 
-    b->last = ngx_cpymem(b->last, ngx_http_error_server_info_ip,
-                         sizeof(ngx_http_error_server_info_ip) - 1);
-    b->last = ngx_cpymem(b->last, client_ip.data,
-                         client_ip.len);
+    for (i = 0; i < clcf->error_page_fields->nelts; i++) {
+        b->last = ngx_cpymem(b->last, ngx_http_error_field_head,
+                             sizeof(ngx_http_error_field_head) - 1);
+        b->last = (u_char *) ngx_escape_html(b->last, fields[i].name.data,
+                                             fields[i].name.len);
+        b->last = ngx_cpymem(b->last, ngx_http_error_field_value,
+                             sizeof(ngx_http_error_field_value) - 1);
+        b->last = (u_char *) ngx_escape_html(b->last, values[i].data,
+                                             values[i].len);
+        b->last = ngx_cpymem(b->last, ngx_http_error_field_tail,
+                             sizeof(ngx_http_error_field_tail) - 1);
+    }
 
-    b->last = ngx_cpymem(b->last, ngx_http_error_server_info_server,
-                         sizeof(ngx_http_error_server_info_server) - 1);
-    b->last = ngx_cpymem(b->last, ngx_cycle->hostname.data,
-                         ngx_cycle->hostname.len);
-
-    b->last = ngx_cpymem(b->last, ngx_http_error_server_info_id,
-                         sizeof(ngx_http_error_server_info_id) - 1);
-    b->last = ngx_cpymem(b->last, request_id.data,
-                         request_id.len);
-
-    b->last = ngx_cpymem(b->last, ngx_http_error_server_info_tail,
-                         sizeof(ngx_http_error_server_info_tail) - 1);
+    b->last = ngx_cpymem(b->last, ngx_http_error_fields_tail,
+                         sizeof(ngx_http_error_fields_tail) - 1);
 
     return b;
 }
+
 #endif
