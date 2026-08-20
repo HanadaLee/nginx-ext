@@ -182,6 +182,14 @@ static ngx_conf_enum_t  ngx_http_core_request_id_algorithm[] = {
 };
 
 
+static ngx_conf_enum_t  ngx_http_core_error_page_format[] = {
+    { ngx_string("default"), NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT },
+    { ngx_string("json"), NGX_HTTP_ERROR_PAGE_FORMAT_JSON },
+    { ngx_string("xml"), NGX_HTTP_ERROR_PAGE_FORMAT_XML },
+    { ngx_null_string, 0 }
+};
+
+
 static ngx_conf_enum_t  ngx_http_core_auto_redirect[] = {
     { ngx_string("off"), NGX_HTTP_AUTO_REDIRECT_OFF },
     { ngx_string("on"), NGX_HTTP_AUTO_REDIRECT_ON },
@@ -874,6 +882,13 @@ static ngx_command_t  ngx_http_core_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
+
+    { ngx_string("error_page_format"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_enum_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, error_page_format),
+      &ngx_http_core_error_page_format },
 
     { ngx_string("ignore_if_unmodified_since"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
@@ -4039,6 +4054,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
 
     clcf->error_page_server_info = NGX_CONF_UNSET;
     clcf->error_page_client_ip_var_index = NGX_CONF_UNSET;
+    clcf->error_page_format = NGX_CONF_UNSET_UINT;
 
     clcf->ignore_if_unmodified_since = NGX_CONF_UNSET;
     clcf->ignore_if_match = NGX_CONF_UNSET;
@@ -4360,6 +4376,10 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->error_page_client_ip_var_index,
                          prev->error_page_client_ip_var_index, 0);
+
+    ngx_conf_merge_uint_value(conf->error_page_format,
+                              prev->error_page_format,
+                              NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT);
 
     if (conf->error_page_client_ip_var_index == 0) {
         conf->error_page_client_ip_var_index = ngx_http_get_variable_index(cf,
