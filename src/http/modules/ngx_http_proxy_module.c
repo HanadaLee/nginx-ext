@@ -1666,10 +1666,10 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
             tmp_len = val_len;
         }
 #else
-        len += key_len + sizeof(": ") - 1 + val_len + sizeof(CRLF) - 1;
+        headers_len += key_len + sizeof(": ") - 1 + val_len
+                       + sizeof(CRLF) - 1;
 #endif
     }
-
 
 #if (NGX_RESTY_EXT)
 
@@ -1770,6 +1770,10 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
         th->hash = ngx_hash_key_lc(th->key.data, th->key.len);
         th->next = NULL;
     }
+
+#else
+
+    len += headers_len;
 
 #endif
 
