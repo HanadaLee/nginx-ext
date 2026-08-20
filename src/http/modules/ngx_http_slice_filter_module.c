@@ -250,9 +250,9 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     if (ctx->done) {
         return ngx_http_next_header_filter(r);
     }
-#endif
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+#endif
 
     if (r->headers_out.status != NGX_HTTP_PARTIAL_CONTENT) {
         if (r == r->main) {
@@ -346,6 +346,10 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http slice response range: %O-%O/%O",
                    cr.start, cr.end, cr.complete_length);
+
+#if !(NGX_RESTY_EXT)
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+#endif
 
     end = ngx_min(cr.start + (off_t) slcf->size, cr.complete_length);
 
@@ -469,9 +473,9 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                             NGX_HTTP_SUBREQUEST_CLONE)
         != NGX_OK)
     {
+#if (NGX_RESTY_EXT)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "failed to create slice subrequest");
-#if (NGX_RESTY_EXT)
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_SUBREQUEST_FAILED);
 #endif
         return NGX_ERROR;
