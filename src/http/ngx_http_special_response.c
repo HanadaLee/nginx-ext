@@ -936,12 +936,12 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     ngx_int_t                           rc;
     ngx_uint_t                          i, nfields;
     ngx_str_t                          *values;
-    ngx_str_t                           error, message;
+    ngx_str_t                           reason, message;
     ngx_buf_t                          *b;
     ngx_chain_t                         out;
     ngx_http_error_page_field_t        *fields;
 
-    error = ngx_http_error_page_infos[err].reason;
+    reason = ngx_http_error_page_infos[err].reason;
     message = ngx_http_error_page_infos[err].message;
 
     status_end = ngx_sprintf(status, "%ui", r->err_status);
@@ -964,8 +964,8 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     if (clcf->error_page_format == NGX_HTTP_ERROR_PAGE_FORMAT_JSON) {
         size = sizeof("{\"status\":") - 1
                + status_len
-               + sizeof(",\"error\":\"") - 1
-               + error.len + ngx_escape_json(NULL, error.data, error.len)
+               + sizeof(",\"reason\":\"") - 1
+               + reason.len + ngx_escape_json(NULL, reason.data, reason.len)
                + sizeof("\",\"message\":\"") - 1
                + message.len + ngx_escape_json(NULL, message.data, message.len)
                + sizeof("\"") - 1;
@@ -987,9 +987,9 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
         size = sizeof("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" CRLF
                       "<Error><Status>") - 1
                + status_len
-               + sizeof("</Status><Error>") - 1
-               + error.len + ngx_escape_html(NULL, error.data, error.len)
-               + sizeof("</Error><Message>") - 1
+               + sizeof("</Status><Reason>") - 1
+               + reason.len + ngx_escape_html(NULL, reason.data, reason.len)
+               + sizeof("</Reason><Message>") - 1
                + message.len + ngx_escape_html(NULL, message.data, message.len)
                + sizeof("</Message>") - 1;
 
@@ -1016,8 +1016,8 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
         p = ngx_cpymem(b->last, "{\"status\":",
                        sizeof("{\"status\":") - 1);
         p = ngx_cpymem(p, status, status_len);
-        p = ngx_cpymem(p, ",\"error\":\"", sizeof(",\"error\":\"") - 1);
-        p = (u_char *) ngx_escape_json(p, error.data, error.len);
+        p = ngx_cpymem(p, ",\"reason\":\"", sizeof(",\"reason\":\"") - 1);
+        p = (u_char *) ngx_escape_json(p, reason.data, reason.len);
         p = ngx_cpymem(p, "\",\"message\":\"",
                        sizeof("\",\"message\":\"") - 1);
         p = (u_char *) ngx_escape_json(p, message.data, message.len);
@@ -1044,11 +1044,11 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
                        sizeof("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" CRLF
                               "<Error><Status>") - 1);
         p = ngx_cpymem(p, status, status_len);
-        p = ngx_cpymem(p, "</Status><Error>",
-                       sizeof("</Status><Error>") - 1);
-        p = (u_char *) ngx_escape_html(p, error.data, error.len);
-        p = ngx_cpymem(p, "</Error><Message>",
-                       sizeof("</Error><Message>") - 1);
+        p = ngx_cpymem(p, "</Status><Reason>",
+                       sizeof("</Status><Reason>") - 1);
+        p = (u_char *) ngx_escape_html(p, reason.data, reason.len);
+        p = ngx_cpymem(p, "</Reason><Message>",
+                       sizeof("</Reason><Message>") - 1);
         p = (u_char *) ngx_escape_html(p, message.data, message.len);
         p = ngx_cpymem(p, "</Message>", sizeof("</Message>") - 1);
 
