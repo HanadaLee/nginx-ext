@@ -190,7 +190,7 @@ static ngx_conf_enum_t  ngx_http_core_error_page_format[] = {
 
 static ngx_str_t  ngx_http_core_error_page_reserved_fields[] = {
     ngx_string("status"),
-    ngx_string("error"),
+    ngx_string("reason"),
     ngx_string("message"),
     ngx_null_string
 };
