@@ -1670,7 +1670,6 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
 #endif
     }
 
-
 #if (NGX_RESTY_EXT)
 
     tmp = ngx_pnalloc(r->pool, tmp_len * 2);
@@ -1771,12 +1770,13 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
         th->next = NULL;
     }
 
-#endif
+#else
 
-
-#if !(NGX_RESTY_EXT)
     len += headers_len;
+
 #endif
+
+
     if (plcf->upstream.pass_request_headers) {
         part = &r->headers_in.headers.part;
         header = part->elts;

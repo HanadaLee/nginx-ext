@@ -705,23 +705,20 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         }
 
 #if !(NGX_RESTY_EXT)
-#if (NGX_RESTY_EXT)
-        len += 1 + NGX_HTTP_V2_INT_OCTETS + key_len
-                 + NGX_HTTP_V2_INT_OCTETS + val_len;
-#else
         if (key_len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header name");
             return NGX_ERROR;
         }
+
         if (val_len > NGX_HTTP_V2_MAX_FIELD) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "too long http2 header value");
             return NGX_ERROR;
         }
+
         headers_len += 1 + NGX_HTTP_V2_INT_OCTETS + key_len
                          + NGX_HTTP_V2_INT_OCTETS + val_len;
-#endif
 #endif
 
         if (tmp_len < key_len) {
@@ -848,11 +845,12 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         th->next = NULL;
     }
 
+#else
+
+    len += headers_len;
+
 #endif
 
-#if !(NGX_RESTY_EXT)
-    len += headers_len;
-#endif
     if (plcf->upstream.pass_request_headers) {
         part = &r->headers_in.headers.part;
         header = part->elts;
