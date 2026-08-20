@@ -188,6 +188,14 @@ static ngx_conf_enum_t  ngx_http_core_error_page_format[] = {
 };
 
 
+static ngx_str_t  ngx_http_core_error_page_reserved_fields[] = {
+    ngx_string("status"),
+    ngx_string("error"),
+    ngx_string("message"),
+    ngx_null_string
+};
+
+
 static ngx_conf_enum_t  ngx_http_core_auto_redirect[] = {
     { ngx_string("off"), NGX_HTTP_AUTO_REDIRECT_OFF },
     { ngx_string("on"), NGX_HTTP_AUTO_REDIRECT_ON },
@@ -5614,7 +5622,7 @@ ngx_http_core_error_page_field(ngx_conf_t *cf, ngx_command_t *cmd,
     ngx_http_core_loc_conf_t     *clcf = conf;
 
     u_char                       *p, *last;
-    ngx_str_t                    *value, name;
+    ngx_str_t                    *reserved, *value, name;
     ngx_uint_t                    i;
     ngx_http_error_page_field_t  *field;
 
@@ -5643,6 +5651,20 @@ ngx_http_core_error_page_field(ngx_conf_t *cf, ngx_command_t *cmd,
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid error page field name \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
+    }
+
+    reserved = ngx_http_core_error_page_reserved_fields;
+
+    for (i = 0; reserved[i].len; i++) {
+        if (value[1].len == reserved[i].len
+            && ngx_strncasecmp(value[1].data, reserved[i].data, value[1].len)
+               == 0)
+        {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "error page field name \"%V\" is reserved",
+                               &value[1]);
+            return NGX_CONF_ERROR;
+        }
     }
 
     if (value[2].len < 2 || value[2].data[0] != '$') {
