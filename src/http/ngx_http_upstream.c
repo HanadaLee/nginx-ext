@@ -613,6 +613,203 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[] = {
 #endif
 
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+
+static ngx_flag_t
+ngx_http_upstream_get_flag(ngx_http_request_t *r, ngx_array_t *values,
+    ngx_flag_t value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        return value;
+    }
+
+    return ngx_http_get_conditional_flag_value(r, values);
+}
+
+
+static ngx_uint_t
+ngx_http_upstream_get_num(ngx_http_request_t *r, ngx_array_t *values,
+    ngx_uint_t value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        return value;
+    }
+
+    return (ngx_uint_t) ngx_http_get_conditional_num_value(r, values);
+}
+
+
+static ngx_msec_t
+ngx_http_upstream_get_msec(ngx_http_request_t *r, ngx_array_t *values,
+    ngx_msec_t value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        return value;
+    }
+
+    return ngx_http_get_conditional_msec_value(r, values);
+}
+
+
+static off_t
+ngx_http_upstream_get_off(ngx_http_request_t *r, ngx_array_t *values,
+    off_t value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        return value;
+    }
+
+    return ngx_http_get_conditional_off_value(r, values);
+}
+
+
+static ngx_uint_t
+ngx_http_upstream_get_bitmask(ngx_http_request_t *r, ngx_array_t *values,
+    ngx_uint_t value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        return value;
+    }
+
+    return ngx_http_get_conditional_bitmask_value(r, values);
+}
+
+
+static ngx_int_t
+ngx_http_upstream_get_complex(ngx_http_request_t *r, ngx_array_t *values,
+    ngx_http_complex_value_t *cv, ngx_str_t *value)
+{
+    if (values != NULL && values != NGX_CONF_UNSET_PTR) {
+        return ngx_http_get_conditional_complex_value(r, values, value);
+    }
+
+    if (cv == NULL || cv == NGX_CONF_UNSET_PTR) {
+        return NGX_DECLINED;
+    }
+
+    return ngx_http_complex_value(r, cv, value);
+}
+
+
+static size_t
+ngx_http_upstream_get_complex_size(ngx_http_request_t *r,
+    ngx_array_t *values, ngx_http_complex_value_t *cv, size_t value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        if (cv == NGX_CONF_UNSET_PTR) {
+            return value;
+        }
+
+        return ngx_http_complex_value_size(r, cv, value);
+    }
+
+    return ngx_http_get_conditional_complex_value_size(r, values, value);
+}
+
+
+static ngx_array_t *
+ngx_http_upstream_get_str_array(ngx_http_request_t *r, ngx_array_t *values,
+    ngx_array_t *value)
+{
+    if (values == NULL || values == NGX_CONF_UNSET_PTR) {
+        return value;
+    }
+
+    return ngx_http_get_conditional_str_array_value(r, values);
+}
+
+
+#define ngx_http_upstream_init_conf_value(conf, field, type)                 \
+    do {                                                                     \
+        type  *ctx;                                                          \
+                                                                             \
+        ctx = ngx_condition_find_expr_ctx((conf)->field ## _conf,            \
+                                          NGX_CONDITION_NO_EXPR_ID,          \
+                                          sizeof(type),                      \
+                                          offsetof(type, expr_id));          \
+        if (ctx != NULL) {                                                   \
+            (conf)->field = ctx->value;                                      \
+        }                                                                    \
+    } while (0)
+
+
+void
+ngx_http_upstream_init_conditional_conf(ngx_http_upstream_conf_t *conf)
+{
+    ngx_http_upstream_init_conf_value(conf, connect_timeout,
+                                      ngx_conf_condition_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, send_timeout,
+                                      ngx_conf_condition_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, read_timeout,
+                                      ngx_conf_condition_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, next_upstream_timeout,
+                                      ngx_conf_condition_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, limit_rate,
+                                      ngx_http_condition_complex_value_ctx_t);
+
+    ngx_http_upstream_init_conf_value(conf, ignore_headers,
+                                      ngx_conf_condition_bitmask_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, ignore_cache_control,
+                                      ngx_conf_condition_bitmask_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, next_upstream,
+                                      ngx_conf_condition_bitmask_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, next_upstream_tries,
+                                      ngx_conf_condition_num_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, buffering,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, request_buffering,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, pass_request_headers,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, pass_request_body,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, ignore_client_abort,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, force_ranges,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, hide_cookies,
+                                      ngx_conf_condition_str_array_ctx_t);
+
+#if (NGX_HTTP_CACHE)
+    ngx_http_upstream_init_conf_value(conf, cache_min_uses,
+                                      ngx_conf_condition_num_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_use_stale,
+                                      ngx_conf_condition_bitmask_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_vary,
+                                      ngx_http_condition_complex_value_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_hide_cookies,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_methods,
+                                      ngx_conf_condition_bitmask_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_min_length,
+                                      ngx_conf_condition_off_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_max_length,
+                                      ngx_conf_condition_off_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_max_range_offset,
+                                      ngx_conf_condition_off_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_lock,
+                                      ngx_conf_condition_flag_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_lock_timeout,
+                                      ngx_conf_condition_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_lock_age,
+                                      ngx_conf_condition_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_background_update,
+                                      ngx_conf_condition_flag_ctx_t);
+#endif
+
+#if (NGX_HTTP_SSL || NGX_COMPAT)
+    ngx_http_upstream_init_conf_value(conf, ssl_name,
+                                      ngx_http_condition_complex_value_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, ssl_server_name,
+                                      ngx_conf_condition_flag_ctx_t);
+#endif
+}
+
+#undef ngx_http_upstream_init_conf_value
+
+#endif
+
+
 ngx_int_t
 ngx_http_upstream_create(ngx_http_request_t *r)
 {
@@ -660,12 +857,15 @@ ngx_http_upstream_init(ngx_http_request_t *r)
     u = r->upstream;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    u->connect_timeout = ngx_http_get_conditional_msec_value(r,
-                                                     u->conf->connect_timeout);
-    u->send_timeout = ngx_http_get_conditional_msec_value(r,
-                                                        u->conf->send_timeout);
-    u->read_timeout = ngx_http_get_conditional_msec_value(r,
-                                                        u->conf->read_timeout);
+    u->connect_timeout = ngx_http_upstream_get_msec(r,
+                              u->conf->connect_timeout_conf,
+                              u->conf->connect_timeout);
+    u->send_timeout = ngx_http_upstream_get_msec(r,
+                           u->conf->send_timeout_conf,
+                           u->conf->send_timeout);
+    u->read_timeout = ngx_http_upstream_get_msec(r,
+                           u->conf->read_timeout_conf,
+                           u->conf->read_timeout);
 #else
     u->connect_timeout = u->conf->connect_timeout;
     u->send_timeout = u->conf->send_timeout;
@@ -775,8 +975,9 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (!u->store && !r->post_action
-        && !ngx_http_get_conditional_flag_value(r,
-                                                u->conf->ignore_client_abort))
+        && !ngx_http_upstream_get_flag(r,
+                                      u->conf->ignore_client_abort_conf,
+                                      u->conf->ignore_client_abort))
     {
 #else
     if (!u->store && !r->post_action && !u->conf->ignore_client_abort) {
@@ -1018,8 +1219,9 @@ found:
     {
         ngx_uint_t  tries;
 
-        tries = (ngx_uint_t) ngx_http_get_conditional_num_value(r,
-                                                 u->conf->next_upstream_tries);
+        tries = ngx_http_upstream_get_num(r,
+                                          u->conf->next_upstream_tries_conf,
+                                          u->conf->next_upstream_tries);
         if (tries && u->peer.tries > tries) {
             u->peer.tries = tries;
         }
@@ -1054,8 +1256,9 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
     if (c == NULL) {
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-        methods = ngx_http_get_conditional_bitmask_value(r,
-                                                       u->conf->cache_methods);
+        methods = ngx_http_upstream_get_bitmask(r,
+                                                u->conf->cache_methods_conf,
+                                                u->conf->cache_methods);
         if (!(r->method & methods)) {
 #else
         if (!(r->method & u->conf->cache_methods)) {
@@ -1102,8 +1305,9 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         c->body_start = u->conf->buffer_size;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-       c->min_uses = ngx_http_get_conditional_num_value(r,
-                                                      u->conf->cache_min_uses);
+        c->min_uses = ngx_http_upstream_get_num(r,
+                                                u->conf->cache_min_uses_conf,
+                                                u->conf->cache_min_uses);
 #else
         c->min_uses = u->conf->cache_min_uses;
 #endif
@@ -1123,11 +1327,14 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         }
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-        c->lock = ngx_http_get_conditional_flag_value(r, u->conf->cache_lock);
-        c->lock_timeout =
-            ngx_http_get_conditional_msec_value(r, u->conf->cache_lock_timeout);
-        c->lock_age = ngx_http_get_conditional_msec_value(r,
-                                                       u->conf->cache_lock_age);
+        c->lock = ngx_http_upstream_get_flag(r, u->conf->cache_lock_conf,
+                                             u->conf->cache_lock);
+        c->lock_timeout = ngx_http_upstream_get_msec(r,
+                                  u->conf->cache_lock_timeout_conf,
+                                  u->conf->cache_lock_timeout);
+        c->lock_age = ngx_http_upstream_get_msec(r,
+                              u->conf->cache_lock_age_conf,
+                              u->conf->cache_lock_age);
 #else
         c->lock = u->conf->cache_lock;
         c->lock_timeout = u->conf->cache_lock_timeout;
@@ -1148,10 +1355,12 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
-        stale = ngx_http_get_conditional_bitmask_value(r,
-                                                     u->conf->cache_use_stale);
-        background = ngx_http_get_conditional_flag_value(r,
-                                             u->conf->cache_background_update);
+        stale = ngx_http_upstream_get_bitmask(r,
+                                              u->conf->cache_use_stale_conf,
+                                              u->conf->cache_use_stale);
+        background = ngx_http_upstream_get_flag(r,
+                                      u->conf->cache_background_update_conf,
+                                      u->conf->cache_background_update);
         if (!c->must_revalidate
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
@@ -1184,8 +1393,9 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
-        stale = ngx_http_get_conditional_bitmask_value(r,
-                                                     u->conf->cache_use_stale);
+        stale = ngx_http_upstream_get_bitmask(r,
+                                              u->conf->cache_use_stale_conf,
+                                              u->conf->cache_use_stale);
         if (!c->must_revalidate
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background)
@@ -1426,8 +1636,9 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
     ngx_table_elt_t  *h;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    max_offset = ngx_http_get_conditional_off_value(r,
-                                              u->conf->cache_max_range_offset);
+    max_offset = ngx_http_upstream_get_off(r,
+                                    u->conf->cache_max_range_offset_conf,
+                                    u->conf->cache_max_range_offset);
 #endif
 
     h = r->headers_in.range;
@@ -1579,8 +1790,9 @@ ngx_http_upstream_resolve_handler(ngx_resolver_ctx_t *ctx)
     {
         ngx_uint_t  tries;
 
-        tries = (ngx_uint_t) ngx_http_get_conditional_num_value(r,
-                                                 u->conf->next_upstream_tries);
+        tries = ngx_http_upstream_get_num(r,
+                                          u->conf->next_upstream_tries_conf,
+                                          u->conf->next_upstream_tries);
         if (tries && u->peer.tries > tries) {
             u->peer.tries = tries;
         }
@@ -2087,7 +2299,8 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
     }
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(r, u->conf->ssl_server_name)
+    if (ngx_http_upstream_get_flag(r, u->conf->ssl_server_name_conf,
+                                   u->conf->ssl_server_name)
         || u->conf->ssl_verify)
     {
 #else
@@ -2308,7 +2521,8 @@ ngx_http_upstream_ssl_name(ngx_http_request_t *r, ngx_http_upstream_t *u,
     ngx_str_t   name;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    rc = ngx_http_get_conditional_complex_value(r, u->conf->ssl_name, &name);
+    rc = ngx_http_upstream_get_complex(r, u->conf->ssl_name_conf,
+                                       u->conf->ssl_name, &name);
 
     if (rc == NGX_ERROR) {
         return NGX_ERROR;
@@ -2355,7 +2569,9 @@ ngx_http_upstream_ssl_name(ngx_http_request_t *r, ngx_http_upstream_t *u,
     }
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(r, u->conf->ssl_server_name)) {
+    if (!ngx_http_upstream_get_flag(r, u->conf->ssl_server_name_conf,
+                                    u->conf->ssl_server_name))
+    {
 #else
     if (!u->conf->ssl_server_name) {
 #endif
@@ -2785,8 +3001,9 @@ ngx_http_upstream_send_request_body(ngx_http_request_t *r,
     if (!r->reading_body) {
 #if (NGX_RESTY_EXT && NGX_CONDITION)
         if (!u->store && !r->post_action
-            && !ngx_http_get_conditional_flag_value(r,
-                                                 u->conf->ignore_client_abort))
+            && !ngx_http_upstream_get_flag(r,
+                                           u->conf->ignore_client_abort_conf,
+                                           u->conf->ignore_client_abort))
         {
 #else
         if (!u->store && !r->post_action && !u->conf->ignore_client_abort) {
@@ -3216,8 +3433,9 @@ ngx_http_upstream_early_hints_writer(ngx_http_request_t *r)
     if (!c->buffered) {
 #if (NGX_RESTY_EXT && NGX_CONDITION)
         if (!u->store && !r->post_action
-            && !ngx_http_get_conditional_flag_value(r,
-                                                 u->conf->ignore_client_abort))
+            && !ngx_http_upstream_get_flag(r,
+                                           u->conf->ignore_client_abort_conf,
+                                           u->conf->ignore_client_abort))
         {
 #else
         if (!u->store && !r->post_action && !u->conf->ignore_client_abort) {
@@ -3251,13 +3469,14 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ngx_http_upstream_next_t  *un;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    timeout = ngx_http_get_conditional_msec_value(r,
-                                               u->conf->next_upstream_timeout);
-    next = ngx_http_get_conditional_bitmask_value(r,
-                                                  u->conf->next_upstream);
+    timeout = ngx_http_upstream_get_msec(r,
+                                         u->conf->next_upstream_timeout_conf,
+                                         u->conf->next_upstream_timeout);
+    next = ngx_http_upstream_get_bitmask(r, u->conf->next_upstream_conf,
+                                         u->conf->next_upstream);
 #if (NGX_HTTP_CACHE)
-    stale = ngx_http_get_conditional_bitmask_value(r,
-                                                   u->conf->cache_use_stale);
+    stale = ngx_http_upstream_get_bitmask(r, u->conf->cache_use_stale_conf,
+                                          u->conf->cache_use_stale);
 #endif
 #endif
 
@@ -3595,8 +3814,8 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     if (u->headers_in.x_accel_redirect
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-        && !(ngx_http_get_conditional_bitmask_value(r,
-                                                    u->conf->ignore_headers)
+        && !(ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                           u->conf->ignore_headers)
              & NGX_HTTP_UPSTREAM_IGN_XA_REDIRECT))
 #else
         && !(u->conf->ignore_headers & NGX_HTTP_UPSTREAM_IGN_XA_REDIRECT))
@@ -3722,7 +3941,9 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
     r->disable_not_modified = !u->cacheable;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(r, u->conf->force_ranges)) {
+    if (ngx_http_upstream_get_flag(r, u->conf->force_ranges_conf,
+                                   u->conf->force_ranges))
+    {
 #else
     if (u->conf->force_ranges) {
 #endif
@@ -3995,9 +4216,8 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
-           rc = ngx_http_get_conditional_complex_value(r,
-                                                       u->conf->cache_vary,
-                                                       &vary);
+            rc = ngx_http_upstream_get_complex(r, u->conf->cache_vary_conf,
+                                                u->conf->cache_vary, &vary);
 
             if (rc == NGX_ERROR) {
                 ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
@@ -4071,7 +4291,8 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     p->pool = r->pool;
     p->log = c->log;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    p->limit_rate = ngx_http_get_conditional_complex_value_size(r,
+    p->limit_rate = ngx_http_upstream_get_complex_size(r,
+                                                       u->conf->limit_rate_conf,
                                                        u->conf->limit_rate, 0);
 #else
     p->limit_rate = ngx_http_complex_value_size(r, u->conf->limit_rate, 0);
@@ -5240,8 +5461,8 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 #endif
 
 #if (NGX_HTTP_CACHE)
-    stale = ngx_http_get_conditional_bitmask_value(r,
-                                                   u->conf->cache_use_stale);
+    stale = ngx_http_upstream_get_bitmask(r, u->conf->cache_use_stale_conf,
+                                          u->conf->cache_use_stale);
 #endif
 #endif
 
@@ -5329,9 +5550,11 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
     u->state->status = status;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    timeout = ngx_http_get_conditional_msec_value(r,
-                                               u->conf->next_upstream_timeout);
-    next = ngx_http_get_conditional_bitmask_value(r, u->conf->next_upstream);
+    timeout = ngx_http_upstream_get_msec(r,
+                                         u->conf->next_upstream_timeout_conf,
+                                         u->conf->next_upstream_timeout);
+    next = ngx_http_upstream_get_bitmask(r, u->conf->next_upstream_conf,
+                                         u->conf->next_upstream);
 #else
     timeout = u->conf->next_upstream_timeout;
 #endif
@@ -5354,8 +5577,9 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 #if (NGX_HTTP_CACHE)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-        stale = ngx_http_get_conditional_bitmask_value(r,
-                                                     u->conf->cache_use_stale);
+        stale = ngx_http_upstream_get_bitmask(r,
+                                              u->conf->cache_use_stale_conf,
+                                              u->conf->cache_use_stale);
 #endif
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
@@ -5718,8 +5942,10 @@ ngx_http_upstream_process_content_length(ngx_http_request_t *r,
     {
         off_t  max, min;
 
-        min = ngx_http_get_conditional_off_value(r, u->conf->cache_min_length);
-        max = ngx_http_get_conditional_off_value(r, u->conf->cache_max_length);
+        min = ngx_http_upstream_get_off(r, u->conf->cache_min_length_conf,
+                                        u->conf->cache_min_length);
+        max = ngx_http_upstream_get_off(r, u->conf->cache_max_length_conf,
+                                        u->conf->cache_max_length);
 
         if (u->headers_in.content_length_n < min
             || (max > 0 && u->headers_in.content_length_n > max))
@@ -5786,7 +6012,8 @@ ngx_http_upstream_process_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
 
 #if (NGX_HTTP_CACHE)
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!(ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (!(ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                        u->conf->ignore_headers)
           & NGX_HTTP_UPSTREAM_IGN_SET_COOKIE))
     {
 #else
@@ -5826,7 +6053,8 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_CACHE_CONTROL)
     {
 #else
@@ -5844,8 +6072,9 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
-    ignore = ngx_http_get_conditional_bitmask_value(r,
-                                                u->conf->ignore_cache_control);
+    ignore = ngx_http_upstream_get_bitmask(r,
+                                           u->conf->ignore_cache_control_conf,
+                                           u->conf->ignore_cache_control);
 #else
     ignore = u->conf->ignore_cache_control;
 #endif
@@ -6115,7 +6344,8 @@ ngx_http_upstream_process_expires(ngx_http_request_t *r, ngx_table_elt_t *h,
     time_t  expires;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_EXPIRES)
     {
 #else
@@ -6174,7 +6404,8 @@ ngx_http_upstream_process_pragma(ngx_http_request_t *r,
 #if (NGX_HTTP_CACHE)
     {
 #if (NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_PRAGMA)
     {
 #else
@@ -6236,7 +6467,8 @@ ngx_http_upstream_process_accel_expires(ngx_http_request_t *r,
     ngx_int_t   n;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_EXPIRES)
     {
 #else
@@ -6312,7 +6544,8 @@ ngx_http_upstream_process_limit_rate(ngx_http_request_t *r, ngx_table_elt_t *h,
     h->next = NULL;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_LIMIT_RATE)
     {
 #else
@@ -6342,7 +6575,8 @@ ngx_http_upstream_process_buffering(ngx_http_request_t *r, ngx_table_elt_t *h,
     u = r->upstream;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_BUFFERING)
     {
 #else
@@ -6385,7 +6619,8 @@ ngx_http_upstream_process_charset(ngx_http_request_t *r, ngx_table_elt_t *h,
     u = r->upstream;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_CHARSET)
     {
 #else
@@ -6492,7 +6727,8 @@ ngx_http_upstream_process_vary(ngx_http_request_t *r,
     ngx_str_t   vary;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_bitmask_value(r, u->conf->ignore_headers)
+    if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
+                                      u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_VARY)
     {
 #else
@@ -6790,8 +7026,9 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
 
 #if (NGX_HTTP_CACHE)
 #if (NGX_CONDITION)
-    cache_hide = ngx_http_get_conditional_flag_value(r,
-                                                  u->conf->cache_hide_cookies);
+    cache_hide = ngx_http_upstream_get_flag(r,
+                                            u->conf->cache_hide_cookies_conf,
+                                            u->conf->cache_hide_cookies);
 #else
     cache_hide = u->conf->cache_hide_cookies;
 #endif
@@ -6802,8 +7039,9 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
 #endif
 
 #if (NGX_CONDITION)
-    hide_cookies = ngx_http_get_conditional_str_array_value(r,
-                                                        u->conf->hide_cookies);
+    hide_cookies = ngx_http_upstream_get_str_array(r,
+                                                   u->conf->hide_cookies_conf,
+                                                   u->conf->hide_cookies);
 #else
     hide_cookies = u->conf->hide_cookies;
 #endif
@@ -6874,8 +7112,9 @@ ngx_http_upstream_copy_allow_ranges(ngx_http_request_t *r,
     ngx_table_elt_t  *ho;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(r,
-                                            r->upstream->conf->force_ranges))
+    if (ngx_http_upstream_get_flag(r,
+                                   r->upstream->conf->force_ranges_conf,
+                                   r->upstream->conf->force_ranges))
     {
 #else
     if (r->upstream->conf->force_ranges) {
