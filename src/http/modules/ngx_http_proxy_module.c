@@ -298,11 +298,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.buffering_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.buffering),
+#endif
       NULL },
 
     { ngx_string("proxy_request_buffering"),
@@ -316,11 +318,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.request_buffering_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.request_buffering),
+#endif
       NULL },
 
     { ngx_string("proxy_ignore_client_abort"),
@@ -334,11 +338,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_client_abort_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_client_abort),
+#endif
       NULL },
 
     { ngx_string("proxy_bind"),
@@ -380,11 +386,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.connect_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.connect_timeout),
+#endif
       NULL },
 
     { ngx_string("proxy_send_timeout"),
@@ -398,11 +406,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.send_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.send_timeout),
+#endif
       NULL },
 
     { ngx_string("proxy_send_lowat"),
@@ -485,11 +495,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.pass_request_headers_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.pass_request_headers),
+#endif
       NULL },
 
     { ngx_string("proxy_pass_request_body"),
@@ -503,11 +515,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.pass_request_body_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.pass_request_body),
+#endif
       NULL },
 
     { ngx_string("proxy_pass_trailers"),
@@ -535,11 +549,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.read_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.read_timeout),
+#endif
       NULL },
 
     { ngx_string("proxy_buffers"),
@@ -567,11 +583,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.force_ranges_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.force_ranges),
+#endif
       NULL },
 
     { ngx_string("proxy_limit_rate"),
@@ -585,11 +603,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_http_set_conditional_complex_value_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.limit_rate_conf),
 #else
       ngx_http_set_complex_value_size_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.limit_rate),
+#endif
       NULL },
 
 #if (NGX_HTTP_CACHE)
@@ -665,11 +685,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_min_uses_conf),
 #else
       ngx_conf_set_num_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_min_uses),
+#endif
       NULL },
 
 #if (NGX_RESTY_EXT)
@@ -682,11 +704,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_off_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_min_length_conf),
 #else
       ngx_conf_set_off_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_min_length),
+#endif
       NULL },
 
     { ngx_string("proxy_cache_max_length"),
@@ -698,11 +722,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_off_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_max_length_conf),
 #else
       ngx_conf_set_off_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_max_length),
+#endif
       NULL },
 #endif
 
@@ -717,11 +743,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_off_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_max_range_offset_conf),
 #else
       ngx_conf_set_off_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_max_range_offset),
+#endif
       NULL },
 
     { ngx_string("proxy_cache_use_stale"),
@@ -735,11 +763,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_use_stale_conf),
 #else
       ngx_conf_set_bitmask_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_use_stale),
+#endif
       &ngx_http_proxy_next_upstream_masks },
 
 #if (NGX_RESTY_EXT)
@@ -767,11 +797,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_CONDITION)
       ngx_http_set_conditional_complex_value_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_vary_conf),
 #else
       ngx_http_set_complex_value_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_vary),
+#endif
       NULL },
 
     { ngx_string("proxy_cache_hide_cookies"),
@@ -783,11 +815,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
                         |NGX_CONF_FLAG,
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_hide_cookies_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_hide_cookies),
+#endif
       NULL },
 #endif
 
@@ -802,11 +836,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_methods_conf),
 #else
       ngx_conf_set_bitmask_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_methods),
+#endif
       &ngx_http_upstream_cache_method_mask },
 
     { ngx_string("proxy_cache_lock"),
@@ -820,11 +856,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock),
+#endif
       NULL },
 
     { ngx_string("proxy_cache_lock_timeout"),
@@ -838,11 +876,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_timeout),
+#endif
       NULL },
 
     { ngx_string("proxy_cache_lock_age"),
@@ -856,11 +896,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_age_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_age),
+#endif
       NULL },
 
     { ngx_string("proxy_cache_revalidate"),
@@ -888,11 +930,14 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t,
+               upstream.cache_background_update_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_background_update),
+#endif
       NULL },
 
 #endif
@@ -929,11 +974,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.next_upstream_conf),
 #else
       ngx_conf_set_bitmask_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.next_upstream),
+#endif
       &ngx_http_proxy_next_upstream_masks },
 
     { ngx_string("proxy_next_upstream_tries"),
@@ -947,11 +994,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.next_upstream_tries_conf),
 #else
       ngx_conf_set_num_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.next_upstream_tries),
+#endif
       NULL },
 
     { ngx_string("proxy_next_upstream_timeout"),
@@ -965,11 +1014,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.next_upstream_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.next_upstream_timeout),
+#endif
       NULL },
 
     { ngx_string("proxy_pass_header"),
@@ -997,11 +1048,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_headers_conf),
 #else
       ngx_conf_set_bitmask_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_headers),
+#endif
       &ngx_http_upstream_ignore_headers_masks },
 
 #if (NGX_RESTY_EXT)
@@ -1015,11 +1068,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
                         |NGX_CONF_1MORE,
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_cache_control_conf),
 #else
       ngx_conf_set_bitmask_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_cache_control),
+#endif
       &ngx_http_upstream_ignore_cache_control_masks },
 
     { ngx_string("proxy_hide_cookie"),
@@ -1031,11 +1086,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_str_array_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.hide_cookies_conf),
 #else
       ngx_conf_set_str_array_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.hide_cookies),
+#endif
       NULL },
 
 #endif
@@ -1092,11 +1149,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_http_set_conditional_complex_value_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.ssl_name_conf),
 #else
       ngx_http_set_complex_value_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ssl_name),
+#endif
       NULL },
 
     { ngx_string("proxy_ssl_server_name"),
@@ -1110,11 +1169,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.ssl_server_name_conf),
 #else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ssl_server_name),
+#endif
       NULL },
 
     { ngx_string("proxy_ssl_verify"),
@@ -1437,8 +1498,9 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    u->buffering = ngx_http_get_conditional_flag_value(r,
-                                                     plcf->upstream.buffering);
+    u->buffering =
+        ngx_http_get_conditional_flag_value(r,
+                                            plcf->upstream.buffering_conf);
 #else
     u->buffering = plcf->upstream.buffering;
 #endif
@@ -1458,11 +1520,11 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
     u->accel = 1;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(r,
-                                             plcf->upstream.request_buffering)
+    if (!ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.request_buffering_conf)
         && plcf->body_values == NULL
-        && ngx_http_get_conditional_flag_value(r,
-                                               plcf->upstream.pass_request_body)
+        && ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.pass_request_body_conf)
         && (!r->headers_in.chunked || version == NGX_HTTP_VERSION_11))
 #else
     if (!plcf->upstream.request_buffering
@@ -2131,8 +2193,8 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
 
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(r,
-                                          plcf->upstream.pass_request_headers))
+    if (ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.pass_request_headers_conf))
     {
 #else
     if (plcf->upstream.pass_request_headers) {
@@ -2542,8 +2604,8 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     } else if (plcf->body_values == NULL
-               && ngx_http_get_conditional_flag_value(r,
-                                             plcf->upstream.pass_request_body))
+               && ngx_http_get_conditional_flag_value(
+                   r, plcf->upstream.pass_request_body_conf))
     {
 #else
     } else if (plcf->body_values == NULL && plcf->upstream.pass_request_body) {
@@ -4805,13 +4867,13 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.store = NGX_CONF_UNSET;
     conf->upstream.store_access = NGX_CONF_UNSET_UINT;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.next_upstream_tries = NGX_CONF_UNSET_PTR;
-    conf->upstream.buffering = NGX_CONF_UNSET_PTR;
-    conf->upstream.request_buffering = NGX_CONF_UNSET_PTR;
-    conf->upstream.pass_request_headers = NGX_CONF_UNSET_PTR;
-    conf->upstream.pass_request_body = NGX_CONF_UNSET_PTR;
-    conf->upstream.ignore_client_abort = NGX_CONF_UNSET_PTR;
-    conf->upstream.force_ranges = NGX_CONF_UNSET_PTR;
+    conf->upstream.next_upstream_tries_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.buffering_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.request_buffering_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_headers_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_body_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.ignore_client_abort_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.force_ranges_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.next_upstream_tries = NGX_CONF_UNSET_UINT;
     conf->upstream.buffering = NGX_CONF_UNSET;
@@ -4830,10 +4892,10 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.socket_sndbuf = NGX_CONF_UNSET_SIZE;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.connect_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.send_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.read_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.next_upstream_timeout = NGX_CONF_UNSET_PTR;
+    conf->upstream.connect_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.send_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.read_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.next_upstream_timeout_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.connect_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream.send_timeout = NGX_CONF_UNSET_MSEC;
@@ -4861,7 +4923,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_min_age = NGX_CONF_UNSET_PTR;
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.cache_min_uses = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_min_uses_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.cache_min_uses = NGX_CONF_UNSET_UINT;
 #endif
@@ -4869,10 +4931,10 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_stale_if_error = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_stale_while_revalidate = NGX_CONF_UNSET_PTR;
 #if (NGX_CONDITION)
-    conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_hide_cookies = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_min_length = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_max_length = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_vary_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_hide_cookies_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_min_length_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_max_length_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_hide_cookies = NGX_CONF_UNSET;
@@ -4881,7 +4943,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
 #endif
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.cache_max_range_offset = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_max_range_offset_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.cache_max_range_offset = NGX_CONF_UNSET;
 #endif
@@ -4889,9 +4951,9 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_valid = NGX_CONF_UNSET_PTR;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.cache_lock = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_lock_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_lock_age = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_lock_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_lock_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_lock_age_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.cache_lock = NGX_CONF_UNSET;
     conf->upstream.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
@@ -4900,7 +4962,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_revalidate = NGX_CONF_UNSET;
     conf->upstream.cache_convert_head = NGX_CONF_UNSET;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.cache_background_update = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_background_update_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.cache_background_update = NGX_CONF_UNSET;
 #endif
@@ -4922,7 +4984,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.ssl_session_reuse = NGX_CONF_UNSET;
     conf->upstream.ssl_name = NGX_CONF_UNSET_PTR;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.ssl_server_name = NGX_CONF_UNSET_PTR;
+    conf->upstream.ssl_server_name_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.ssl_server_name = NGX_CONF_UNSET;
 #endif
@@ -5018,38 +5080,40 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_num_value(cf,
-            &conf->upstream.next_upstream_tries,
-            prev->upstream.next_upstream_tries, 0)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->upstream.buffering,
-                                              prev->upstream.buffering, 1)
+            &conf->upstream.next_upstream_tries_conf,
+            prev->upstream.next_upstream_tries_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.request_buffering,
-            prev->upstream.request_buffering, 1)
+            &conf->upstream.buffering_conf,
+            prev->upstream.buffering_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.ignore_client_abort,
-            prev->upstream.ignore_client_abort, 0)
+            &conf->upstream.request_buffering_conf,
+            prev->upstream.request_buffering_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->upstream.force_ranges,
-                                              prev->upstream.force_ranges, 0)
+    if (ngx_conf_merge_conditional_flag_value(cf,
+            &conf->upstream.ignore_client_abort_conf,
+            prev->upstream.ignore_client_abort_conf, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_flag_value(cf,
+            &conf->upstream.force_ranges_conf,
+            prev->upstream.force_ranges_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5085,30 +5149,32 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_msec_value(cf,
-            &conf->upstream.connect_timeout,
-            prev->upstream.connect_timeout, 60000)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-
-    if (ngx_conf_merge_conditional_msec_value(cf, &conf->upstream.send_timeout,
-            prev->upstream.send_timeout, 60000)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-
-    if (ngx_conf_merge_conditional_msec_value(cf, &conf->upstream.read_timeout,
-            prev->upstream.read_timeout, 60000)
+            &conf->upstream.connect_timeout_conf,
+            prev->upstream.connect_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_msec_value(cf,
-            &conf->upstream.next_upstream_timeout,
-            prev->upstream.next_upstream_timeout, 0)
+            &conf->upstream.send_timeout_conf,
+            prev->upstream.send_timeout_conf, 60000)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_msec_value(cf,
+            &conf->upstream.read_timeout_conf,
+            prev->upstream.read_timeout_conf, 60000)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_msec_value(cf,
+            &conf->upstream.next_upstream_timeout_conf,
+            prev->upstream.next_upstream_timeout_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5135,8 +5201,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               (size_t) ngx_pagesize);
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_ptr_value(cf, &conf->upstream.limit_rate,
-                                             prev->upstream.limit_rate, NULL)
+    if (ngx_conf_merge_conditional_ptr_value(cf,
+            &conf->upstream.limit_rate_conf,
+            prev->upstream.limit_rate_conf, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5239,8 +5306,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.ignore_headers,
-            prev->upstream.ignore_headers, NGX_CONF_BITMASK_SET)
+            &conf->upstream.ignore_headers_conf,
+            prev->upstream.ignore_headers_conf, NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5254,8 +5321,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.ignore_cache_control,
-            prev->upstream.ignore_cache_control, NGX_CONF_BITMASK_SET)
+            &conf->upstream.ignore_cache_control_conf,
+            prev->upstream.ignore_cache_control_conf, NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5269,8 +5336,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.next_upstream,
-            prev->upstream.next_upstream,
+            &conf->upstream.next_upstream_conf,
+            prev->upstream.next_upstream_conf,
             (NGX_CONF_BITMASK_SET
              |NGX_HTTP_UPSTREAM_FT_ERROR
              |NGX_HTTP_UPSTREAM_FT_TIMEOUT))
@@ -5279,8 +5346,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    bm = conf->upstream.next_upstream->elts;
-    for (i = 0; i < conf->upstream.next_upstream->nelts; i++) {
+    bm = conf->upstream.next_upstream_conf->elts;
+    for (i = 0; i < conf->upstream.next_upstream_conf->nelts; i++) {
         if (bm[i].value & NGX_HTTP_UPSTREAM_FT_OFF) {
             bm[i].value = NGX_CONF_BITMASK_SET|NGX_HTTP_UPSTREAM_FT_OFF;
         }
@@ -5338,8 +5405,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_num_value(cf,
-            &conf->upstream.cache_min_uses,
-            prev->upstream.cache_min_uses, 1)
+            &conf->upstream.cache_min_uses_conf,
+            prev->upstream.cache_min_uses_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5353,16 +5420,16 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_off_value(cf,
-            &conf->upstream.cache_min_length,
-            prev->upstream.cache_min_length, 0)
+            &conf->upstream.cache_min_length_conf,
+            prev->upstream.cache_min_length_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_off_value(cf,
-            &conf->upstream.cache_max_length,
-            prev->upstream.cache_max_length, 0)
+            &conf->upstream.cache_max_length_conf,
+            prev->upstream.cache_max_length_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5379,16 +5446,16 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_off_value(cf,
-            &conf->upstream.cache_max_range_offset,
-            prev->upstream.cache_max_range_offset, NGX_MAX_OFF_T_VALUE)
+            &conf->upstream.cache_max_range_offset_conf,
+            prev->upstream.cache_max_range_offset_conf, NGX_MAX_OFF_T_VALUE)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.cache_use_stale,
-            prev->upstream.cache_use_stale,
+            &conf->upstream.cache_use_stale_conf,
+            prev->upstream.cache_use_stale_conf,
             (NGX_CONF_BITMASK_SET
              |NGX_HTTP_UPSTREAM_FT_OFF))
         != NGX_OK)
@@ -5396,8 +5463,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    bm = conf->upstream.cache_use_stale->elts;
-    for (i = 0; i < conf->upstream.cache_use_stale->nelts; i++) {
+    bm = conf->upstream.cache_use_stale_conf->elts;
+    for (i = 0; i < conf->upstream.cache_use_stale_conf->nelts; i++) {
         if (bm[i].value & NGX_HTTP_UPSTREAM_FT_OFF) {
             bm[i].value = NGX_CONF_BITMASK_SET|NGX_HTTP_UPSTREAM_FT_OFF;
         }
@@ -5438,16 +5505,16 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_ptr_value(cf,
-            &conf->upstream.cache_vary,
-            prev->upstream.cache_vary, NULL)
+            &conf->upstream.cache_vary_conf,
+            prev->upstream.cache_vary_conf, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.cache_hide_cookies,
-            prev->upstream.cache_hide_cookies, 0)
+            &conf->upstream.cache_hide_cookies_conf,
+            prev->upstream.cache_hide_cookies_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5464,15 +5531,15 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.cache_methods,
-            prev->upstream.cache_methods, 0)
+            &conf->upstream.cache_methods_conf,
+            prev->upstream.cache_methods_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
-    bm = conf->upstream.cache_methods->elts;
-    for (i = 0; i < conf->upstream.cache_methods->nelts; i++) {
+    bm = conf->upstream.cache_methods_conf->elts;
+    for (i = 0; i < conf->upstream.cache_methods_conf->nelts; i++) {
         bm[i].value |= NGX_HTTP_GET|NGX_HTTP_HEAD;
     }
 #else
@@ -5511,24 +5578,25 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->upstream.cache_lock,
-                                              prev->upstream.cache_lock, 0)
+    if (ngx_conf_merge_conditional_flag_value(cf,
+            &conf->upstream.cache_lock_conf,
+            prev->upstream.cache_lock_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_msec_value(cf,
-            &conf->upstream.cache_lock_timeout,
-            prev->upstream.cache_lock_timeout, 5000)
+            &conf->upstream.cache_lock_timeout_conf,
+            prev->upstream.cache_lock_timeout_conf, 5000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_msec_value(cf,
-            &conf->upstream.cache_lock_age,
-            prev->upstream.cache_lock_age, 5000)
+            &conf->upstream.cache_lock_age_conf,
+            prev->upstream.cache_lock_age_conf, 5000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5552,8 +5620,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.cache_background_update,
-            prev->upstream.cache_background_update, 0)
+            &conf->upstream.cache_background_update_conf,
+            prev->upstream.cache_background_update_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5567,16 +5635,16 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.pass_request_headers,
-            prev->upstream.pass_request_headers, 1)
+            &conf->upstream.pass_request_headers_conf,
+            prev->upstream.pass_request_headers_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.pass_request_body,
-            prev->upstream.pass_request_body, 1)
+            &conf->upstream.pass_request_body_conf,
+            prev->upstream.pass_request_body_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5617,15 +5685,16 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                              "DEFAULT");
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_ptr_value(cf, &conf->upstream.ssl_name,
-                                             prev->upstream.ssl_name, NULL)
+    if (ngx_conf_merge_conditional_ptr_value(cf,
+            &conf->upstream.ssl_name_conf,
+            prev->upstream.ssl_name_conf, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
     if (ngx_conf_merge_conditional_flag_value(cf,
-                                              &conf->upstream.ssl_server_name,
-                                              prev->upstream.ssl_server_name, 0)
+            &conf->upstream.ssl_server_name_conf,
+            prev->upstream.ssl_server_name_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5668,8 +5737,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_ptr_value(cf, &conf->method,
-                                             prev->method, NULL)
+    if (ngx_conf_merge_conditional_ptr_value(cf,
+            &conf->method,
+            prev->method, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5721,8 +5791,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
-    if (ngx_conf_merge_conditional_ptr_value(cf, &conf->redirects,
-                                             prev->redirects, dflt)
+    if (ngx_conf_merge_conditional_ptr_value(cf,
+            &conf->redirects,
+            prev->redirects, dflt)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5824,8 +5895,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_ptr_value(conf->cookie_flags, prev->cookie_flags, NULL);
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_enum_value(cf, &conf->http_version,
-                                              prev->http_version,
+    if (ngx_conf_merge_conditional_enum_value(cf,
+            &conf->http_version,
+            prev->http_version,
                                               NGX_HTTP_VERSION_11)
         != NGX_OK)
     {
@@ -5859,8 +5931,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_ptr_value(cf,
-            &conf->upstream.hide_cookies,
-            prev->upstream.hide_cookies, NULL)
+            &conf->upstream.hide_cookies_conf,
+            prev->upstream.hide_cookies_conf, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -6010,6 +6082,10 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
         prev->host_value = conf->host_value;
     }
+
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_http_upstream_init_conditional_conf(&conf->upstream);
+#endif
 
     return NGX_CONF_OK;
 }
