@@ -1108,7 +1108,12 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         c = r->cache;
 
         c->body_start = u->conf->buffer_size;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+       c->min_uses = ngx_http_get_conditional_num_value(r,
+                                                      u->conf->cache_min_uses);
+#else
         c->min_uses = u->conf->cache_min_uses;
+#endif
         c->file_cache = cache;
 
         switch (ngx_http_test_predicates(r, u->conf->cache_bypass)) {
@@ -3998,6 +4003,20 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
             }
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+           rc = ngx_http_get_conditional_complex_value(r,
+                                                       u->conf->cache_vary,
+                                                       &vary);
+
+            if (rc == NGX_ERROR) {
+                ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
+                return;
+            }
+
+            if (rc == NGX_DECLINED) {
+                ngx_str_null(&vary);
+            }
+#else
             if (u->conf->cache_vary == NULL) {
                 ngx_str_null(&vary);
 
@@ -4007,6 +4026,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
                 ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
                 return;
             }
+#endif
 
             if (vary.len == 0
                 || (vary.len == 6
@@ -5705,13 +5725,28 @@ ngx_http_upstream_process_content_length(ngx_http_request_t *r,
         return NGX_HTTP_UPSTREAM_INVALID_HEADER;
     }
 
-#if (NGX_HTTP_CACHE) && (NGX_RESTY_EXT)
+#if (NGX_RESTY_EXT) && (NGX_HTTP_CACHE)
+#if (NGX_CONDITION)
+    {
+        off_t  max, min;
+
+        min = ngx_http_get_conditional_off_value(r, u->conf->cache_min_length);
+        max = ngx_http_get_conditional_off_value(r, u->conf->cache_max_length);
+
+        if (u->headers_in.content_length_n < min
+            || (max > 0 && u->headers_in.content_length_n > max))
+        {
+            u->cacheable = 0;
+        }
+    }
+#else
     if (u->headers_in.content_length_n < u->conf->cache_min_length
         || (u->conf->cache_max_length > 0
             && u->headers_in.content_length_n > u->conf->cache_max_length))
     {
         u->cacheable = 0;
     }
+#endif
 #endif
 
     return NGX_OK;
@@ -5799,6 +5834,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 #if (NGX_RESTY_EXT)
     time_t      val;
     ngx_int_t   must_revalidate;
+    ngx_uint_t  ignore;
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
@@ -5819,18 +5855,23 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     last = start + h->value.len;
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    ignore = ngx_http_get_conditional_bitmask_value(r,
+                                                u->conf->ignore_cache_control);
+#else
+    ignore = u->conf->ignore_cache_control;
+#endif
+
     must_revalidate = 0;
 
     if ((ngx_strlcasestrn(start, last, (u_char *) "must-revalidate",
                           15 - 1)
          != NULL
-         && !(u->conf->ignore_cache_control
-              & NGX_HTTP_UPSTREAM_IGN_CC_MUSTREVAL))
+         && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_MUSTREVAL))
         || (ngx_strlcasestrn(start, last, (u_char *) "proxy-revalidate",
                              16 - 1)
             != NULL
-            && !(u->conf->ignore_cache_control
-                 & NGX_HTTP_UPSTREAM_IGN_CC_PROXYREVAL)))
+            && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_PROXYREVAL)))
     {
         must_revalidate = 1;
     }
@@ -5842,19 +5883,16 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
 #if (NGX_RESTY_EXT)
     if ((ngx_strlcasestrn(start, last, (u_char *) "no-store", 8 - 1) != NULL
-         && !(u->conf->ignore_cache_control
-              & NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE))
+         && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE))
         || (ngx_strlcasestrn(start, last, (u_char *) "private", 7 - 1) != NULL
-            && !(u->conf->ignore_cache_control
-                 & NGX_HTTP_UPSTREAM_IGN_CC_PRIVATE)))
+            && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_PRIVATE)))
     {
         u->headers_in.no_cache = 1;
         return NGX_OK;
     }
 
     if (ngx_strlcasestrn(start, last, (u_char *) "no-cache", 8 - 1) != NULL
-        && !(u->conf->ignore_cache_control
-             & NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE))
+        && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE))
     {
         r->cache->valid_sec = ngx_time() - 1;
         u->headers_in.expired = 0;
@@ -5873,14 +5911,12 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
     p = ngx_strlcasestrn(start, last, (u_char *) "s-maxage=", 9 - 1);
 #if (NGX_RESTY_EXT)
-    if (p && !(u->conf->ignore_cache_control
-               & NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE))
+    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE))
     {
         offset = 9;
         must_revalidate = 1;
 
-    } else if (!(u->conf->ignore_cache_control
-                 & NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE))
+    } else if (!(ignore & NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE))
     {
         p = ngx_strlcasestrn(start, last, (u_char *) "max-age=", 8 - 1);
         offset = 8;
@@ -5953,8 +5989,7 @@ extensions:
                          23 - 1);
 
 #if (NGX_RESTY_EXT)
-    if (p && !(u->conf->ignore_cache_control
-               & NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR))
+    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR))
     {
         n = ngx_http_upstream_process_delta_seconds(p + 23, last);
 
@@ -5992,8 +6027,7 @@ extensions:
     p = ngx_strlcasestrn(start, last, (u_char *) "stale-if-error=", 15 - 1);
 
 #if (NGX_RESTY_EXT)
-    if (p && !(u->conf->ignore_cache_control
-               & NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE))
+    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE))
     {
         n = ngx_http_upstream_process_delta_seconds(p + 15, last);
 
@@ -6790,7 +6824,11 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
 {
 #if (NGX_RESTY_EXT)
     ngx_http_upstream_t  *u;
+    ngx_array_t          *hide_cookies;
     ngx_str_t            *hide_cookie;
+#if (NGX_HTTP_CACHE)
+    ngx_flag_t            cache_hide;
+#endif
     ngx_uint_t            i;
     u_char               *start, *p;
     size_t                len;
@@ -6802,12 +6840,26 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     u = r->upstream;
 
 #if (NGX_HTTP_CACHE)
-    if (r->cached && u->conf->cache_hide_cookies) {
+#if (NGX_CONDITION)
+    cache_hide = ngx_http_get_conditional_flag_value(r,
+                                                  u->conf->cache_hide_cookies);
+#else
+    cache_hide = u->conf->cache_hide_cookies;
+#endif
+
+    if (r->cached && cache_hide) {
         return NGX_OK;
     }
 #endif
 
-    if (u->conf->hide_cookies) {
+#if (NGX_CONDITION)
+    hide_cookies = ngx_http_get_conditional_str_array_value(r,
+                                                        u->conf->hide_cookies);
+#else
+    hide_cookies = u->conf->hide_cookies;
+#endif
+
+    if (hide_cookies) {
         start = h->value.data;
         p = (u_char *) ngx_strlchr(start, h->value.data + h->value.len, ';');
         if (p == NULL) {
@@ -6824,8 +6876,8 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
         len = p - start;
         while (len && *(start + len - 1) == ' ') { len--; }
 
-        hide_cookie = u->conf->hide_cookies->elts;
-        for (i = 0; i < u->conf->hide_cookies->nelts; i++) {
+        hide_cookie = hide_cookies->elts;
+        for (i = 0; i < hide_cookies->nelts; i++) {
 
             if (hide_cookie[i].len == len
                 && ngx_strncasecmp(start, hide_cookie[i].data, len)

@@ -1201,7 +1201,13 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
     len += headers_len;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_http_get_conditional_flag_value(r,
+                                          glcf->upstream.pass_request_headers))
+    {
+#else
     if (glcf->upstream.pass_request_headers) {
+#endif
         part = &r->headers_in.headers.part;
         header = part->elts;
 
@@ -1544,7 +1550,13 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 #endif
     }
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_http_get_conditional_flag_value(r,
+                                          glcf->upstream.pass_request_headers))
+    {
+#else
     if (glcf->upstream.pass_request_headers) {
+#endif
         part = &r->headers_in.headers.part;
         header = part->elts;
 
@@ -5080,20 +5092,28 @@ ngx_http_grpc_create_loc_conf(ngx_conf_t *cf)
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     conf->upstream.buffering = NGX_CONF_UNSET_PTR;
     conf->upstream.ignore_client_abort = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_headers = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_body = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.buffering = 0;
     conf->upstream.ignore_client_abort = 0;
+#if (NGX_RESTY_EXT)
+    conf->upstream.pass_request_headers = 1;
+    conf->upstream.pass_request_body = 1;
+#endif
 #endif
     conf->upstream.send_lowat = 0;
     conf->upstream.bufs.num = 0;
     conf->upstream.busy_buffers_size = 0;
     conf->upstream.max_temp_file_size = 0;
     conf->upstream.temp_file_write_size = 0;
-    conf->upstream.pass_request_headers = 1;
-    conf->upstream.pass_request_body = 1;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     conf->upstream.force_ranges = NGX_CONF_UNSET_PTR;
 #else
+#if !(NGX_RESTY_EXT)
+    conf->upstream.pass_request_headers = 1;
+    conf->upstream.pass_request_body = 1;
+#endif
     conf->upstream.force_ranges = 0;
 #endif
     conf->upstream.pass_trailers = 1;
@@ -5129,6 +5149,22 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (ngx_conf_init_conditional_flag_value(cf,
             &conf->upstream.ignore_client_abort, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+   if (ngx_conf_init_conditional_flag_value(cf,
+                                          &conf->upstream.pass_request_headers,
+                                          1)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+   if (ngx_conf_init_conditional_flag_value(cf,
+                                            &conf->upstream.pass_request_body,
+                                            1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
