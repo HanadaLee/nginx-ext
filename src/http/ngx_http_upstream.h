@@ -223,14 +223,25 @@ typedef struct {
 typedef struct {
     ngx_http_upstream_srv_conf_t    *upstream;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *connect_timeout;
+    ngx_array_t                     *send_timeout;
+    ngx_array_t                     *read_timeout;
+    ngx_array_t                     *next_upstream_timeout;
+#else
     ngx_msec_t                       connect_timeout;
     ngx_msec_t                       send_timeout;
     ngx_msec_t                       read_timeout;
     ngx_msec_t                       next_upstream_timeout;
+#endif
 
     size_t                           send_lowat;
     size_t                           buffer_size;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *limit_rate;
+#else
     ngx_http_complex_value_t        *limit_rate;
+#endif
 
     size_t                           busy_buffers_size;
     size_t                           max_temp_file_size;
@@ -242,24 +253,46 @@ typedef struct {
 
     ngx_bufs_t                       bufs;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *ignore_headers;
+#else
     ngx_uint_t                       ignore_headers;
+#endif
 #if (NGX_RESTY_EXT)
     ngx_uint_t                       ignore_cache_control;
 #endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *next_upstream;
+#else
     ngx_uint_t                       next_upstream;
+#endif
     ngx_uint_t                       store_access;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *next_upstream_tries;
+    ngx_array_t                     *buffering;
+    ngx_array_t                     *request_buffering;
+#else
     ngx_uint_t                       next_upstream_tries;
     ngx_flag_t                       buffering;
     ngx_flag_t                       request_buffering;
+#endif
     ngx_flag_t                       pass_request_headers;
     ngx_flag_t                       pass_request_body;
     ngx_flag_t                       pass_trailers;
     ngx_flag_t                       pass_early_hints;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *ignore_client_abort;
+#else
     ngx_flag_t                       ignore_client_abort;
+#endif
     ngx_flag_t                       intercept_errors;
     ngx_flag_t                       cyclic_temp_file;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *force_ranges;
+#else
     ngx_flag_t                       force_ranges;
+#endif
 
     ngx_path_t                      *temp_path;
 
@@ -283,28 +316,48 @@ typedef struct {
     ngx_http_complex_value_t        *cache_min_age;
 #endif
     ngx_uint_t                       cache_min_uses;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *cache_use_stale;
+#else
     ngx_uint_t                       cache_use_stale;
+#endif
 #if (NGX_RESTY_EXT)
     ngx_http_complex_value_t        *cache_stale_if_error;
     ngx_http_complex_value_t        *cache_stale_while_revalidate;
     ngx_http_complex_value_t        *cache_vary;
     ngx_flag_t                       cache_hide_cookies;
 #endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *cache_methods;
+#else
     ngx_uint_t                       cache_methods;
+#endif
 
 #if (NGX_RESTY_EXT)
     off_t                            cache_min_length;
     off_t                            cache_max_length;
 #endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *cache_max_range_offset;
+
+    ngx_array_t                     *cache_lock;
+    ngx_array_t                     *cache_lock_timeout;
+    ngx_array_t                     *cache_lock_age;
+#else
     off_t                            cache_max_range_offset;
 
     ngx_flag_t                       cache_lock;
     ngx_msec_t                       cache_lock_timeout;
     ngx_msec_t                       cache_lock_age;
+#endif
 
     ngx_flag_t                       cache_revalidate;
     ngx_flag_t                       cache_convert_head;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *cache_background_update;
+#else
     ngx_flag_t                       cache_background_update;
+#endif
 
     ngx_array_t                     *cache_valid;
     ngx_array_t                     *cache_bypass;
@@ -333,8 +386,13 @@ typedef struct {
     ngx_ssl_t                       *ssl;
     ngx_flag_t                       ssl_session_reuse;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                     *ssl_name;
+    ngx_array_t                     *ssl_server_name;
+#else
     ngx_http_complex_value_t        *ssl_name;
     ngx_flag_t                       ssl_server_name;
+#endif
     ngx_flag_t                       ssl_verify;
 
     ngx_http_complex_value_t        *ssl_certificate;

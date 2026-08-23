@@ -9,6 +9,9 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include <ngx_http_proxy_module.h>
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+#include <ngx_http_condition_module.h>
+#endif
 #if (NGX_RESTY_EXT && NGX_HTTP_PROXY_FILTER)
 #include <ngx_http_proxy_filter_module.h>
 #endif
@@ -226,6 +229,9 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     ngx_http_upstream_t         *u;
     ngx_http_proxy_v2_ctx_t     *ctx;
     ngx_http_proxy_loc_conf_t   *plcf;
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_http_proxy_loc_conf_t   *rcf, *dcf, *pcf, *fcf;
+#endif
 #if (NGX_HTTP_CACHE)
     ngx_http_proxy_main_conf_t  *pmcf;
 #endif
@@ -283,16 +289,36 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     u->abort_request = ngx_http_proxy_v2_abort_request;
     u->finalize_request = ngx_http_proxy_v2_finalize_request;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    rcf = ngx_http_get_conditional_ptr_value(r, plcf->redirects);
+
+    if (rcf && rcf->redirects) {
+#else
     if (plcf->redirects) {
+#endif
         u->rewrite_redirect = ngx_http_proxy_rewrite_redirect;
     }
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    dcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_domains);
+    pcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_paths);
+    fcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_flags);
+
+    if ((dcf && dcf->cookie_domains)
+        || (pcf && pcf->cookie_paths)
+        || (fcf && fcf->cookie_flags)
+        || plcf->cookie_values || plcf->cookie_max_age)
+    {
+        u->rewrite_cookie = ngx_http_proxy_rewrite_cookie;
+    }
+#else
     if (plcf->cookie_domains || plcf->cookie_paths || plcf->cookie_flags
         || plcf->cookie_values || plcf->cookie_max_age)
     {
         u->rewrite_cookie = ngx_http_proxy_rewrite_cookie;
     }
+#endif
 #else
     if (plcf->cookie_domains || plcf->cookie_paths || plcf->cookie_flags) {
         u->rewrite_cookie = ngx_http_proxy_rewrite_cookie;
@@ -306,7 +332,12 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     }
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    u->buffering = ngx_http_get_conditional_flag_value(r,
+                                                     plcf->upstream.buffering);
+#else
     u->buffering = plcf->upstream.buffering;
+#endif
 
     u->pipe = ngx_pcalloc(r->pool, sizeof(ngx_event_pipe_t));
     if (u->pipe == NULL) {
@@ -322,7 +353,12 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
 
     u->accel = 1;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (!ngx_http_get_conditional_flag_value(r,
+                                             plcf->upstream.request_buffering)
+#else
     if (!plcf->upstream.request_buffering
+#endif
         && plcf->body_values == NULL && plcf->upstream.pass_request_body)
     {
         r->request_body_no_buffering = 1;
@@ -406,6 +442,9 @@ ngx_http_proxy_v2_build_uri(ngx_http_request_t *r, ngx_str_t *uri)
 static ngx_int_t
 ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 {
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_int_t                     rc;
+#endif
 #if (NGX_RESTY_EXT)
     u_char                       *p, *tmp, *val_tmp, *headers_frame;
     size_t                        len, tmp_len, old_tmp_len, key_len, val_len,
@@ -454,6 +493,22 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 #endif
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+
+    rc = ngx_http_get_conditional_complex_value(r, plcf->method, &method);
+
+    if (rc == NGX_ERROR) {
+        return NGX_ERROR;
+    }
+
+    if (rc == NGX_OK) {
+        u->method = method;
+
+    } else {
+        method = u->method;
+    }
+
+#else
 
     if (plcf->method) {
         if (ngx_http_complex_value(r, plcf->method, &method) != NGX_OK) {
@@ -466,6 +521,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
         method = u->method;
     }
 
+#endif
 #else
 
     if (u->method.len) {
