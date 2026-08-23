@@ -963,7 +963,13 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
             return NGX_CONF_OK;
         }
 
-        if (len == 2 && p[0] == '^' && p[1] == '~') {
+        if ((len == 2
+             && ((p[0] == '^' && p[1] == '~')
+                 || (p[0] == '~' && p[1] == '$')))
+            || (len == 3 && p[0] == '!'
+                && ((p[1] == '^' && p[2] == '~')
+                    || (p[1] == '~' && p[2] == '$'))))
+        {
 
             if (ngx_http_rewrite_value(cf, lcf, &value[last]) != NGX_CONF_OK) {
                 return NGX_CONF_ERROR;
@@ -976,24 +982,17 @@ ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
                 return NGX_CONF_ERROR;
             }
 
-            *code = ngx_http_script_start_with_code;
-            return NGX_CONF_OK;
-        }
+            if (p[len - 2] == '^') {
+                *code = (p[0] == '!')
+                        ? ngx_http_script_not_starts_with_code
+                        : ngx_http_script_starts_with_code;
 
-        if (len == 3 && p[0] == '!' && p[1] == '^' && p[2] == '~') {
-
-            if (ngx_http_rewrite_value(cf, lcf, &value[last]) != NGX_CONF_OK) {
-                return NGX_CONF_ERROR;
+            } else {
+                *code = (p[0] == '!')
+                        ? ngx_http_script_not_ends_with_code
+                        : ngx_http_script_ends_with_code;
             }
 
-            code = ngx_http_script_start_code(cf->pool, &lcf->codes,
-                                              sizeof(uintptr_t));
-
-            if (code == NULL) {
-                return NGX_CONF_ERROR;
-            }
-
-            *code = ngx_http_script_not_start_with_code;
             return NGX_CONF_OK;
         }
 

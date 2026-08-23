@@ -351,8 +351,10 @@ void ngx_http_script_greater_than_code(ngx_http_script_engine_t *e);
 void ngx_http_script_greater_equal_code(ngx_http_script_engine_t *e);
 void ngx_http_script_less_than_code(ngx_http_script_engine_t *e);
 void ngx_http_script_less_equal_code(ngx_http_script_engine_t *e);
-void ngx_http_script_start_with_code(ngx_http_script_engine_t *e);
-void ngx_http_script_not_start_with_code(ngx_http_script_engine_t *e);
+void ngx_http_script_starts_with_code(ngx_http_script_engine_t *e);
+void ngx_http_script_not_starts_with_code(ngx_http_script_engine_t *e);
+void ngx_http_script_ends_with_code(ngx_http_script_engine_t *e);
+void ngx_http_script_not_ends_with_code(ngx_http_script_engine_t *e);
 #endif
 
 #endif /* _NGX_HTTP_SCRIPT_H_INCLUDED_ */
