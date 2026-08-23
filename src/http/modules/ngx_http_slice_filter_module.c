@@ -806,7 +806,8 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_flag_value(cf, &conf->enable,
-            prev->enable, 0) != NGX_OK)
+                                              prev->enable, 0)
+        != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }

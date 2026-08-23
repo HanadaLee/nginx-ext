@@ -67,7 +67,11 @@ typedef struct {
     ngx_array_t                   *cookie_max_age;
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                   *method;
+#else
     ngx_http_complex_value_t      *method;
+#endif
     ngx_str_t                      location;
     ngx_str_t                      url;
 
@@ -79,7 +83,11 @@ typedef struct {
 
     ngx_flag_t                     redirect;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_array_t                   *http_version;
+#else
     ngx_uint_t                     http_version;
+#endif
 
     ngx_uint_t                     headers_hash_max_size;
     ngx_uint_t                     headers_hash_bucket_size;
