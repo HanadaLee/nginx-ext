@@ -334,10 +334,13 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (!ngx_http_get_conditional_flag_value(r,
                                              plcf->upstream.request_buffering)
+        && plcf->body_values == NULL
+        && ngx_http_get_conditional_flag_value(r,
+                                             plcf->upstream.pass_request_body))
 #else
     if (!plcf->upstream.request_buffering
-#endif
         && plcf->body_values == NULL && plcf->upstream.pass_request_body)
+#endif
     {
         r->request_body_no_buffering = 1;
     }
@@ -885,7 +888,13 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_http_get_conditional_flag_value(r,
+                                          plcf->upstream.pass_request_headers))
+    {
+#else
     if (plcf->upstream.pass_request_headers) {
+#endif
         part = &r->headers_in.headers.part;
         header = part->elts;
 
@@ -1507,7 +1516,14 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
         u->request_bufs = cl;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    } else if (plcf->body_values == NULL
+               && ngx_http_get_conditional_flag_value(r,
+                                             plcf->upstream.pass_request_body))
+    {
+#else
     } else if (plcf->body_values == NULL && plcf->upstream.pass_request_body) {
+#endif
 
         body = u->request_bufs;
         u->request_bufs = cl;

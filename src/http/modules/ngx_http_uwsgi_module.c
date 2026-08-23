@@ -317,15 +317,37 @@ static ngx_command_t ngx_http_uwsgi_commands[] = {
       &ngx_conf_size_nonzero_post },
 
     { ngx_string("uwsgi_pass_request_headers"),
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+                        |NGX_CONF_FLAG,
+#else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+#endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+      ngx_conf_set_conditional_flag_slot,
+#else
       ngx_conf_set_flag_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.pass_request_headers),
       NULL },
 
     { ngx_string("uwsgi_pass_request_body"),
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+                        |NGX_CONF_FLAG,
+#else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+#endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+      ngx_conf_set_conditional_flag_slot,
+#else
       ngx_conf_set_flag_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.pass_request_body),
       NULL },
@@ -468,23 +490,52 @@ static ngx_command_t ngx_http_uwsgi_commands[] = {
 #endif
 
     { ngx_string("uwsgi_cache_min_uses"),
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+                        |NGX_CONF_TAKE1,
+#else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+#endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+      ngx_conf_set_conditional_num_slot,
+#else
       ngx_conf_set_num_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.cache_min_uses),
       NULL },
 
 #if (NGX_RESTY_EXT)
     { ngx_string("uwsgi_cache_min_length"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_TAKE1,
+#if (NGX_CONDITION)
+      ngx_conf_set_conditional_off_slot,
+#else
       ngx_conf_set_off_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.cache_min_length),
       NULL },
 
     { ngx_string("uwsgi_cache_max_length"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_TAKE1,
+#if (NGX_CONDITION)
+      ngx_conf_set_conditional_off_slot,
+#else
       ngx_conf_set_off_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.cache_max_length),
       NULL },
@@ -543,15 +594,33 @@ static ngx_command_t ngx_http_uwsgi_commands[] = {
       NULL },
 
     { ngx_string("uwsgi_cache_vary"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_TAKE1,
+#if (NGX_CONDITION)
+      ngx_http_set_conditional_complex_value_slot,
+#else
       ngx_http_set_complex_value_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.cache_vary),
       NULL },
 
     { ngx_string("uwsgi_cache_hide_cookies"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_FLAG,
+#if (NGX_CONDITION)
+      ngx_conf_set_conditional_flag_slot,
+#else
       ngx_conf_set_flag_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.cache_hide_cookies),
       NULL },
@@ -789,15 +858,33 @@ static ngx_command_t ngx_http_uwsgi_commands[] = {
 #if (NGX_RESTY_EXT)
 
     { ngx_string("uwsgi_ignore_cache_control"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_1MORE,
+#if (NGX_CONDITION)
+      ngx_conf_set_conditional_bitmask_slot,
+#else
       ngx_conf_set_bitmask_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.ignore_cache_control),
       &ngx_http_upstream_ignore_cache_control_masks },
 
     { ngx_string("uwsgi_hide_cookie"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_TAKE1,
+#if (NGX_CONDITION)
+      ngx_conf_set_conditional_str_array_slot,
+#else
       ngx_conf_set_str_array_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_uwsgi_loc_conf_t, upstream.hide_cookies),
       NULL },
@@ -1090,11 +1177,14 @@ ngx_http_uwsgi_handler(ngx_http_request_t *r)
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (!ngx_http_get_conditional_flag_value(r,
                                              uwcf->upstream.request_buffering)
+        && ngx_http_get_conditional_flag_value(r,
+                                               uwcf->upstream.pass_request_body)
+        && !r->headers_in.chunked)
 #else
     if (!uwcf->upstream.request_buffering
-#endif
         && uwcf->upstream.pass_request_body
         && !r->headers_in.chunked)
+#endif
     {
         r->request_body_no_buffering = 1;
     }
@@ -1284,7 +1374,13 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
         len += params_len;
     }
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_http_get_conditional_flag_value(r,
+                                          uwcf->upstream.pass_request_headers))
+    {
+#else
     if (uwcf->upstream.pass_request_headers) {
+#endif
 
         allocated = 0;
         lowcase_key = NULL;
@@ -1493,7 +1589,13 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
         b->last = e.pos;
     }
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_http_get_conditional_flag_value(r,
+                                          uwcf->upstream.pass_request_headers))
+    {
+#else
     if (uwcf->upstream.pass_request_headers) {
+#endif
 
         part = &r->headers_in.headers.part;
         header = part->elts;
@@ -1581,7 +1683,13 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
     if (r->request_body_no_buffering) {
         r->upstream->request_bufs = cl;
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    } else if (ngx_http_get_conditional_flag_value(r,
+                                             uwcf->upstream.pass_request_body))
+    {
+#else
     } else if (uwcf->upstream.pass_request_body) {
+#endif
         body = r->upstream->request_bufs;
         r->upstream->request_bufs = cl;
 
@@ -1949,12 +2057,18 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.next_upstream_tries = NGX_CONF_UNSET_PTR;
     conf->upstream.buffering = NGX_CONF_UNSET_PTR;
     conf->upstream.request_buffering = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_headers = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_body = NGX_CONF_UNSET_PTR;
     conf->upstream.ignore_client_abort = NGX_CONF_UNSET_PTR;
     conf->upstream.force_ranges = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.next_upstream_tries = NGX_CONF_UNSET_UINT;
     conf->upstream.buffering = NGX_CONF_UNSET;
     conf->upstream.request_buffering = NGX_CONF_UNSET;
+#if (NGX_RESTY_EXT)
+    conf->upstream.pass_request_headers = NGX_CONF_UNSET;
+    conf->upstream.pass_request_body = NGX_CONF_UNSET;
+#endif
     conf->upstream.ignore_client_abort = NGX_CONF_UNSET;
     conf->upstream.force_ranges = NGX_CONF_UNSET;
 #endif
@@ -1984,22 +2098,34 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.max_temp_file_size_conf = NGX_CONF_UNSET_SIZE;
     conf->upstream.temp_file_write_size_conf = NGX_CONF_UNSET_SIZE;
 
+#if !(NGX_RESTY_EXT)
     conf->upstream.pass_request_headers = NGX_CONF_UNSET;
     conf->upstream.pass_request_body = NGX_CONF_UNSET;
-
+#endif
 #if (NGX_HTTP_CACHE)
     conf->upstream.cache = NGX_CONF_UNSET;
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_min_age = NGX_CONF_UNSET_PTR;
 #endif
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    conf->upstream.cache_min_uses = NGX_CONF_UNSET_PTR;
+#else
     conf->upstream.cache_min_uses = NGX_CONF_UNSET_UINT;
+#endif
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_stale_if_error = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_stale_while_revalidate = NGX_CONF_UNSET_PTR;
+#if (NGX_CONDITION)
+    conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_hide_cookies = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_min_length = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_max_length = NGX_CONF_UNSET_PTR;
+#else
     conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_hide_cookies = NGX_CONF_UNSET;
     conf->upstream.cache_min_length = NGX_CONF_UNSET;
     conf->upstream.cache_max_length = NGX_CONF_UNSET;
+#endif
 #endif
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     conf->upstream.cache_max_range_offset = NGX_CONF_UNSET_PTR;
@@ -2352,11 +2478,19 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
 
 #if (NGX_RESTY_EXT)
-
+#if (NGX_CONDITION)
+    if (ngx_conf_merge_conditional_bitmask_value(cf,
+            &conf->upstream.ignore_cache_control,
+            prev->upstream.ignore_cache_control, NGX_CONF_BITMASK_SET)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_bitmask_value(conf->upstream.ignore_cache_control,
                                  prev->upstream.ignore_cache_control,
                                  NGX_CONF_BITMASK_SET);
-
+#endif
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
@@ -2427,17 +2561,43 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_conf_merge_conditional_num_value(cf,
+            &conf->upstream.cache_min_uses,
+            prev->upstream.cache_min_uses, 1)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_uint_value(conf->upstream.cache_min_uses,
                               prev->upstream.cache_min_uses, 1);
+#endif
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    if (ngx_conf_merge_conditional_off_value(cf,
+            &conf->upstream.cache_min_length,
+            prev->upstream.cache_min_length, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
 
+    if (ngx_conf_merge_conditional_off_value(cf,
+            &conf->upstream.cache_max_length,
+            prev->upstream.cache_max_length, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_off_value(conf->upstream.cache_min_length,
                              prev->upstream.cache_min_length, 0);
 
     ngx_conf_merge_off_value(conf->upstream.cache_max_length,
                              prev->upstream.cache_max_length, 0);
-
+#endif
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
@@ -2499,11 +2659,29 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                              prev->upstream.cache_stale_while_revalidate,
                              NULL);
 
+#if (NGX_CONDITION)
+    if (ngx_conf_merge_conditional_ptr_value(cf,
+            &conf->upstream.cache_vary,
+            prev->upstream.cache_vary, NULL)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_flag_value(cf,
+            &conf->upstream.cache_hide_cookies,
+            prev->upstream.cache_hide_cookies, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_ptr_value(conf->upstream.cache_vary,
                              prev->upstream.cache_vary, NULL);
 
     ngx_conf_merge_value(conf->upstream.cache_hide_cookies,
                          prev->upstream.cache_hide_cookies, 0);
+#endif
 
 #endif
 
@@ -2612,10 +2790,28 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (ngx_conf_merge_conditional_flag_value(cf,
+            &conf->upstream.pass_request_headers,
+            prev->upstream.pass_request_headers, 1)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_flag_value(cf,
+            &conf->upstream.pass_request_body,
+            prev->upstream.pass_request_body, 1)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_value(conf->upstream.pass_request_headers,
                          prev->upstream.pass_request_headers, 1);
     ngx_conf_merge_value(conf->upstream.pass_request_body,
                          prev->upstream.pass_request_body, 1);
+#endif
 
     ngx_conf_merge_value(conf->upstream.intercept_errors,
                          prev->upstream.intercept_errors, 0);
@@ -2700,8 +2896,18 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    if (ngx_conf_merge_conditional_ptr_value(cf,
+            &conf->upstream.hide_cookies,
+            prev->upstream.hide_cookies, NULL)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_ptr_value(conf->upstream.hide_cookies,
                              prev->upstream.hide_cookies, NULL);
+#endif
 #endif
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
