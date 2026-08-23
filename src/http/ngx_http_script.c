@@ -2583,12 +2583,12 @@ ngx_http_script_less_equal_code(ngx_http_script_engine_t *e)
 
 
 void
-ngx_http_script_start_with_code(ngx_http_script_engine_t *e)
+ngx_http_script_starts_with_code(ngx_http_script_engine_t *e)
 {
     ngx_http_variable_value_t  *val, *res;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                   "http script start with");
+                   "http script starts with");
 
     e->sp--;
     val = e->sp;
@@ -2598,32 +2598,34 @@ ngx_http_script_start_with_code(ngx_http_script_engine_t *e)
 
     if (res->len < val->len) {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                       "http script start with: false");
+                       "http script starts with: false");
         *res = ngx_http_variable_null_value;
         return;
     }
 
-    if (ngx_strncmp(res->data, val->data, val->len) == 0) {
+    if (val->len == 0
+        || ngx_strncmp(res->data, val->data, val->len) == 0)
+    {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                       "http script start with: true");
+                       "http script starts with: true");
         *res = ngx_http_variable_true_value;
         return;
     }
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                   "http script start with: false");
+                   "http script starts with: false");
 
     *res = ngx_http_variable_null_value;
 }
 
 
 void
-ngx_http_script_not_start_with_code(ngx_http_script_engine_t *e)
+ngx_http_script_not_starts_with_code(ngx_http_script_engine_t *e)
 {
     ngx_http_variable_value_t  *val, *res;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                   "http not script start with");
+                   "http script does not start with");
 
     e->sp--;
     val = e->sp;
@@ -2633,20 +2635,98 @@ ngx_http_script_not_start_with_code(ngx_http_script_engine_t *e)
 
     if (res->len < val->len) {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                       "http not script start with: true");
+                       "http script does not start with: true");
         *res = ngx_http_variable_true_value;
         return;
     }
 
-    if (ngx_strncmp(res->data, val->data, val->len) == 0) {
+    if (val->len == 0
+        || ngx_strncmp(res->data, val->data, val->len) == 0)
+    {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                       "http script start with: false");
+                       "http script does not start with: false");
         *res = ngx_http_variable_null_value;
         return;
     }
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
-                   "http script start with: true");
+                   "http script does not start with: true");
+
+    *res = ngx_http_variable_true_value;
+}
+
+
+void
+ngx_http_script_ends_with_code(ngx_http_script_engine_t *e)
+{
+    ngx_http_variable_value_t  *val, *res;
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                   "http script ends with");
+
+    e->sp--;
+    val = e->sp;
+    res = e->sp - 1;
+
+    e->ip += sizeof(uintptr_t);
+
+    if (res->len < val->len) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                       "http script ends with: false");
+        *res = ngx_http_variable_null_value;
+        return;
+    }
+
+    if (val->len == 0
+        || ngx_strncmp(res->data + res->len - val->len, val->data,
+                       val->len) == 0)
+    {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                       "http script ends with: true");
+        *res = ngx_http_variable_true_value;
+        return;
+    }
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                   "http script ends with: false");
+
+    *res = ngx_http_variable_null_value;
+}
+
+
+void
+ngx_http_script_not_ends_with_code(ngx_http_script_engine_t *e)
+{
+    ngx_http_variable_value_t  *val, *res;
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                   "http script does not end with");
+
+    e->sp--;
+    val = e->sp;
+    res = e->sp - 1;
+
+    e->ip += sizeof(uintptr_t);
+
+    if (res->len < val->len) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                       "http script does not end with: true");
+        *res = ngx_http_variable_true_value;
+        return;
+    }
+
+    if (val->len == 0
+        || ngx_strncmp(res->data + res->len - val->len, val->data,
+                       val->len) == 0)
+    {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                       "http script does not end with: false");
+        *res = ngx_http_variable_null_value;
+        return;
+    }
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                   "http script does not end with: true");
 
     *res = ngx_http_variable_true_value;
 }
