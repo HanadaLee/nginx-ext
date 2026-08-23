@@ -35,7 +35,11 @@ typedef struct {
 #endif
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    ngx_array_t               *method;
+#else
     ngx_http_complex_value_t  *method;
+#endif
     ngx_str_t                  uri;
     ngx_str_t                  location;
 #endif
@@ -436,8 +440,17 @@ static ngx_command_t  ngx_http_grpc_commands[] = {
 
 #if (NGX_RESTY_EXT)
     { ngx_string("grpc_method"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+#if (NGX_CONDITION)
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+#endif
+                        |NGX_CONF_TAKE1,
+#if (NGX_CONDITION)
+      ngx_http_set_conditional_complex_value_slot,
+#else
       ngx_http_set_complex_value_slot,
+#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_grpc_loc_conf_t, method),
       NULL },
@@ -968,6 +981,9 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     ngx_str_t                     host;
 #endif
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    ngx_int_t                     rc;
+#endif
     ngx_str_t                     method, uri;
 #endif
 
@@ -985,6 +1001,22 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     /* :method header */
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+
+    rc = ngx_http_get_conditional_complex_value(r, glcf->method, &method);
+
+    if (rc == NGX_ERROR) {
+        return NGX_ERROR;
+    }
+
+    if (rc == NGX_OK) {
+        u->method = method;
+
+    } else {
+        method = u->method;
+    }
+
+#else
 
     if (glcf->method) {
         if (ngx_http_complex_value(r, glcf->method, &method) != NGX_OK) {
@@ -996,6 +1028,8 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     } else {
         method = u->method;
     }
+
+#endif
 
     if (method.len == 0 || method.data == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
@@ -5290,7 +5324,16 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.intercept_errors, 0);
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    if (ngx_conf_merge_conditional_ptr_value(cf, &conf->method,
+                                             prev->method, NULL)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
     ngx_conf_merge_ptr_value(conf->method, prev->method, NULL);
+#endif
     ngx_conf_merge_value(conf->headers_inherit,
                          prev->headers_inherit, 0);
 #endif
