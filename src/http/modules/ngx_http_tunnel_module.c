@@ -99,11 +99,13 @@ static ngx_command_t  ngx_http_tunnel_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_tunnel_loc_conf_t, upstream.connect_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_tunnel_loc_conf_t, upstream.connect_timeout),
+#endif
       NULL },
 
     { ngx_string("tunnel_send_timeout"),
@@ -115,11 +117,13 @@ static ngx_command_t  ngx_http_tunnel_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_tunnel_loc_conf_t, upstream.send_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_tunnel_loc_conf_t, upstream.send_timeout),
+#endif
       NULL },
 
     { ngx_string("tunnel_send_lowat"),
@@ -145,11 +149,13 @@ static ngx_command_t  ngx_http_tunnel_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_tunnel_loc_conf_t, upstream.read_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_tunnel_loc_conf_t, upstream.read_timeout),
+#endif
       NULL },
 
     { ngx_string("tunnel_next_upstream"),
@@ -161,11 +167,13 @@ static ngx_command_t  ngx_http_tunnel_commands[] = {
                         |NGX_CONF_1MORE,
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_tunnel_loc_conf_t, upstream.next_upstream_conf),
 #else
       ngx_conf_set_bitmask_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_tunnel_loc_conf_t, upstream.next_upstream),
+#endif
       &ngx_http_tunnel_next_upstream_masks },
 
     { ngx_string("tunnel_next_upstream_tries"),
@@ -177,11 +185,13 @@ static ngx_command_t  ngx_http_tunnel_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_tunnel_loc_conf_t, upstream.next_upstream_tries_conf),
 #else
       ngx_conf_set_num_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_tunnel_loc_conf_t, upstream.next_upstream_tries),
+#endif
       NULL },
 
     { ngx_string("tunnel_next_upstream_timeout"),
@@ -193,11 +203,13 @@ static ngx_command_t  ngx_http_tunnel_commands[] = {
                         |NGX_CONF_TAKE1,
 #if (NGX_RESTY_EXT && NGX_CONDITION)
       ngx_conf_set_conditional_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_tunnel_loc_conf_t, upstream.next_upstream_timeout_conf),
 #else
       ngx_conf_set_msec_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_tunnel_loc_conf_t, upstream.next_upstream_timeout),
+#endif
       NULL },
 
       ngx_null_command
@@ -403,7 +415,7 @@ ngx_http_tunnel_create_loc_conf(ngx_conf_t *cf)
      */
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.next_upstream_tries = NGX_CONF_UNSET_PTR;
+    conf->upstream.next_upstream_tries_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.next_upstream_tries = NGX_CONF_UNSET_UINT;
 #endif
@@ -414,10 +426,10 @@ ngx_http_tunnel_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.socket_sndbuf = NGX_CONF_UNSET_SIZE;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    conf->upstream.connect_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.send_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.read_timeout = NGX_CONF_UNSET_PTR;
-    conf->upstream.next_upstream_timeout = NGX_CONF_UNSET_PTR;
+    conf->upstream.connect_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.send_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.read_timeout_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.next_upstream_timeout_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.connect_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream.send_timeout = NGX_CONF_UNSET_MSEC;
@@ -448,22 +460,22 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_condition_bitmask_ctx_t  *bm;
 
     if (ngx_conf_init_conditional_flag_value(cf,
-            &conf->upstream.ignore_client_abort, 0)
+            &conf->upstream.ignore_client_abort_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_init_conditional_flag_value(cf,
-                                             &conf->upstream.force_ranges, 0)
+            &conf->upstream.force_ranges_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_num_value(cf,
-            &conf->upstream.next_upstream_tries,
-            prev->upstream.next_upstream_tries, 0)
+            &conf->upstream.next_upstream_tries_conf,
+            prev->upstream.next_upstream_tries_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -488,30 +500,32 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_msec_value(cf,
-            &conf->upstream.connect_timeout,
-            prev->upstream.connect_timeout, 60000)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-
-    if (ngx_conf_merge_conditional_msec_value(cf, &conf->upstream.send_timeout,
-            prev->upstream.send_timeout, 60000)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-
-    if (ngx_conf_merge_conditional_msec_value(cf, &conf->upstream.read_timeout,
-            prev->upstream.read_timeout, 60000)
+            &conf->upstream.connect_timeout_conf,
+            prev->upstream.connect_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_msec_value(cf,
-            &conf->upstream.next_upstream_timeout,
-            prev->upstream.next_upstream_timeout, 0)
+            &conf->upstream.send_timeout_conf,
+            prev->upstream.send_timeout_conf, 60000)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_msec_value(cf,
+            &conf->upstream.read_timeout_conf,
+            prev->upstream.read_timeout_conf, 60000)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_conditional_msec_value(cf,
+            &conf->upstream.next_upstream_timeout_conf,
+            prev->upstream.next_upstream_timeout_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -539,8 +553,8 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.next_upstream,
-            prev->upstream.next_upstream,
+            &conf->upstream.next_upstream_conf,
+            prev->upstream.next_upstream_conf,
             (NGX_CONF_BITMASK_SET
              |NGX_HTTP_UPSTREAM_FT_ERROR
              |NGX_HTTP_UPSTREAM_FT_TIMEOUT))
@@ -549,8 +563,8 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    bm = conf->upstream.next_upstream->elts;
-    for (i = 0; i < conf->upstream.next_upstream->nelts; i++) {
+    bm = conf->upstream.next_upstream_conf->elts;
+    for (i = 0; i < conf->upstream.next_upstream_conf->nelts; i++) {
         if (bm[i].value & NGX_HTTP_UPSTREAM_FT_OFF) {
             bm[i].value = NGX_CONF_BITMASK_SET|NGX_HTTP_UPSTREAM_FT_OFF;
         }
@@ -585,6 +599,9 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         clcf->handler = ngx_http_tunnel_handler;
     }
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_http_upstream_init_conditional_conf(&conf->upstream);
+#endif
 
     return NGX_CONF_OK;
 }
