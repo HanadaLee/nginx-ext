@@ -311,8 +311,9 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    u->buffering = ngx_http_get_conditional_flag_value(r,
-                                                     plcf->upstream.buffering);
+    u->buffering =
+        ngx_http_get_conditional_flag_value(r,
+                                            plcf->upstream.buffering_conf);
 #else
     u->buffering = plcf->upstream.buffering;
 #endif
@@ -332,11 +333,11 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     u->accel = 1;
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(r,
-                                             plcf->upstream.request_buffering)
+    if (!ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.request_buffering_conf)
         && plcf->body_values == NULL
-        && ngx_http_get_conditional_flag_value(r,
-                                             plcf->upstream.pass_request_body))
+        && ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.pass_request_body_conf))
 #else
     if (!plcf->upstream.request_buffering
         && plcf->body_values == NULL && plcf->upstream.pass_request_body)
@@ -906,8 +907,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 #endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(r,
-                                          plcf->upstream.pass_request_headers))
+    if (ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.pass_request_headers_conf))
     {
 #else
     if (plcf->upstream.pass_request_headers) {
@@ -1438,8 +1439,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
     }
 
 #if (NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(r,
-                                          plcf->upstream.pass_request_headers))
+    if (ngx_http_get_conditional_flag_value(
+            r, plcf->upstream.pass_request_headers_conf))
     {
 #else
     if (plcf->upstream.pass_request_headers) {
@@ -1551,8 +1552,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     } else if (plcf->body_values == NULL
-               && ngx_http_get_conditional_flag_value(r,
-                                             plcf->upstream.pass_request_body))
+               && ngx_http_get_conditional_flag_value(
+                   r, plcf->upstream.pass_request_body_conf))
     {
 #else
     } else if (plcf->body_values == NULL && plcf->upstream.pass_request_body) {
