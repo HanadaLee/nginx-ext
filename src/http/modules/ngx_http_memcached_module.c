@@ -685,9 +685,13 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     conf->upstream.buffering = NGX_CONF_UNSET_PTR;
     conf->upstream.ignore_client_abort = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_headers = NGX_CONF_UNSET_PTR;
+    conf->upstream.pass_request_body = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.buffering = 0;
     conf->upstream.ignore_client_abort = 0;
+    conf->upstream.pass_request_headers = 0;
+    conf->upstream.pass_request_body = 0;
 #endif
     conf->upstream.send_lowat = 0;
     conf->upstream.bufs.num = 0;
@@ -696,8 +700,6 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.temp_file_write_size = 0;
     conf->upstream.intercept_errors = 1;
     conf->upstream.intercept_404 = 1;
-    conf->upstream.pass_request_headers = 0;
-    conf->upstream.pass_request_body = 0;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     conf->upstream.force_ranges = NGX_CONF_UNSET_PTR;
 #else
@@ -723,6 +725,22 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (ngx_conf_init_conditional_flag_value(cf,
             &conf->upstream.ignore_client_abort, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+   if (ngx_conf_init_conditional_flag_value(cf,
+                                          &conf->upstream.pass_request_headers,
+                                          0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+   if (ngx_conf_init_conditional_flag_value(cf,
+                                            &conf->upstream.pass_request_body,
+                                            0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
