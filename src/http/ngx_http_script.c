@@ -2427,6 +2427,45 @@ ngx_http_script_compare_number(u_char *data1, size_t len1, u_char *data2,
 
 
 void
+ngx_http_script_number_equal_code(ngx_http_script_engine_t *e)
+{
+    ngx_http_variable_value_t  *val, *res;
+    ngx_int_t                   cmp;
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                   "http script number equal");
+
+    e->sp--;
+    val = e->sp;
+    res = e->sp - 1;
+
+    e->ip += sizeof(uintptr_t);
+
+    if (ngx_http_script_compare_number(res->data, res->len, val->data,
+                                       val->len, &cmp) != NGX_OK)
+    {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                       "http script number equal: error "
+                       "in number comparison");
+        *res = ngx_http_variable_null_value;
+        return;
+    }
+
+    if (cmp == 0) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                       "http script number equal: true");
+        *res = ngx_http_variable_true_value;
+        return;
+    }
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
+                   "http script number equal: false");
+
+    *res = ngx_http_variable_null_value;
+}
+
+
+void
 ngx_http_script_greater_than_code(ngx_http_script_engine_t *e)
 {
     ngx_http_variable_value_t  *val, *res;

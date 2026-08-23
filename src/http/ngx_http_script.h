@@ -347,6 +347,7 @@ void ngx_http_script_nop_code(ngx_http_script_engine_t *e);
 void ngx_http_script_if_op_code(ngx_http_script_engine_t *e);
 ngx_int_t ngx_http_script_compare_number(u_char *data1, size_t len1,
     u_char *data2, size_t len2, ngx_int_t *cmp);
+void ngx_http_script_number_equal_code(ngx_http_script_engine_t *e);
 void ngx_http_script_greater_than_code(ngx_http_script_engine_t *e);
 void ngx_http_script_greater_equal_code(ngx_http_script_engine_t *e);
 void ngx_http_script_less_than_code(ngx_http_script_engine_t *e);
