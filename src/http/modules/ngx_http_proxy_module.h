@@ -58,6 +58,10 @@ typedef struct {
     ngx_array_t                   *cookie_domains;
     ngx_array_t                   *cookie_paths;
     ngx_array_t                   *cookie_flags;
+#if (NGX_RESTY_EXT)
+    ngx_array_t                   *cookie_values;
+    ngx_array_t                   *cookie_max_age;
+#endif
 
 #if (NGX_RESTY_EXT && NGX_CONDITION)
     ngx_array_t                   *method;
