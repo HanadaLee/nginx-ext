@@ -675,6 +675,8 @@ ngx_http_upstream_get_bitmask(ngx_http_request_t *r, ngx_array_t *values,
 }
 
 
+#if (NGX_HTTP_SSL)
+
 static ngx_int_t
 ngx_http_upstream_get_complex(ngx_http_request_t *r, ngx_array_t *values,
     ngx_http_complex_value_t *cv, ngx_str_t *value)
@@ -689,6 +691,8 @@ ngx_http_upstream_get_complex(ngx_http_request_t *r, ngx_array_t *values,
 
     return ngx_http_complex_value(r, cv, value);
 }
+
+#endif
 
 
 static size_t
