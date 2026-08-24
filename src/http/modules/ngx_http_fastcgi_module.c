@@ -624,7 +624,7 @@ static ngx_command_t  ngx_http_fastcgi_commands[] = {
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_off_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_min_length_conf),
+      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_min_length),
 #else
       ngx_conf_set_off_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -642,7 +642,7 @@ static ngx_command_t  ngx_http_fastcgi_commands[] = {
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_off_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_max_length_conf),
+      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_max_length),
 #else
       ngx_conf_set_off_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -718,7 +718,7 @@ static ngx_command_t  ngx_http_fastcgi_commands[] = {
 #if (NGX_CONDITION)
       ngx_http_set_conditional_complex_value_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_vary_conf),
+      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_vary),
 #else
       ngx_http_set_complex_value_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -736,7 +736,7 @@ static ngx_command_t  ngx_http_fastcgi_commands[] = {
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_hide_cookies_conf),
+      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.cache_hide_cookies),
 #else
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -998,7 +998,7 @@ static ngx_command_t  ngx_http_fastcgi_commands[] = {
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_bitmask_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.ignore_cache_control_conf),
+      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.ignore_cache_control),
 #else
       ngx_conf_set_bitmask_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -1016,7 +1016,7 @@ static ngx_command_t  ngx_http_fastcgi_commands[] = {
 #if (NGX_CONDITION)
       ngx_conf_set_conditional_str_array_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.hide_cookies_conf),
+      offsetof(ngx_http_fastcgi_loc_conf_t, upstream.hide_cookies),
 #else
       ngx_conf_set_str_array_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -3527,10 +3527,10 @@ ngx_http_fastcgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_stale_if_error = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_stale_while_revalidate = NGX_CONF_UNSET_PTR;
 #if (NGX_CONDITION)
-    conf->upstream.cache_vary_conf = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_hide_cookies_conf = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_min_length_conf = NGX_CONF_UNSET_PTR;
-    conf->upstream.cache_max_length_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_hide_cookies = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_min_length = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_max_length = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_hide_cookies = NGX_CONF_UNSET;
@@ -3884,8 +3884,8 @@ ngx_http_fastcgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_bitmask_value(cf,
-            &conf->upstream.ignore_cache_control_conf,
-            prev->upstream.ignore_cache_control_conf, NGX_CONF_BITMASK_SET)
+            &conf->upstream.ignore_cache_control,
+            prev->upstream.ignore_cache_control, NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -3981,16 +3981,16 @@ ngx_http_fastcgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_off_value(cf,
-            &conf->upstream.cache_min_length_conf,
-            prev->upstream.cache_min_length_conf, 0)
+            &conf->upstream.cache_min_length,
+            prev->upstream.cache_min_length, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_off_value(cf,
-            &conf->upstream.cache_max_length_conf,
-            prev->upstream.cache_max_length_conf, 0)
+            &conf->upstream.cache_max_length,
+            prev->upstream.cache_max_length, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -4065,16 +4065,16 @@ ngx_http_fastcgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_ptr_value(cf,
-            &conf->upstream.cache_vary_conf,
-            prev->upstream.cache_vary_conf, NULL)
+            &conf->upstream.cache_vary,
+            prev->upstream.cache_vary, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_conditional_flag_value(cf,
-            &conf->upstream.cache_hide_cookies_conf,
-            prev->upstream.cache_hide_cookies_conf, 0)
+            &conf->upstream.cache_hide_cookies,
+            prev->upstream.cache_hide_cookies, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -4242,8 +4242,8 @@ ngx_http_fastcgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_CONDITION)
     if (ngx_conf_merge_conditional_ptr_value(cf,
-            &conf->upstream.hide_cookies_conf,
-            prev->upstream.hide_cookies_conf, NULL)
+            &conf->upstream.hide_cookies,
+            prev->upstream.hide_cookies, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
