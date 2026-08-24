@@ -244,7 +244,11 @@ typedef struct {
 
     ngx_uint_t                       ignore_headers;
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    ngx_array_t                     *ignore_cache_control;
+#else
     ngx_uint_t                       ignore_cache_control;
+#endif
 #endif
     ngx_uint_t                       next_upstream;
     ngx_uint_t                       store_access;
@@ -287,14 +291,24 @@ typedef struct {
 #if (NGX_RESTY_EXT)
     ngx_http_complex_value_t        *cache_stale_if_error;
     ngx_http_complex_value_t        *cache_stale_while_revalidate;
+#if (NGX_CONDITION)
+    ngx_array_t                     *cache_vary;
+    ngx_array_t                     *cache_hide_cookies;
+#else
     ngx_http_complex_value_t        *cache_vary;
     ngx_flag_t                       cache_hide_cookies;
+#endif
 #endif
     ngx_uint_t                       cache_methods;
 
 #if (NGX_RESTY_EXT)
+#if (NGX_CONDITION)
+    ngx_array_t                     *cache_min_length;
+    ngx_array_t                     *cache_max_length;
+#else
     off_t                            cache_min_length;
     off_t                            cache_max_length;
+#endif
 #endif
     off_t                            cache_max_range_offset;
 
@@ -353,7 +367,6 @@ typedef struct {
     ngx_array_t                     *limit_rate_conf;
 
     ngx_array_t                     *ignore_headers_conf;
-    ngx_array_t                     *ignore_cache_control_conf;
     ngx_array_t                     *next_upstream_conf;
     ngx_array_t                     *next_upstream_tries_conf;
     ngx_array_t                     *buffering_conf;
@@ -362,16 +375,11 @@ typedef struct {
     ngx_array_t                     *pass_request_body_conf;
     ngx_array_t                     *ignore_client_abort_conf;
     ngx_array_t                     *force_ranges_conf;
-    ngx_array_t                     *hide_cookies_conf;
 
 #if (NGX_HTTP_CACHE)
     ngx_array_t                     *cache_min_uses_conf;
     ngx_array_t                     *cache_use_stale_conf;
-    ngx_array_t                     *cache_vary_conf;
-    ngx_array_t                     *cache_hide_cookies_conf;
     ngx_array_t                     *cache_methods_conf;
-    ngx_array_t                     *cache_min_length_conf;
-    ngx_array_t                     *cache_max_length_conf;
     ngx_array_t                     *cache_max_range_offset_conf;
     ngx_array_t                     *cache_lock_conf;
     ngx_array_t                     *cache_lock_timeout_conf;
