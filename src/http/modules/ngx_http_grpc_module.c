@@ -150,8 +150,6 @@ typedef struct {
 
 #if (NGX_RESTY_EXT)
     ngx_str_t                  uri;
-#endif
-#if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
     ngx_list_t                 headers_in;
 #endif
 } ngx_http_grpc_ctx_t;
@@ -225,6 +223,10 @@ static void ngx_http_grpc_finalize_request(ngx_http_request_t *r,
 
 static ngx_int_t ngx_http_grpc_internal_trailers_variable(
     ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
+#if (NGX_RESTY_EXT)
+static ngx_int_t ngx_http_grpc_http_variable(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data);
+#endif
 
 static ngx_int_t ngx_http_grpc_add_variables(ngx_conf_t *cf);
 static void *ngx_http_grpc_create_loc_conf(ngx_conf_t *cf);
@@ -730,6 +732,11 @@ static ngx_http_variable_t  ngx_http_grpc_vars[] = {
       ngx_http_grpc_internal_trailers_variable, 0,
       NGX_HTTP_VAR_NOCACHEABLE|NGX_HTTP_VAR_NOHASH, 0 },
 
+#if (NGX_RESTY_EXT)
+    { ngx_string("grpc_http_"), NULL, ngx_http_grpc_http_variable,
+      0, NGX_HTTP_VAR_NOCACHEABLE|NGX_HTTP_VAR_PREFIX, 0 },
+#endif
+
       ngx_http_null_variable
 };
 
@@ -1007,8 +1014,11 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
                                  *headers_end;
     size_t                        len, headers_len, tmp_len,
                                   key_len, val_len, uri_len;
-#if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
-    size_t                        method_len, host_len, old_tmp_len;
+#if (NGX_RESTY_EXT)
+    size_t                        old_tmp_len;
+#if (NGX_HTTP_GRPC_FILTER)
+    size_t                        method_len, host_len;
+#endif
 #endif
 #if !(NGX_RESTY_EXT)
     uintptr_t                     escape;
@@ -1019,7 +1029,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     ngx_chain_t                  *cl, *body;
     ngx_list_part_t              *part;
     ngx_table_elt_t              *header;
-#if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
+#if (NGX_RESTY_EXT)
     ngx_table_elt_t              *th;
 #endif
     ngx_http_grpc_ctx_t          *ctx;
@@ -1284,7 +1294,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         }
     }
 
-#if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
+#if (NGX_RESTY_EXT)
 
     if (ngx_list_init(&ctx->headers_in, r->pool, 16,
                       sizeof(ngx_table_elt_t))
@@ -1300,6 +1310,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
     key_tmp = tmp + tmp_len;
     val_tmp = tmp + 2 * tmp_len;
+    old_tmp_len = tmp_len;
 
     ngx_memzero(&e, sizeof(ngx_http_script_engine_t));
 
@@ -1450,7 +1461,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
                 return NGX_ERROR;
             }
 
-#if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
+#if (NGX_RESTY_EXT)
             th = ngx_list_push(&ctx->headers_in);
             if (th == NULL) {
                 return NGX_ERROR;
@@ -1615,6 +1626,12 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
     len += headers_len;
 
+#endif
+
+#if (NGX_RESTY_EXT)
+
+    ctx->host = host;
+
     if (tmp_len > old_tmp_len) {
         tmp = ngx_palloc(r->pool, tmp_len * 3);
         if (tmp == NULL) {
@@ -1646,7 +1663,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     cl->buf = b;
     cl->next = NULL;
 
-#if !(NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
+#if !(NGX_RESTY_EXT)
     tmp = ngx_palloc(r->pool, tmp_len * 3);
     if (tmp == NULL) {
         return NGX_ERROR;
@@ -1807,7 +1824,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "grpc header: \":authority: %V\"", &host);
 
-#if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
+#if (NGX_RESTY_EXT)
 
     headers_end = b->last + headers_len;
 
@@ -1909,10 +1926,6 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         code((ngx_http_script_engine_t *) &e);
 
         if (e.status) {
-#if (NGX_RESTY_EXT)
-            ngx_http_upstream_set_error(r,
-                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
-#endif
             return NGX_ERROR;
         }
 
@@ -1938,10 +1951,6 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
         e.ip += sizeof(uintptr_t);
 
         if (e.status) {
-#if (NGX_RESTY_EXT)
-            ngx_http_upstream_set_error(r,
-                             NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
-#endif
             return NGX_ERROR;
         }
 
@@ -5480,6 +5489,48 @@ ngx_http_grpc_internal_trailers_variable(ngx_http_request_t *r,
 
     return NGX_OK;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static ngx_int_t
+ngx_http_grpc_http_variable(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    ngx_str_t            *name = (ngx_str_t *) data;
+    ngx_http_grpc_ctx_t  *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_grpc_module);
+    if (ctx == NULL) {
+        v->not_found = 1;
+        return NGX_OK;
+    }
+
+    if (name->len == sizeof("grpc_http_host") - 1
+        && ngx_strncasecmp(name->data, (u_char *) "grpc_http_host",
+                           sizeof("grpc_http_host") - 1) == 0)
+    {
+        v->valid = 1;
+        v->no_cacheable = 0;
+        v->not_found = 0;
+
+        v->len = ctx->host.len;
+        v->data = ctx->host.data;
+
+        return NGX_OK;
+    }
+
+    if (ctx->headers_in.pool == NULL) {
+        v->not_found = 1;
+        return NGX_OK;
+    }
+
+    return ngx_http_variable_unknown_header(r, v, name,
+                                            &ctx->headers_in.part,
+                                            sizeof("grpc_http_") - 1);
+}
+
+#endif
 
 
 static ngx_int_t
