@@ -72,6 +72,7 @@ typedef struct {
     ngx_syslog_peer_t           *syslog_peer;
     ngx_stream_log_fmt_t        *format;
 #if (NGX_RESTY_EXT && NGX_CONDITION)
+    ngx_flag_t                   off;
     ngx_condition_expr_id_t      expr_id;
 #else
     ngx_stream_complex_value_t  *filter;
@@ -86,7 +87,9 @@ typedef struct {
     time_t                       open_file_cache_valid;
     ngx_uint_t                   open_file_cache_min_uses;
 
+#if !(NGX_RESTY_EXT && NGX_CONDITION)
     ngx_uint_t                   off;        /* unsigned  off:1 */
+#endif
 } ngx_stream_log_srv_conf_t;
 
 
@@ -234,7 +237,11 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
 
     lscf = ngx_stream_get_module_srv_conf(s, ngx_stream_log_module);
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (lscf->logs == NULL) {
+#else
     if (lscf->off || lscf->logs == NULL) {
+#endif
         return NGX_OK;
     }
 
@@ -246,6 +253,10 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
             != NGX_CONDITION_EXPR_HIT)
         {
             continue;
+        }
+
+        if (log[l].off) {
+            return NGX_OK;
         }
 #else
         if (log[l].filter) {
@@ -1048,12 +1059,20 @@ ngx_stream_log_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
+#if (NGX_RESTY_EXT && NGX_CONDITION)
+    if (conf->logs) {
+        return NGX_CONF_OK;
+    }
+
+    conf->logs = prev->logs;
+#else
     if (conf->logs || conf->off) {
         return NGX_CONF_OK;
     }
 
     conf->logs = prev->logs;
     conf->off = prev->off;
+#endif
 
     return NGX_CONF_OK;
 }
@@ -1083,16 +1102,31 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
 #if (NGX_RESTY_EXT && NGX_CONDITION)
-        if (ngx_condition_get_associated_expr_id(cf)
-            != NGX_CONDITION_NO_EXPR_ID)
-        {
+        if (cf->args->nelts != 2) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "\"access_log off\" is not allowed "
-                               "inside \"when\"");
+                               "invalid parameter \"%V\"", &value[2]);
             return NGX_CONF_ERROR;
         }
-#endif
 
+        if (lscf->logs == NULL) {
+            lscf->logs = ngx_array_create(cf->pool, 2,
+                                          sizeof(ngx_stream_log_t));
+            if (lscf->logs == NULL) {
+                return NGX_CONF_ERROR;
+            }
+        }
+
+        log = ngx_array_push(lscf->logs);
+        if (log == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memzero(log, sizeof(ngx_stream_log_t));
+        log->off = 1;
+        log->expr_id = ngx_condition_get_associated_expr_id(cf);
+
+        return NGX_CONF_OK;
+#else
         lscf->off = 1;
         if (cf->args->nelts == 2) {
             return NGX_CONF_OK;
@@ -1101,6 +1135,7 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[2]);
         return NGX_CONF_ERROR;
+#endif
     }
 
     if (lscf->logs == NULL) {
