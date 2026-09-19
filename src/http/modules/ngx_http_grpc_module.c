@@ -1474,8 +1474,6 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
 
 #if (NGX_RESTY_EXT && NGX_HTTP_GRPC_FILTER)
 
-    old_tmp_len = tmp_len;
-
     if (ngx_http_grpc_filter_request_hook(r, &ctx->headers_in, &method,
                                           &host, &uri)
         != NGX_OK)
