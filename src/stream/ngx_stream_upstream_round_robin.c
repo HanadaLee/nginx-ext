@@ -8,6 +8,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_stream.h>
+#include <ngx_stream_upstream_round_robin.h>
 
 
 #define ngx_stream_upstream_tries(p) ((p)->tries                              \
