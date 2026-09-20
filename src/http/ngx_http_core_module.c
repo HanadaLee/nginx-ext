@@ -3773,7 +3773,7 @@ ngx_http_core_init_main_conf(ngx_conf_t *cf, void *conf)
 
 
 #if (NGX_RESTY_EXT)
-    ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 2048);
+    ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 4096);
 #else
     ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 1024);
 #endif
