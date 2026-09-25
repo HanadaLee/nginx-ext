@@ -555,10 +555,9 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    pctx->connect_timeout = ngx_stream_get_expr_msec_value(
-                                s, pscf->connect_timeout);
-    pctx->timeout = ngx_stream_get_expr_msec_value(s,
-                                                          pscf->timeout);
+    pctx->connect_timeout = ngx_stream_get_expr_msec_value(s,
+                                                         pscf->connect_timeout);
+    pctx->timeout = ngx_stream_get_expr_msec_value(s, pscf->timeout);
 #else
     pctx->connect_timeout = pscf->connect_timeout;
     pctx->timeout = pscf->timeout;
@@ -751,8 +750,7 @@ found:
     {
         ngx_uint_t  tries;
 
-        tries = ngx_stream_get_expr_num_value(
-                    s, pscf->next_upstream_tries);
+        tries = ngx_stream_get_expr_num_value(s, pscf->next_upstream_tries);
         if (tries && u->peer.tries > tries) {
             u->peer.tries = tries;
         }
@@ -1574,8 +1572,7 @@ ngx_stream_proxy_ssl_name(ngx_stream_session_t *s)
     u = s->upstream;
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    rc = ngx_stream_get_expr_complex_value(s, pscf->ssl_name,
-                                                   &name);
+    rc = ngx_stream_get_expr_complex_value(s, pscf->ssl_name, &name);
     if (rc == NGX_ERROR) {
         return NGX_ERROR;
     }
@@ -1883,8 +1880,7 @@ ngx_stream_proxy_resolve_handler(ngx_resolver_ctx_t *ctx)
     {
         ngx_uint_t  tries;
 
-        tries = ngx_stream_get_expr_num_value(
-                    s, pscf->next_upstream_tries);
+        tries = ngx_stream_get_expr_num_value(s, pscf->next_upstream_tries);
         if (tries && u->peer.tries > tries) {
             u->peer.tries = tries;
         }
@@ -2441,10 +2437,8 @@ ngx_stream_proxy_next_upstream(ngx_stream_session_t *s)
 #endif
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    timeout = ngx_stream_get_expr_msec_value(
-                  s, pscf->next_upstream_timeout);
-    next = ngx_stream_get_expr_flag_value(s,
-                                                  pscf->next_upstream);
+    timeout = ngx_stream_get_expr_msec_value(s, pscf->next_upstream_timeout);
+    next = ngx_stream_get_expr_flag_value(s, pscf->next_upstream);
 #else
     timeout = pscf->next_upstream_timeout;
 #endif
@@ -2672,22 +2666,22 @@ ngx_stream_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->connect_timeout, prev->connect_timeout, 60000)
+                           &conf->connect_timeout, prev->connect_timeout, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf, &conf->timeout,
-            prev->timeout, 10 * 60000)
+                                       prev->timeout, 10 * 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->next_upstream_timeout,
-            prev->next_upstream_timeout, 0)
+                                       &conf->next_upstream_timeout,
+                                       prev->next_upstream_timeout, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2718,15 +2712,15 @@ ngx_stream_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
-            &conf->next_upstream_tries,
-            prev->next_upstream_tries, 0)
+                                      &conf->next_upstream_tries,
+                                      prev->next_upstream_tries, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->next_upstream, prev->next_upstream, 1)
+                                   &conf->next_upstream, prev->next_upstream, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2769,14 +2763,14 @@ ngx_stream_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_ptr_value(cf, &conf->ssl_name,
-            prev->ssl_name, NULL)
+                                      prev->ssl_name, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf, &conf->ssl_server_name,
-            prev->ssl_server_name, 0)
+                                       prev->ssl_server_name, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -3181,8 +3175,7 @@ ngx_stream_proxy_get_next_upstream_tries(ngx_stream_session_t *s)
     pscf = ngx_stream_get_module_srv_conf(s, ngx_stream_proxy_module);
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    return ngx_stream_get_expr_num_value(s,
-                                                pscf->next_upstream_tries);
+    return ngx_stream_get_expr_num_value(s, pscf->next_upstream_tries);
 #else
     return pscf->next_upstream_tries;
 #endif

@@ -756,32 +756,32 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_memcached_loc_conf_t *conf = child;
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    ngx_uint_t                         i;
-    ngx_conf_expr_bitmask_ctx_t       *bm;
+    ngx_uint_t                    i;
+    ngx_conf_expr_bitmask_ctx_t  *bm;
 
     if (ngx_conf_init_expr_flag_value(cf,
-            &conf->upstream.ignore_client_abort_conf, 0)
+                                    &conf->upstream.ignore_client_abort_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_init_expr_flag_value(cf,
-            &conf->upstream.pass_request_headers_conf, 0)
+                                   &conf->upstream.pass_request_headers_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_init_expr_flag_value(cf,
-            &conf->upstream.pass_request_body_conf, 0)
+                                      &conf->upstream.pass_request_body_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_init_expr_flag_value(cf,
-            &conf->upstream.force_ranges_conf, 1)
+                                      &conf->upstream.force_ranges_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -796,40 +796,40 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
-            &conf->upstream.next_upstream_tries_conf,
-            prev->upstream.next_upstream_tries_conf, 0)
+                                      &conf->upstream.next_upstream_tries_conf,
+                                     prev->upstream.next_upstream_tries_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.connect_timeout_conf,
-            prev->upstream.connect_timeout_conf, 60000)
+                                       &conf->upstream.connect_timeout_conf,
+                                     prev->upstream.connect_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.send_timeout_conf,
-            prev->upstream.send_timeout_conf, 60000)
+                                       &conf->upstream.send_timeout_conf,
+                                       prev->upstream.send_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.read_timeout_conf,
-            prev->upstream.read_timeout_conf, 60000)
+                                       &conf->upstream.read_timeout_conf,
+                                       prev->upstream.read_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.next_upstream_timeout_conf,
-            prev->upstream.next_upstream_timeout_conf, 0)
+                                   &conf->upstream.next_upstream_timeout_conf,
+                                   prev->upstream.next_upstream_timeout_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -857,11 +857,11 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-            &conf->upstream.next_upstream_conf,
-            prev->upstream.next_upstream_conf,
-            (NGX_CONF_BITMASK_SET
-             |NGX_HTTP_UPSTREAM_FT_ERROR
-             |NGX_HTTP_UPSTREAM_FT_TIMEOUT))
+                                          &conf->upstream.next_upstream_conf,
+                                          prev->upstream.next_upstream_conf,
+                                          (NGX_CONF_BITMASK_SET
+                                           |NGX_HTTP_UPSTREAM_FT_ERROR
+                                           |NGX_HTTP_UPSTREAM_FT_TIMEOUT))
         != NGX_OK)
     {
         return NGX_CONF_ERROR;

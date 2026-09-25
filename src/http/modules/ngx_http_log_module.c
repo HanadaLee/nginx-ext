@@ -298,8 +298,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
     for (l = 0; l < lcf->logs->nelts; l++) {
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-        if (ngx_http_expr_get_result(r, log[l].expr_id)
-            != NGX_EXPR_WHEN_HIT)
+        if (ngx_http_expr_get_result(r, log[l].expr_id) != NGX_EXPR_WHEN_HIT)
         {
             continue;
         }

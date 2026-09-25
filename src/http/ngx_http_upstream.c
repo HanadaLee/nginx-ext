@@ -721,10 +721,10 @@ ngx_http_upstream_get_complex_size(ngx_http_request_t *r,
     do {                                                                     \
         type  *ctx;                                                          \
                                                                              \
-        ctx = ngx_expr_find_ctx((conf)->field ## _conf,            \
-                                          NGX_EXPR_NO_WHEN_ID,          \
-                                          sizeof(type),                      \
-                                          offsetof(type, expr_id));          \
+        ctx = ngx_expr_find_ctx((conf)->field ## _conf,                      \
+                                NGX_EXPR_NO_WHEN_ID,                         \
+                                sizeof(type),                                \
+                                offsetof(type, expr_id));                    \
         if (ctx != NULL) {                                                   \
             (conf)->field = ctx->value;                                      \
         }                                                                    \
@@ -4205,9 +4205,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
-            rc = ngx_http_get_expr_complex_value(r,
-                                                        u->conf->cache_vary,
-                                                        &vary);
+            rc = ngx_http_get_expr_complex_value(r, u->conf->cache_vary, &vary);
 
             if (rc == NGX_ERROR) {
                 ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
@@ -5935,10 +5933,8 @@ ngx_http_upstream_process_content_length(ngx_http_request_t *r,
     {
         off_t  max, min;
 
-        min = ngx_http_get_expr_off_value(r,
-                                                 u->conf->cache_min_length);
-        max = ngx_http_get_expr_off_value(r,
-                                                 u->conf->cache_max_length);
+        min = ngx_http_get_expr_off_value(r, u->conf->cache_min_length);
+        max = ngx_http_get_expr_off_value(r, u->conf->cache_max_length);
 
         if (u->headers_in.content_length_n < min
             || (max > 0 && u->headers_in.content_length_n > max))
@@ -6065,8 +6061,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
-    ignore = ngx_http_get_expr_bitmask_value(
-                 r, u->conf->ignore_cache_control);
+    ignore = ngx_http_get_expr_bitmask_value(r, u->conf->ignore_cache_control);
 #else
     ignore = u->conf->ignore_cache_control;
 #endif
@@ -7057,8 +7052,7 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
 
 #if (NGX_HTTP_CACHE)
 #if (NGX_EXPR)
-    cache_hide = ngx_http_get_expr_flag_value(
-                     r, u->conf->cache_hide_cookies);
+    cache_hide = ngx_http_get_expr_flag_value(r, u->conf->cache_hide_cookies);
 #else
     cache_hide = u->conf->cache_hide_cookies;
 #endif
@@ -7069,8 +7063,7 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
 #endif
 
 #if (NGX_EXPR)
-    hide_cookies = ngx_http_get_expr_str_array_value(
-                       r, u->conf->hide_cookies);
+    hide_cookies = ngx_http_get_expr_str_array_value(r, u->conf->hide_cookies);
 #else
     hide_cookies = u->conf->hide_cookies;
 #endif
