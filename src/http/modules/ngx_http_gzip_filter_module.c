@@ -1263,7 +1263,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_flag_value(cf, &conf->enable,
-            prev->enable, 0) != NGX_OK)
+                                       prev->enable, 0) != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
@@ -1279,7 +1279,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
                               0);
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf, &conf->level,
-            prev->level, 1) != NGX_OK)
+                                      prev->level, 1) != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
@@ -1291,7 +1291,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
                               MAX_MEM_LEVEL - 1);
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_size_value(cf, &conf->min_length,
-            prev->min_length, 20) != NGX_OK)
+                                       prev->min_length, 20) != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
@@ -1302,7 +1302,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_size_value(cf, &conf->max_length,
-            prev->max_length, 0) != NGX_OK)
+                                       prev->max_length, 0) != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
