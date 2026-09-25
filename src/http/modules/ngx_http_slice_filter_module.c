@@ -9,15 +9,15 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 
 typedef struct {
     size_t               size;
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t         *enable;
 #else
     ngx_flag_t           enable;
@@ -96,12 +96,12 @@ static ngx_command_t  ngx_http_slice_filter_commands[] = {
 #if (NGX_RESTY_EXT)
     { ngx_string("slice"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_FLAG,
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
       ngx_conf_set_flag_slot,
@@ -631,8 +631,8 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
         slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
-        if (!ngx_http_get_conditional_flag_value(r, slcf->enable)) {
+#if (NGX_EXPR)
+        if (!ngx_http_get_expr_flag_value(r, slcf->enable)) {
 #else
         if (!slcf->enable) {
 #endif
@@ -785,7 +785,7 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
     slcf->size = NGX_CONF_UNSET_SIZE;
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     slcf->enable = NGX_CONF_UNSET_PTR;
 #else
     slcf->enable = NGX_CONF_UNSET;
@@ -808,8 +808,8 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->size, prev->size, 0);
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->enable,
+#if (NGX_EXPR)
+    if (ngx_conf_merge_expr_flag_value(cf, &conf->enable,
                                               prev->enable, 0)
         != NGX_OK)
     {

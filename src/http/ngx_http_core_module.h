@@ -334,7 +334,7 @@ typedef struct {
     ngx_http_complex_value_t   value;
     ngx_str_t                  args;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_uint_t                 expr_id;
 #endif
 
