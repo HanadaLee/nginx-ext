@@ -9,8 +9,8 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 #if (NGX_ZLIB)
@@ -72,9 +72,9 @@ typedef struct {
     time_t                      error_log_time;
     ngx_syslog_peer_t          *syslog_peer;
     ngx_http_log_fmt_t         *format;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_flag_t                  off;
-    ngx_condition_expr_id_t     expr_id;
+    ngx_expr_when_id_t          expr_id;
 #else
     ngx_http_complex_value_t   *filter;
 #endif
@@ -90,7 +90,7 @@ typedef struct {
 
     ngx_flag_t                  escape_non_ascii;
 
-#if !(NGX_RESTY_EXT && NGX_CONDITION)
+#if !(NGX_RESTY_EXT && NGX_EXPR)
     ngx_uint_t                  off;        /* unsigned  off:1 */
 #endif
 } ngx_http_log_loc_conf_t;
@@ -190,7 +190,7 @@ static ngx_command_t  ngx_http_log_commands[] = {
 
     { ngx_string("access_log"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -284,7 +284,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
     u_char                   *line, *p, *end;
     size_t                    len, size;
     ssize_t                   n;
-#if !(NGX_RESTY_EXT && NGX_CONDITION)
+#if !(NGX_RESTY_EXT && NGX_EXPR)
     ngx_str_t                 val;
 #endif
     ngx_uint_t                i, l;
@@ -298,7 +298,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_log_module);
 
-#if !(NGX_RESTY_EXT && NGX_CONDITION)
+#if !(NGX_RESTY_EXT && NGX_EXPR)
     if (lcf->off) {
         return NGX_OK;
     }
@@ -307,9 +307,9 @@ ngx_http_log_handler(ngx_http_request_t *r)
     log = lcf->logs->elts;
     for (l = 0; l < lcf->logs->nelts; l++) {
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-        if (ngx_http_condition_get_expr_result(r, log[l].expr_id)
-            != NGX_CONDITION_EXPR_HIT)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+        if (ngx_http_expr_get_result(r, log[l].expr_id)
+            != NGX_EXPR_WHEN_HIT)
         {
             continue;
         }
@@ -1367,7 +1367,7 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     if (conf->logs) {
         return NGX_CONF_OK;
     }
@@ -1434,14 +1434,14 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_log_fmt_t                *fmt;
     ngx_http_log_main_conf_t          *lmcf;
     ngx_http_script_compile_t          sc;
-#if !(NGX_RESTY_EXT && NGX_CONDITION)
+#if !(NGX_RESTY_EXT && NGX_EXPR)
     ngx_http_compile_complex_value_t   ccv;
 #endif
 
     value = cf->args->elts;
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
         if (cf->args->nelts != 2) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                "invalid parameter \"%V\"", &value[2]);
@@ -1463,7 +1463,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         ngx_memzero(log, sizeof(ngx_http_log_t));
         log->off = 1;
-        log->expr_id = ngx_condition_get_associated_expr_id(cf);
+        log->expr_id = ngx_expr_get_associated_when_id(cf);
 
         return NGX_CONF_OK;
 #else
@@ -1493,8 +1493,8 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     ngx_memzero(log, sizeof(ngx_http_log_t));
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    log->expr_id = ngx_condition_get_associated_expr_id(cf);
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    log->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif
 
 
@@ -1646,7 +1646,7 @@ process_formats:
 #endif
         }
 
-#if !(NGX_RESTY_EXT && NGX_CONDITION)
+#if !(NGX_RESTY_EXT && NGX_EXPR)
         if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
             s.len = value[i].len - 3;
             s.data = value[i].data + 3;
