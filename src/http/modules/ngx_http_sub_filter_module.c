@@ -9,16 +9,16 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 
 typedef struct {
     ngx_http_complex_value_t   match;
     ngx_http_complex_value_t   value;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    ngx_condition_expr_id_t    expr_id;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_expr_when_id_t         expr_id;
 #endif
 } ngx_http_sub_pair_t;
 
@@ -108,7 +108,7 @@ static ngx_int_t ngx_http_sub_filter_init(ngx_conf_t *cf);
 static ngx_command_t  ngx_http_sub_filter_commands[] = {
 
     { ngx_string("sub_filter"),
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -220,9 +220,9 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
 
         j = 0;
         for (i = 0; i < n; i++) {
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-            if (ngx_http_condition_get_expr_result(r, pairs[i].expr_id)
-                != NGX_CONDITION_EXPR_HIT)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+            if (ngx_http_expr_get_result(r, pairs[i].expr_id)
+                != NGX_EXPR_WHEN_HIT)
             {
                 continue;
             }
@@ -848,9 +848,9 @@ ngx_http_sub_filter(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    pair->expr_id = ngx_condition_get_associated_expr_id(cf);
-    if (pair->expr_id != NGX_CONDITION_NO_EXPR_ID) {
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    pair->expr_id = ngx_expr_get_associated_when_id(cf);
+    if (pair->expr_id != NGX_EXPR_NO_WHEN_ID) {
         slcf->dynamic = 1;
     }
 #endif

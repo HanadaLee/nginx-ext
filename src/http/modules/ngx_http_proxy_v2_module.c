@@ -9,8 +9,8 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include <ngx_http_proxy_module.h>
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 #if (NGX_RESTY_EXT && NGX_HTTP_PROXY_FILTER)
 #include <ngx_http_proxy_filter_module.h>
@@ -229,7 +229,7 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     ngx_http_upstream_t         *u;
     ngx_http_proxy_v2_ctx_t     *ctx;
     ngx_http_proxy_loc_conf_t   *plcf;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_http_proxy_loc_conf_t   *rcf, *dcf, *pcf, *fcf, *vcf, *mcf;
 #endif
 #if (NGX_HTTP_CACHE)
@@ -289,8 +289,8 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     u->abort_request = ngx_http_proxy_v2_abort_request;
     u->finalize_request = ngx_http_proxy_v2_finalize_request;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    rcf = ngx_http_get_conditional_ptr_value(r, plcf->redirects);
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    rcf = ngx_http_get_expr_ptr_value(r, plcf->redirects);
 
     if (rcf && rcf->redirects) {
 #else
@@ -300,12 +300,12 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
-    dcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_domains);
-    pcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_paths);
-    fcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_flags);
-    vcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_values);
-    mcf = ngx_http_get_conditional_ptr_value(r, plcf->cookie_max_age);
+#if (NGX_EXPR)
+    dcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_domains);
+    pcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_paths);
+    fcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_flags);
+    vcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_values);
+    mcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_max_age);
 
     if ((dcf && dcf->cookie_domains)
         || (pcf && pcf->cookie_paths)
@@ -335,9 +335,9 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     }
 #endif
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     u->buffering =
-        ngx_http_get_conditional_flag_value(r,
+        ngx_http_get_expr_flag_value(r,
                                             plcf->upstream.buffering_conf);
 #else
     u->buffering = plcf->upstream.buffering;
@@ -357,11 +357,11 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
 
     u->accel = 1;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (!ngx_http_get_expr_flag_value(
             r, plcf->upstream.request_buffering_conf)
         && plcf->body_values == NULL
-        && ngx_http_get_conditional_flag_value(
+        && ngx_http_get_expr_flag_value(
             r, plcf->upstream.pass_request_body_conf))
 #else
     if (!plcf->upstream.request_buffering
@@ -449,7 +449,7 @@ ngx_http_proxy_v2_build_uri(ngx_http_request_t *r, ngx_str_t *uri)
 static ngx_int_t
 ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 {
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_int_t                     rc;
 #endif
 #if (NGX_RESTY_EXT)
@@ -500,9 +500,9 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 #endif
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
 
-    rc = ngx_http_get_conditional_complex_value(r, plcf->method, &method);
+    rc = ngx_http_get_expr_complex_value(r, plcf->method, &method);
 
     if (rc == NGX_ERROR) {
         return NGX_ERROR;
@@ -914,8 +914,8 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
 #endif
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_http_get_conditional_flag_value(
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (ngx_http_get_expr_flag_value(
             r, plcf->upstream.pass_request_headers_conf))
     {
 #else
@@ -1542,9 +1542,9 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
 
         u->request_bufs = cl;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     } else if (plcf->body_values == NULL
-               && ngx_http_get_conditional_flag_value(
+               && ngx_http_get_expr_flag_value(
                    r, plcf->upstream.pass_request_body_conf))
     {
 #else

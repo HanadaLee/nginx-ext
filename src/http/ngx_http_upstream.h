@@ -244,7 +244,7 @@ typedef struct {
 
     ngx_uint_t                       ignore_headers;
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t                     *ignore_cache_control;
 #else
     ngx_uint_t                       ignore_cache_control;
@@ -291,7 +291,7 @@ typedef struct {
 #if (NGX_RESTY_EXT)
     ngx_http_complex_value_t        *cache_stale_if_error;
     ngx_http_complex_value_t        *cache_stale_while_revalidate;
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t                     *cache_vary;
     ngx_array_t                     *cache_hide_cookies;
 #else
@@ -302,7 +302,7 @@ typedef struct {
     ngx_uint_t                       cache_methods;
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t                     *cache_min_length;
     ngx_array_t                     *cache_max_length;
 #else
@@ -359,7 +359,7 @@ typedef struct {
 
     ngx_str_t                        module;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_array_t                     *connect_timeout_conf;
     ngx_array_t                     *send_timeout_conf;
     ngx_array_t                     *read_timeout_conf;
@@ -592,7 +592,7 @@ char *ngx_http_upstream_param_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 ngx_int_t ngx_http_upstream_hide_headers_hash(ngx_conf_t *cf,
     ngx_http_upstream_conf_t *conf, ngx_http_upstream_conf_t *prev,
     ngx_str_t *default_hide_headers, ngx_hash_init_t *hash);
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
 void ngx_http_upstream_init_conditional_conf(
     ngx_http_upstream_conf_t *conf);
 #endif
