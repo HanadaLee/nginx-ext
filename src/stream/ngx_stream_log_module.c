@@ -247,8 +247,7 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
     for (l = 0; l < lscf->logs->nelts; l++) {
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-        if (ngx_stream_expr_get_result(s, log[l].expr_id)
-            != NGX_EXPR_WHEN_HIT)
+        if (ngx_stream_expr_get_result(s, log[l].expr_id) != NGX_EXPR_WHEN_HIT)
         {
             continue;
         }

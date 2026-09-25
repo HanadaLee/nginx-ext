@@ -1169,9 +1169,8 @@ ngx_http_uwsgi_handler(ngx_http_request_t *r)
     r->state = 0;
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    u->buffering =
-        ngx_http_get_expr_flag_value(r,
-                                            uwcf->upstream.buffering_conf);
+    u->buffering = ngx_http_get_expr_flag_value(r,
+                                                uwcf->upstream.buffering_conf);
 #else
     u->buffering = uwcf->upstream.buffering;
 #endif
@@ -1189,10 +1188,10 @@ ngx_http_uwsgi_handler(ngx_http_request_t *r)
     u->input_filter_ctx = r;
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (!ngx_http_get_expr_flag_value(
-            r, uwcf->upstream.request_buffering_conf)
-        && ngx_http_get_expr_flag_value(
-            r, uwcf->upstream.pass_request_body_conf)
+    if (!ngx_http_get_expr_flag_value(r,
+                                      uwcf->upstream.request_buffering_conf)
+        && ngx_http_get_expr_flag_value(r,
+                                        uwcf->upstream.pass_request_body_conf)
         && !r->headers_in.chunked)
 #else
     if (!uwcf->upstream.request_buffering
@@ -1389,8 +1388,8 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_http_get_expr_flag_value(
-            r, uwcf->upstream.pass_request_headers_conf))
+    if (ngx_http_get_expr_flag_value(r,
+                                     uwcf->upstream.pass_request_headers_conf))
     {
 #else
     if (uwcf->upstream.pass_request_headers) {
@@ -1604,8 +1603,8 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_http_get_expr_flag_value(
-            r, uwcf->upstream.pass_request_headers_conf))
+    if (ngx_http_get_expr_flag_value(r,
+                                     uwcf->upstream.pass_request_headers_conf))
     {
 #else
     if (uwcf->upstream.pass_request_headers) {
@@ -1698,8 +1697,8 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
         r->upstream->request_bufs = cl;
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    } else if (ngx_http_get_expr_flag_value(
-                   r, uwcf->upstream.pass_request_body_conf))
+    } else if (ngx_http_get_expr_flag_value(r,
+                                         uwcf->upstream.pass_request_body_conf))
     {
 #else
     } else if (uwcf->upstream.pass_request_body) {
@@ -2214,7 +2213,7 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_hash_init_t               hash;
     ngx_http_core_loc_conf_t     *clcf;
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    ngx_conf_expr_bitmask_ctx_t       *bm;
+    ngx_conf_expr_bitmask_ctx_t  *bm;
 #endif
 
 #if (NGX_RESTY_EXT)
@@ -2247,40 +2246,40 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
-            &conf->upstream.next_upstream_tries_conf,
-            prev->upstream.next_upstream_tries_conf, 0)
+                                     &conf->upstream.next_upstream_tries_conf,
+                                     prev->upstream.next_upstream_tries_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.buffering_conf,
-            prev->upstream.buffering_conf, 1)
+                                       &conf->upstream.buffering_conf,
+                                       prev->upstream.buffering_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.request_buffering_conf,
-            prev->upstream.request_buffering_conf, 1)
+                                       &conf->upstream.request_buffering_conf,
+                                       prev->upstream.request_buffering_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.ignore_client_abort_conf,
-            prev->upstream.ignore_client_abort_conf, 0)
+                                     &conf->upstream.ignore_client_abort_conf,
+                                     prev->upstream.ignore_client_abort_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.force_ranges_conf,
-            prev->upstream.force_ranges_conf, 0)
+                                       &conf->upstream.force_ranges_conf,
+                                       prev->upstream.force_ranges_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2316,32 +2315,32 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.connect_timeout_conf,
-            prev->upstream.connect_timeout_conf, 60000)
+                                     &conf->upstream.connect_timeout_conf,
+                                     prev->upstream.connect_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.send_timeout_conf,
-            prev->upstream.send_timeout_conf, 60000)
+                                       &conf->upstream.send_timeout_conf,
+                                       prev->upstream.send_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.read_timeout_conf,
-            prev->upstream.read_timeout_conf, 60000)
+                                       &conf->upstream.read_timeout_conf,
+                                       prev->upstream.read_timeout_conf, 60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.next_upstream_timeout_conf,
-            prev->upstream.next_upstream_timeout_conf, 0)
+                                   &conf->upstream.next_upstream_timeout_conf,
+                                   prev->upstream.next_upstream_timeout_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2369,8 +2368,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_ptr_value(cf,
-            &conf->upstream.limit_rate_conf,
-            prev->upstream.limit_rate_conf, NULL)
+                                      &conf->upstream.limit_rate_conf,
+                                      prev->upstream.limit_rate_conf, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2478,8 +2477,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-            &conf->upstream.ignore_headers_conf,
-            prev->upstream.ignore_headers_conf, NGX_CONF_BITMASK_SET)
+                       &conf->upstream.ignore_headers_conf,
+                       prev->upstream.ignore_headers_conf, NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2493,8 +2492,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-            &conf->upstream.ignore_cache_control,
-            prev->upstream.ignore_cache_control, NGX_CONF_BITMASK_SET)
+                      &conf->upstream.ignore_cache_control,
+                      prev->upstream.ignore_cache_control, NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2508,11 +2507,11 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-            &conf->upstream.next_upstream_conf,
-            prev->upstream.next_upstream_conf,
-            (NGX_CONF_BITMASK_SET
-             |NGX_HTTP_UPSTREAM_FT_ERROR
-             |NGX_HTTP_UPSTREAM_FT_TIMEOUT))
+                                          &conf->upstream.next_upstream_conf,
+                                          prev->upstream.next_upstream_conf,
+                                          (NGX_CONF_BITMASK_SET
+                                           |NGX_HTTP_UPSTREAM_FT_ERROR
+                                           |NGX_HTTP_UPSTREAM_FT_TIMEOUT))
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2576,8 +2575,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
-            &conf->upstream.cache_min_uses_conf,
-            prev->upstream.cache_min_uses_conf, 1)
+                                      &conf->upstream.cache_min_uses_conf,
+                                      prev->upstream.cache_min_uses_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2590,16 +2589,16 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_off_value(cf,
-            &conf->upstream.cache_min_length,
-            prev->upstream.cache_min_length, 0)
+                                      &conf->upstream.cache_min_length,
+                                      prev->upstream.cache_min_length, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_off_value(cf,
-            &conf->upstream.cache_max_length,
-            prev->upstream.cache_max_length, 0)
+                                      &conf->upstream.cache_max_length,
+                                      prev->upstream.cache_max_length, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2615,18 +2614,18 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_off_value(cf,
-            &conf->upstream.cache_max_range_offset_conf,
-            prev->upstream.cache_max_range_offset_conf, NGX_MAX_OFF_T_VALUE)
+                &conf->upstream.cache_max_range_offset_conf,
+                prev->upstream.cache_max_range_offset_conf, NGX_MAX_OFF_T_VALUE)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_bitmask_value(cf,
-            &conf->upstream.cache_use_stale_conf,
-            prev->upstream.cache_use_stale_conf,
-            (NGX_CONF_BITMASK_SET
-             |NGX_HTTP_UPSTREAM_FT_OFF))
+                                          &conf->upstream.cache_use_stale_conf,
+                                          prev->upstream.cache_use_stale_conf,
+                                          (NGX_CONF_BITMASK_SET
+                                           |NGX_HTTP_UPSTREAM_FT_OFF))
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2674,16 +2673,16 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_ptr_value(cf,
-            &conf->upstream.cache_vary,
-            prev->upstream.cache_vary, NULL)
+                                      &conf->upstream.cache_vary,
+                                      prev->upstream.cache_vary, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.cache_hide_cookies,
-            prev->upstream.cache_hide_cookies, 0)
+                                       &conf->upstream.cache_hide_cookies,
+                                       prev->upstream.cache_hide_cookies, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2700,8 +2699,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-            &conf->upstream.cache_methods_conf,
-            prev->upstream.cache_methods_conf, 0)
+                                          &conf->upstream.cache_methods_conf,
+                                          prev->upstream.cache_methods_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2753,24 +2752,24 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.cache_lock_conf,
-            prev->upstream.cache_lock_conf, 0)
+                                       &conf->upstream.cache_lock_conf,
+                                       prev->upstream.cache_lock_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.cache_lock_timeout_conf,
-            prev->upstream.cache_lock_timeout_conf, 5000)
+                                   &conf->upstream.cache_lock_timeout_conf,
+                                   prev->upstream.cache_lock_timeout_conf, 5000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-            &conf->upstream.cache_lock_age_conf,
-            prev->upstream.cache_lock_age_conf, 5000)
+                                       &conf->upstream.cache_lock_age_conf,
+                                       prev->upstream.cache_lock_age_conf, 5000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2791,8 +2790,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.cache_background_update_conf,
-            prev->upstream.cache_background_update_conf, 0)
+                                 &conf->upstream.cache_background_update_conf,
+                                 prev->upstream.cache_background_update_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2806,16 +2805,16 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.pass_request_headers_conf,
-            prev->upstream.pass_request_headers_conf, 1)
+                                    &conf->upstream.pass_request_headers_conf,
+                                    prev->upstream.pass_request_headers_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.pass_request_body_conf,
-            prev->upstream.pass_request_body_conf, 1)
+                                       &conf->upstream.pass_request_body_conf,
+                                       prev->upstream.pass_request_body_conf, 1)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2847,15 +2846,15 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_ptr_value(cf,
-            &conf->upstream.ssl_name_conf,
-            prev->upstream.ssl_name_conf, NULL)
+                                      &conf->upstream.ssl_name_conf,
+                                      prev->upstream.ssl_name_conf, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
     if (ngx_conf_merge_expr_flag_value(cf,
-            &conf->upstream.ssl_server_name_conf,
-            prev->upstream.ssl_server_name_conf, 0)
+                                       &conf->upstream.ssl_server_name_conf,
+                                       prev->upstream.ssl_server_name_conf, 0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2913,8 +2912,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_ptr_value(cf,
-            &conf->upstream.hide_cookies,
-            prev->upstream.hide_cookies, NULL)
+                                      &conf->upstream.hide_cookies,
+                                      prev->upstream.hide_cookies, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
