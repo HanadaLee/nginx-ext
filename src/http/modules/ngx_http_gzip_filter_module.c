@@ -11,13 +11,13 @@
 
 #include <zlib.h>
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 
 typedef struct {
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_array_t         *enable;
 #else
     ngx_flag_t           enable;
@@ -29,20 +29,20 @@ typedef struct {
     ngx_bufs_t           bufs;
 
     size_t               postpone_gzipping;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_array_t         *level;
 #else
     ngx_int_t            level;
 #endif
     size_t               wbits;
     size_t               memlevel;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_array_t         *min_length;
 #else
     ssize_t              min_length;
 #endif
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t         *max_length;
 #else
     ssize_t              max_length;
@@ -77,7 +77,7 @@ typedef struct {
     int                  wbits;
     int                  memlevel;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_int_t            level;
 #endif
 
@@ -141,7 +141,7 @@ static ngx_conf_post_handler_pt  ngx_http_gzip_hash_p = ngx_http_gzip_hash;
 static ngx_command_t  ngx_http_gzip_filter_commands[] = {
 
     { ngx_string("gzip"),
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_LIF_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
@@ -151,7 +151,7 @@ static ngx_command_t  ngx_http_gzip_filter_commands[] = {
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
                         |NGX_CONF_FLAG,
 #endif
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
       ngx_conf_set_flag_slot,
@@ -175,7 +175,7 @@ static ngx_command_t  ngx_http_gzip_filter_commands[] = {
       &ngx_http_html_default_types[0] },
 
     { ngx_string("gzip_comp_level"),
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -183,7 +183,7 @@ static ngx_command_t  ngx_http_gzip_filter_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       ngx_conf_set_conditional_num_slot,
 #else
       ngx_conf_set_num_slot,
@@ -221,7 +221,7 @@ static ngx_command_t  ngx_http_gzip_filter_commands[] = {
       NULL },
 
     { ngx_string("gzip_min_length"),
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -229,7 +229,7 @@ static ngx_command_t  ngx_http_gzip_filter_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       ngx_conf_set_conditional_size_slot,
 #else
       ngx_conf_set_size_slot,
@@ -241,12 +241,12 @@ static ngx_command_t  ngx_http_gzip_filter_commands[] = {
 #if (NGX_RESTY_EXT)
     { ngx_string("gzip_max_length"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_TAKE1,
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
       ngx_conf_set_conditional_size_slot,
 #else
       ngx_conf_set_size_slot,
@@ -309,7 +309,7 @@ static ngx_uint_t  ngx_http_gzip_assume_zlib_ng;
 static ngx_int_t
 ngx_http_gzip_header_filter(ngx_http_request_t *r)
 {
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     size_t                 min_length, max_length;
 #endif
     ngx_table_elt_t       *h;
@@ -318,13 +318,13 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
 
     conf = ngx_http_get_module_loc_conf(r, ngx_http_gzip_filter_module);
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(r, conf->enable)) {
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (!ngx_http_get_expr_flag_value(r, conf->enable)) {
         return ngx_http_next_header_filter(r);
     }
 
-    min_length = ngx_http_get_conditional_size_value(r, conf->min_length);
-    max_length = ngx_http_get_conditional_size_value(r, conf->max_length);
+    min_length = ngx_http_get_expr_size_value(r, conf->min_length);
+    max_length = ngx_http_get_expr_size_value(r, conf->max_length);
 
     if ((r->headers_out.status != NGX_HTTP_OK
 #else
@@ -337,7 +337,7 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
             && r->headers_out.content_encoding->value.len)
         || (r->headers_out.content_length_n != -1
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
             && (r->headers_out.content_length_n < (off_t) min_length
                 || (max_length > 0
                     && r->headers_out.content_length_n > (off_t) max_length)))
@@ -401,8 +401,8 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
 
     ctx->request = r;
     ctx->buffering = (conf->postpone_gzipping != 0);
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    ctx->level = ngx_http_get_conditional_num_value(r, conf->level);
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ctx->level = ngx_http_get_expr_num_value(r, conf->level);
 #endif
 
     ngx_http_gzip_filter_memory(r, ctx);
@@ -655,7 +655,7 @@ ngx_http_gzip_filter_memory(ngx_http_request_t *r, ngx_http_gzip_ctx_t *ctx)
          * and 128K hash.
          */
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
         if (ctx->level == 1) {
 #else
         if (conf->level == 1) {
@@ -744,7 +744,7 @@ ngx_http_gzip_filter_deflate_start(ngx_http_request_t *r,
     ngx_http_gzip_ctx_t *ctx)
 {
     int                    rc;
-#if !(NGX_RESTY_EXT && NGX_CONDITION)
+#if !(NGX_RESTY_EXT && NGX_EXPR)
     ngx_http_gzip_conf_t  *conf;
 
     conf = ngx_http_get_module_loc_conf(r, ngx_http_gzip_filter_module);
@@ -761,7 +761,7 @@ ngx_http_gzip_filter_deflate_start(ngx_http_request_t *r,
     ctx->zstream.zfree = ngx_http_gzip_filter_free;
     ctx->zstream.opaque = ctx;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     rc = deflateInit2(&ctx->zstream, (int) ctx->level, Z_DEFLATED,
 #else
     rc = deflateInit2(&ctx->zstream, (int) conf->level, Z_DEFLATED,
@@ -1221,7 +1221,7 @@ ngx_http_gzip_create_conf(ngx_conf_t *cf)
      *     conf->types_keys = NULL;
      */
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     conf->enable = NGX_CONF_UNSET_PTR;
 #else
     conf->enable = NGX_CONF_UNSET;
@@ -1229,21 +1229,21 @@ ngx_http_gzip_create_conf(ngx_conf_t *cf)
     conf->no_buffer = NGX_CONF_UNSET;
 
     conf->postpone_gzipping = NGX_CONF_UNSET_SIZE;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     conf->level = NGX_CONF_UNSET_PTR;
 #else
     conf->level = NGX_CONF_UNSET;
 #endif
     conf->wbits = NGX_CONF_UNSET_SIZE;
     conf->memlevel = NGX_CONF_UNSET_SIZE;
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     conf->min_length = NGX_CONF_UNSET_PTR;
 #else
     conf->min_length = NGX_CONF_UNSET;
 #endif
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     conf->max_length = NGX_CONF_UNSET_PTR;
 #else
     conf->max_length = NGX_CONF_UNSET;
@@ -1261,8 +1261,8 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_gzip_conf_t *prev = parent;
     ngx_http_gzip_conf_t *conf = child;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->enable,
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (ngx_conf_merge_expr_flag_value(cf, &conf->enable,
             prev->enable, 0) != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -1277,8 +1277,8 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_size_value(conf->postpone_gzipping, prev->postpone_gzipping,
                               0);
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_num_value(cf, &conf->level,
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (ngx_conf_merge_expr_num_value(cf, &conf->level,
             prev->level, 1) != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -1289,8 +1289,8 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->wbits, prev->wbits, MAX_WBITS);
     ngx_conf_merge_size_value(conf->memlevel, prev->memlevel,
                               MAX_MEM_LEVEL - 1);
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_size_value(cf, &conf->min_length,
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (ngx_conf_merge_expr_size_value(cf, &conf->min_length,
             prev->min_length, 20) != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -1300,8 +1300,8 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
-    if (ngx_conf_merge_conditional_size_value(cf, &conf->max_length,
+#if (NGX_EXPR)
+    if (ngx_conf_merge_expr_size_value(cf, &conf->max_length,
             prev->max_length, 0) != NGX_OK)
     {
         return NGX_CONF_ERROR;

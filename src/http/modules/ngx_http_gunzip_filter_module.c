@@ -12,19 +12,19 @@
 
 #include <zlib.h>
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 
 typedef struct {
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_array_t         *enable;
 #else
     ngx_flag_t           enable;
 #endif
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t         *force;
 #else
     ngx_flag_t           force;
@@ -80,7 +80,7 @@ static char *ngx_http_gunzip_merge_conf(ngx_conf_t *cf,
 static ngx_command_t  ngx_http_gunzip_filter_commands[] = {
 
     { ngx_string("gunzip"),
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -88,7 +88,7 @@ static ngx_command_t  ngx_http_gunzip_filter_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
 #endif
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
       ngx_conf_set_flag_slot,
@@ -100,12 +100,12 @@ static ngx_command_t  ngx_http_gunzip_filter_commands[] = {
 #if (NGX_RESTY_EXT)
     { ngx_string("gunzip_force"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_FLAG,
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
       ngx_conf_set_flag_slot,
@@ -173,8 +173,8 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
     /* TODO always gunzip - due to configuration or module request */
     /* TODO ignore content encoding? */
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(r, conf->enable)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (!ngx_http_get_expr_flag_value(r, conf->enable)
 #else
     if (!conf->enable
 #endif
@@ -187,8 +187,8 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
-    if (!ngx_http_get_conditional_flag_value(r, conf->force)) {
+#if (NGX_EXPR)
+    if (!ngx_http_get_expr_flag_value(r, conf->force)) {
 #else
     if (!conf->force) {
 #endif
@@ -723,14 +723,14 @@ ngx_http_gunzip_create_conf(ngx_conf_t *cf)
      *     conf->bufs.num = 0;
      */
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     conf->enable = NGX_CONF_UNSET_PTR;
 #else
     conf->enable = NGX_CONF_UNSET;
 #endif
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     conf->force = NGX_CONF_UNSET_PTR;
 #else
     conf->force = NGX_CONF_UNSET;
@@ -747,8 +747,8 @@ ngx_http_gunzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_gunzip_conf_t *prev = parent;
     ngx_http_gunzip_conf_t *conf = child;
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->enable,
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (ngx_conf_merge_expr_flag_value(cf, &conf->enable,
                                               prev->enable, 0)
         != NGX_OK)
     {
@@ -759,8 +759,8 @@ ngx_http_gunzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
 
 #if (NGX_RESTY_EXT)
-#if (NGX_CONDITION)
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->force,
+#if (NGX_EXPR)
+    if (ngx_conf_merge_expr_flag_value(cf, &conf->force,
                                               prev->force, 0)
         != NGX_OK)
     {

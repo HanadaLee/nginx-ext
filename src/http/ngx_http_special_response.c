@@ -10,8 +10,8 @@
 #include <ngx_http.h>
 #include <nginx.h>
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 
@@ -1151,9 +1151,9 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
         for (i = 0; i < clcf->error_pages->nelts; i++) {
             if (err_page[i].status == error) {
 
-#if (NGX_RESTY_EXT && NGX_CONDITION)
-                if (ngx_http_condition_get_expr_result(r, err_page[i].expr_id)
-                    != NGX_CONDITION_EXPR_HIT)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+                if (ngx_http_expr_get_result(r, err_page[i].expr_id)
+                    != NGX_EXPR_WHEN_HIT)
                 {
                     continue;
                 }
