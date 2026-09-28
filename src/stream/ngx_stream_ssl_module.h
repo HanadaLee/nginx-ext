@@ -32,6 +32,10 @@ typedef struct {
 
     time_t            session_timeout;
 
+#if (NGX_RESTY_EXT)
+    ngx_uint_t        certificate_load;
+#endif
+
     ngx_array_t      *certificates;
     ngx_array_t      *certificate_keys;
 
