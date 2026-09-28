@@ -2304,6 +2304,9 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
     if (u->conf->ssl_certificate
         && u->conf->ssl_certificate->value.len
         && (u->conf->ssl_certificate->lengths
+#if (NGX_RESTY_EXT)
+            || u->conf->ssl_certificate_load == NGX_SSL_CERTIFICATE_RUNTIME
+#endif
             || u->conf->ssl_certificate_key->lengths))
     {
         if (ngx_http_upstream_ssl_certificate(r, u, c) != NGX_OK) {
@@ -8752,6 +8755,9 @@ ngx_http_upstream_merge_ssl_passwords(ngx_conf_t *cf,
     }
 
     if (conf->ssl_certificate->lengths == NULL
+#if (NGX_RESTY_EXT)
+        && conf->ssl_certificate_load != NGX_SSL_CERTIFICATE_RUNTIME
+#endif
         && conf->ssl_certificate_key->lengths == NULL)
     {
         if (conf->ssl_passwords && conf->ssl_passwords->pool == NULL) {

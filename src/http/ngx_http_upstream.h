@@ -354,6 +354,9 @@ typedef struct {
     ngx_http_complex_value_t        *ssl_certificate;
     ngx_http_complex_value_t        *ssl_certificate_key;
     ngx_ssl_cache_t                 *ssl_certificate_cache;
+#if (NGX_RESTY_EXT)
+    ngx_uint_t                      ssl_certificate_load;
+#endif
     ngx_array_t                     *ssl_passwords;
 #endif
 
