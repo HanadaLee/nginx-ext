@@ -104,6 +104,15 @@ static ngx_conf_post_t  ngx_http_ssl_conf_command_post =
     { ngx_http_ssl_conf_command_check };
 
 
+#if (NGX_RESTY_EXT)
+static ngx_conf_enum_t  ngx_http_ssl_certificate_load_modes[] = {
+    { ngx_string("default"), NGX_SSL_CERTIFICATE_DEFAULT },
+    { ngx_string("runtime"), NGX_SSL_CERTIFICATE_RUNTIME },
+    { ngx_null_string, 0 }
+};
+#endif
+
+
 static ngx_command_t  ngx_http_ssl_commands[] = {
 
     { ngx_string("ssl_certificate"),
@@ -119,6 +128,15 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, certificate_keys),
       NULL },
+
+#if (NGX_RESTY_EXT)
+    { ngx_string("ssl_certificate_load"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_enum_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, certificate_load),
+      &ngx_http_ssl_certificate_load_modes },
+#endif
 
     { ngx_string("ssl_certificate_cache"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE123,
@@ -726,6 +744,9 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->certificates = NGX_CONF_UNSET_PTR;
     sscf->certificate_keys = NGX_CONF_UNSET_PTR;
     sscf->certificate_cache = NGX_CONF_UNSET_PTR;
+#if (NGX_RESTY_EXT)
+    sscf->certificate_load = NGX_CONF_UNSET_UINT;
+#endif
     sscf->ech_files = NGX_CONF_UNSET_PTR;
     sscf->passwords = NGX_CONF_UNSET_PTR;
     sscf->conf_commands = NGX_CONF_UNSET_PTR;
@@ -782,6 +803,11 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_ptr_value(conf->certificates, prev->certificates, NULL);
     ngx_conf_merge_ptr_value(conf->certificate_keys, prev->certificate_keys,
                          NULL);
+
+#if (NGX_RESTY_EXT)
+    ngx_conf_merge_uint_value(conf->certificate_load, prev->certificate_load,
+                              NGX_SSL_CERTIFICATE_DEFAULT);
+#endif
 
     ngx_conf_merge_ptr_value(conf->certificate_cache, prev->certificate_cache,
                          NULL);
@@ -918,7 +944,11 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #else
         ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+#if (NGX_RESTY_EXT)
+                      "runtime loading or variables in "
+#else
                       "variables in "
+#endif
                       "\"ssl_certificate\" and \"ssl_certificate_key\" "
                       "directives are not supported on this platform");
         return NGX_CONF_ERROR;
@@ -1108,6 +1138,12 @@ ngx_http_ssl_compile_certificates(ngx_conf_t *cf,
     cert = conf->certificates->elts;
     key = conf->certificate_keys->elts;
     nelts = conf->certificates->nelts;
+
+#if (NGX_RESTY_EXT)
+    if (conf->certificate_load == NGX_SSL_CERTIFICATE_RUNTIME) {
+        goto found;
+    }
+#endif
 
     for (i = 0; i < nelts; i++) {
 
