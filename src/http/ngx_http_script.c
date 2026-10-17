@@ -455,7 +455,7 @@ ngx_http_set_complex_value_msec_slot(ngx_conf_t *cf, ngx_command_t *cmd,
         return NGX_CONF_OK;
     }
 
-    cv->u.msec = ngx_parse_time(&cv->value, 1);
+    cv->u.msec = ngx_parse_time(&cv->value, 0);
     if (cv->u.msec == (ngx_msec_t) NGX_ERROR) {
         return "invalid value";
     }
