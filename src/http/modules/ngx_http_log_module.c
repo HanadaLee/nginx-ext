@@ -75,9 +75,8 @@ typedef struct {
 #if (NGX_RESTY_EXT && NGX_EXPR)
     ngx_flag_t                  off;
     ngx_expr_when_id_t          expr_id;
-#else
-    ngx_http_complex_value_t   *filter;
 #endif
+    ngx_http_complex_value_t   *filter;
 } ngx_http_log_t;
 
 
@@ -274,9 +273,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
     u_char                   *line, *p, *end;
     size_t                    len, size;
     ssize_t                   n;
-#if !(NGX_RESTY_EXT && NGX_EXPR)
     ngx_str_t                 val;
-#endif
     ngx_uint_t                i, l;
     ngx_http_log_t           *log;
     ngx_http_log_op_t        *op;
@@ -306,7 +303,8 @@ ngx_http_log_handler(ngx_http_request_t *r)
         if (log[l].off) {
             return NGX_OK;
         }
-#else
+#endif
+
         if (log[l].filter) {
             if (ngx_http_complex_value(r, log[l].filter, &val) != NGX_OK) {
                 return NGX_ERROR;
@@ -316,7 +314,6 @@ ngx_http_log_handler(ngx_http_request_t *r)
                 continue;
             }
         }
-#endif
 
         if (ngx_time() == log[l].disk_full_time) {
 
@@ -1407,9 +1404,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_log_fmt_t                *fmt;
     ngx_http_log_main_conf_t          *lmcf;
     ngx_http_script_compile_t          sc;
-#if !(NGX_RESTY_EXT && NGX_EXPR)
     ngx_http_compile_complex_value_t   ccv;
-#endif
 
     value = cf->args->elts;
 
@@ -1619,7 +1614,6 @@ process_formats:
 #endif
         }
 
-#if !(NGX_RESTY_EXT && NGX_EXPR)
         if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
             s.len = value[i].len - 3;
             s.data = value[i].data + 3;
@@ -1642,7 +1636,6 @@ process_formats:
 
             continue;
         }
-#endif
 
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[i]);
