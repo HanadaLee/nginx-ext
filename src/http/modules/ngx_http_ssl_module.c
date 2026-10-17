@@ -342,39 +342,39 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NULL },
 
 #if (NGX_RESTY_EXT)
-    { ngx_string("ssl_dyn_rec"),
+    { ngx_string("ssl_dynamic_record"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
-      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_enable),
+      offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_enable),
       NULL },
 
-    { ngx_string("ssl_dyn_rec_timeout"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+    { ngx_string("ssl_dynamic_record_timeout"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
-      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_timeout),
+      offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_timeout),
       NULL },
 
-    { ngx_string("ssl_dyn_rec_size_lo"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+    { ngx_string("ssl_dynamic_record_low_size"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
-      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_size_lo),
+      offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_low_size),
       NULL },
 
-    { ngx_string("ssl_dyn_rec_size_hi"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+    { ngx_string("ssl_dynamic_record_high_size"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
-      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_size_hi),
+      offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_high_size),
       NULL },
 
-    { ngx_string("ssl_dyn_rec_threshold"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+    { ngx_string("ssl_dynamic_record_threshold"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
-      offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_threshold),
+      offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_threshold),
       NULL },
 
     { ngx_string("ssl_strict_server_name"),
@@ -759,11 +759,11 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->stapling = NGX_CONF_UNSET;
     sscf->stapling_verify = NGX_CONF_UNSET;
 #if (NGX_RESTY_EXT)
-    sscf->dyn_rec_enable = NGX_CONF_UNSET;
-    sscf->dyn_rec_timeout = NGX_CONF_UNSET_MSEC;
-    sscf->dyn_rec_size_lo = NGX_CONF_UNSET_SIZE;
-    sscf->dyn_rec_size_hi = NGX_CONF_UNSET_SIZE;
-    sscf->dyn_rec_threshold = NGX_CONF_UNSET_UINT;
+    sscf->dynamic_record_enable = NGX_CONF_UNSET;
+    sscf->dynamic_record_timeout = NGX_CONF_UNSET_MSEC;
+    sscf->dynamic_record_low_size = NGX_CONF_UNSET_SIZE;
+    sscf->dynamic_record_high_size = NGX_CONF_UNSET_SIZE;
+    sscf->dynamic_record_threshold = NGX_CONF_UNSET_UINT;
     sscf->strict_server_name = NGX_CONF_UNSET_UINT;
 #endif
 
@@ -843,9 +843,10 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
                          prev->stapling_responder, "");
 
 #if (NGX_RESTY_EXT)
-    ngx_conf_merge_value(conf->dyn_rec_enable, prev->dyn_rec_enable, 0);
-    ngx_conf_merge_msec_value(conf->dyn_rec_timeout, prev->dyn_rec_timeout,
-                              1000);
+    ngx_conf_merge_value(conf->dynamic_record_enable,
+                         prev->dynamic_record_enable, 0);
+    ngx_conf_merge_msec_value(conf->dynamic_record_timeout,
+                              prev->dynamic_record_timeout, 1000);
 
     /*
      * Default dynamic record sizes account for the maximum TLS and IPv6
@@ -853,15 +854,15 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
      * 1369 = 1500 - 40 (IP) - 20 (TCP) - 10 (Time) - 61 (TLS overhead).
      */
 
-    ngx_conf_merge_size_value(conf->dyn_rec_size_lo, prev->dyn_rec_size_lo,
-                              1369);
+    ngx_conf_merge_size_value(conf->dynamic_record_low_size,
+                              prev->dynamic_record_low_size, 1369);
 
     /* 4229 = (1500 - 40 - 20 - 10) * 3  - 61 */
 
-    ngx_conf_merge_size_value(conf->dyn_rec_size_hi, prev->dyn_rec_size_hi,
-                              4229);
-    ngx_conf_merge_uint_value(conf->dyn_rec_threshold, prev->dyn_rec_threshold,
-                              40);
+    ngx_conf_merge_size_value(conf->dynamic_record_high_size,
+                              prev->dynamic_record_high_size, 4229);
+    ngx_conf_merge_uint_value(conf->dynamic_record_threshold,
+                              prev->dynamic_record_threshold, 40);
 
     ngx_conf_merge_uint_value(conf->strict_server_name,
                               prev->strict_server_name, 2);
@@ -1095,26 +1096,26 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
 #if (NGX_RESTY_EXT)
-    if (conf->dyn_rec_enable) {
-        conf->ssl.dyn_rec.timeout = conf->dyn_rec_timeout;
-        conf->ssl.dyn_rec.threshold = conf->dyn_rec_threshold;
+    if (conf->dynamic_record_enable) {
+        conf->ssl.dynamic_record.timeout = conf->dynamic_record_timeout;
+        conf->ssl.dynamic_record.threshold = conf->dynamic_record_threshold;
 
-        if (conf->buffer_size > conf->dyn_rec_size_lo) {
-            conf->ssl.dyn_rec.size_lo = conf->dyn_rec_size_lo;
+        if (conf->buffer_size > conf->dynamic_record_low_size) {
+            conf->ssl.dynamic_record.low_size = conf->dynamic_record_low_size;
 
         } else {
-            conf->ssl.dyn_rec.size_lo = conf->buffer_size;
+            conf->ssl.dynamic_record.low_size = conf->buffer_size;
         }
 
-        if (conf->buffer_size > conf->dyn_rec_size_hi) {
-            conf->ssl.dyn_rec.size_hi = conf->dyn_rec_size_hi;
+        if (conf->buffer_size > conf->dynamic_record_high_size) {
+            conf->ssl.dynamic_record.high_size = conf->dynamic_record_high_size;
 
         } else {
-            conf->ssl.dyn_rec.size_hi = conf->buffer_size;
+            conf->ssl.dynamic_record.high_size = conf->buffer_size;
         }
 
     } else {
-        conf->ssl.dyn_rec.timeout = 0;
+        conf->ssl.dynamic_record.timeout = 0;
     }
 #endif
 

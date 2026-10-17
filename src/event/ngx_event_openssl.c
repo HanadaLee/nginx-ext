@@ -2117,7 +2117,7 @@ ngx_ssl_create_connection(ngx_ssl_t *ssl, ngx_connection_t *c, ngx_uint_t flags)
     sc->buffer_size = ssl->buffer_size;
 
 #if (NGX_RESTY_EXT)
-    sc->dyn_rec = ssl->dyn_rec;
+    sc->dynamic_record = ssl->dynamic_record;
 #endif
     sc->session_ctx = ssl->ctx;
 
@@ -3140,29 +3140,29 @@ ngx_ssl_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
            to reduce header overhead.
            After a connection has idled for a given timeout, begin
            the process from the start. The actual parameters are
-           configurable. If dyn_rec_timeout is 0, we assume dyn_rec is off. */
+           configurable. A zero ssl_dynamic_record_timeout disables resizing. */
 
-        if (c->ssl->dyn_rec.timeout > 0) {
+        if (c->ssl->dynamic_record.timeout > 0) {
 
-            if (ngx_current_msec - c->ssl->dyn_rec_last_write >
-                c->ssl->dyn_rec.timeout)
+            if (ngx_current_msec - c->ssl->dynamic_record_last_write >
+                c->ssl->dynamic_record.timeout)
             {
-                buf->end = buf->start + c->ssl->dyn_rec.size_lo;
-                c->ssl->dyn_rec_records_sent = 0;
+                buf->end = buf->start + c->ssl->dynamic_record.low_size;
+                c->ssl->dynamic_record_records_sent = 0;
 
             } else {
-                if (c->ssl->dyn_rec_records_sent >
-                    c->ssl->dyn_rec.threshold * 2)
+                if (c->ssl->dynamic_record_records_sent >
+                    c->ssl->dynamic_record.threshold * 2)
                 {
                     buf->end = buf->start + c->ssl->buffer_size;
 
-                } else if (c->ssl->dyn_rec_records_sent >
-                           c->ssl->dyn_rec.threshold)
+                } else if (c->ssl->dynamic_record_records_sent >
+                           c->ssl->dynamic_record.threshold)
                 {
-                    buf->end = buf->start + c->ssl->dyn_rec.size_hi;
+                    buf->end = buf->start + c->ssl->dynamic_record.high_size;
 
                 } else {
-                    buf->end = buf->start + c->ssl->dyn_rec.size_lo;
+                    buf->end = buf->start + c->ssl->dynamic_record.low_size;
                 }
             }
         }
@@ -3314,8 +3314,8 @@ ngx_ssl_write(ngx_connection_t *c, u_char *data, size_t size)
     if (n > 0) {
 
 #if (NGX_RESTY_EXT)
-        c->ssl->dyn_rec_records_sent++;
-        c->ssl->dyn_rec_last_write = ngx_current_msec;
+        c->ssl->dynamic_record_records_sent++;
+        c->ssl->dynamic_record_last_write = ngx_current_msec;
 #endif
 
         if (c->ssl->saved_read_handler) {

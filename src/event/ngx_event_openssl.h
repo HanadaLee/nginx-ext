@@ -106,9 +106,9 @@ typedef struct ngx_ssl_ocsp_s   ngx_ssl_ocsp_t;
 typedef struct {
     ngx_msec_t                  timeout;
     ngx_uint_t                  threshold;
-    size_t                      size_lo;
-    size_t                      size_hi;
-} ngx_ssl_dyn_rec_t;
+    size_t                      low_size;
+    size_t                      high_size;
+} ngx_ssl_dynamic_record_t;
 #endif
 
 
@@ -122,7 +122,7 @@ struct ngx_ssl_s {
     ngx_rbtree_t                staple_rbtree;
     ngx_rbtree_node_t           staple_sentinel;
 #if (NGX_RESTY_EXT)
-    ngx_ssl_dyn_rec_t           dyn_rec;
+    ngx_ssl_dynamic_record_t    dynamic_record;
 #endif
 };
 
@@ -147,9 +147,9 @@ struct ngx_ssl_connection_s {
     ngx_msec_t                  handshake_start_msec;
     ngx_msec_t                  handshake_end_msec;
 
-    ngx_ssl_dyn_rec_t           dyn_rec;
-    ngx_msec_t                  dyn_rec_last_write;
-    ngx_uint_t                  dyn_rec_records_sent;
+    ngx_ssl_dynamic_record_t    dynamic_record;
+    ngx_msec_t                  dynamic_record_last_write;
+    ngx_uint_t                  dynamic_record_records_sent;
 #endif
 
     ngx_ssl_ocsp_t             *ocsp;

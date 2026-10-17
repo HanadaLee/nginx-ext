@@ -72,11 +72,11 @@ typedef struct {
     ngx_str_t                       stapling_responder;
 
 #if (NGX_RESTY_EXT)
-    ngx_flag_t                      dyn_rec_enable;
-    ngx_msec_t                      dyn_rec_timeout;
-    size_t                          dyn_rec_size_lo;
-    size_t                          dyn_rec_size_hi;
-    ngx_uint_t                      dyn_rec_threshold;
+    ngx_flag_t                      dynamic_record_enable;
+    ngx_msec_t                      dynamic_record_timeout;
+    size_t                          dynamic_record_low_size;
+    size_t                          dynamic_record_high_size;
+    ngx_uint_t                      dynamic_record_threshold;
 
     ngx_uint_t                      strict_server_name;
 #endif
