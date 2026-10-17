@@ -80,14 +80,20 @@ typedef struct {
 } ngx_http_log_t;
 
 
+#if (NGX_RESTY_EXT)
+typedef struct ngx_http_log_loc_conf_s {
+#else
 typedef struct {
+#endif
     ngx_array_t                *logs;       /* array of ngx_http_log_t */
 
     ngx_open_file_cache_t      *open_file_cache;
     time_t                      open_file_cache_valid;
     ngx_uint_t                  open_file_cache_min_uses;
 
-#if !(NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    struct ngx_http_log_loc_conf_s  *parent;
+#else
     ngx_uint_t                  off;        /* unsigned  off:1 */
 #endif
 } ngx_http_log_loc_conf_t;
@@ -279,13 +285,28 @@ ngx_http_log_handler(ngx_http_request_t *r)
     ngx_http_log_op_t        *op;
     ngx_http_log_buf_t       *buffer;
     ngx_http_log_loc_conf_t  *lcf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_uint_t                matched;
+#endif
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http log handler");
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_log_module);
 
-#if !(NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+next_level:
+
+    while (lcf && lcf->logs == NULL) {
+        lcf = lcf->parent;
+    }
+
+    if (lcf == NULL) {
+        return NGX_OK;
+    }
+
+    matched = 0;
+#else
     if (lcf->off) {
         return NGX_OK;
     }
@@ -299,6 +320,9 @@ ngx_http_log_handler(ngx_http_request_t *r)
         {
             continue;
         }
+
+        /* A matching entry selects this level even if if= skips it. */
+        matched = 1;
 
         if (log[l].off) {
             return NGX_OK;
@@ -437,6 +461,13 @@ ngx_http_log_handler(ngx_http_request_t *r)
 
         ngx_http_log_write(r, &log[l], line, p - line);
     }
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (!matched) {
+        lcf = lcf->parent;
+        goto next_level;
+    }
+#endif
 
     return NGX_OK;
 }
@@ -1325,6 +1356,10 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_log_t            *log;
     ngx_http_log_fmt_t        *fmt;
     ngx_http_log_main_conf_t  *lmcf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_uint_t                i;
+    ngx_http_log_loc_conf_t  *fallback;
+#endif
 
     if (conf->open_file_cache == NGX_CONF_UNSET_PTR) {
 
@@ -1338,15 +1373,35 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (conf->logs) {
-        return NGX_CONF_OK;
+    conf->parent = prev;
+
+    /* Only a chain without an unconditional entry needs the default log. */
+    for (fallback = conf; /* void */; fallback = fallback->parent) {
+        if (fallback->logs) {
+            log = fallback->logs->elts;
+            for (i = 0; i < fallback->logs->nelts; i++) {
+                if (log[i].expr_id == NGX_EXPR_NO_WHEN_ID) {
+                    return NGX_CONF_OK;
+                }
+            }
+        }
+
+        if (fallback->parent == NULL) {
+            break;
+        }
     }
 
-    conf->logs = prev->logs;
+    if (fallback->logs) {
+        fallback->parent = ngx_pcalloc(cf->pool,
+                                       sizeof(ngx_http_log_loc_conf_t));
+        if (fallback->parent == NULL) {
+            return NGX_CONF_ERROR;
+        }
 
-    if (conf->logs) {
-        return NGX_CONF_OK;
+        fallback = fallback->parent;
     }
+
+    conf = fallback;
 #else
     if (conf->logs || conf->off) {
         return NGX_CONF_OK;
@@ -1371,6 +1426,10 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     ngx_memzero(log, sizeof(ngx_http_log_t));
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    log->expr_id = NGX_EXPR_NO_WHEN_ID;
+#endif
 
     log->file = ngx_conf_open_file(cf->cycle, &ngx_http_access_log);
     if (log->file == NULL) {
