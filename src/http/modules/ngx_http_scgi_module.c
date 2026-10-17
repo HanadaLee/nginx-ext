@@ -2482,8 +2482,7 @@ ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (ngx_http_merge_types(cf, &conf->upstream.cache_types_keys,
                              &conf->upstream.cache_types,
                              &prev->upstream.cache_types_keys,
-                             &prev->upstream.cache_types,
-                             ngx_http_html_default_types)
+                             &prev->upstream.cache_types, NULL)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
