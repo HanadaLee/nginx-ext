@@ -361,14 +361,14 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       ngx_conf_set_size_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_low_size),
-      NULL },
+      &ngx_conf_size_nonzero_post },
 
     { ngx_string("ssl_dynamic_record_high_size"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_high_size),
-      NULL },
+      &ngx_conf_size_nonzero_post },
 
     { ngx_string("ssl_dynamic_record_threshold"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
