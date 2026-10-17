@@ -153,6 +153,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
     ngx_str_t                   *value;
     ngx_uint_t                   i, hash;
 #if (NGX_RESTY_EXT)
+    ngx_int_t                    rc;
     ngx_uint_t                   j;
 #endif
     ngx_addr_t                   addr;
@@ -178,8 +179,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT)
-    value = NULL;
-    xfwd = NULL;
+    c = r->connection;
 
     for (j = 0; j < rlcf->headers->nelts; j++) {
         realip_header = &((ngx_http_realip_header_t *) rlcf->headers->elts)[j];
@@ -248,6 +248,38 @@ ngx_http_realip_handler(ngx_http_request_t *r)
                 }
             }
         }
+
+        continue;
+
+    found:
+
+        if (value != NULL && value->len == 0) {
+            continue;
+        }
+
+        /* Each candidate is evaluated against the original peer address. */
+
+        addr.sockaddr = c->sockaddr;
+        addr.socklen = c->socklen;
+
+        rc = ngx_http_get_forwarded_addr(r, &addr, xfwd, value, rlcf->from,
+                                         rlcf->recursive);
+
+        if (rc == NGX_DECLINED) {
+            continue;
+        }
+
+        if (rc == NGX_ERROR) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+
+        /* NGX_DONE also yields an address from a partially traversed chain. */
+
+        if (realip_header->type == NGX_HTTP_REALIP_PROXY) {
+            ngx_inet_set_port(addr.sockaddr, c->proxy_protocol->src_port);
+        }
+
+        return ngx_http_realip_set_addr(r, &addr);
     }
 
     return NGX_DECLINED;
@@ -322,7 +354,6 @@ ngx_http_realip_handler(ngx_http_request_t *r)
 
         return NGX_DECLINED;
     }
-#endif
 
 found:
 
@@ -336,11 +367,7 @@ found:
                                     rlcf->recursive)
         != NGX_DECLINED)
     {
-#if (NGX_RESTY_EXT)
-        if (realip_header->type == NGX_HTTP_REALIP_PROXY) {
-#else
         if (rlcf->type == NGX_HTTP_REALIP_PROXY) {
-#endif
             ngx_inet_set_port(addr.sockaddr, c->proxy_protocol->src_port);
         }
 
@@ -348,6 +375,7 @@ found:
     }
 
     return NGX_DECLINED;
+#endif
 }
 
 
@@ -529,7 +557,8 @@ ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_uint_t                i;
 
     if (rlcf->headers == NULL) {
-        rlcf->headers = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
+        rlcf->headers = ngx_array_create(cf->pool, 4,
+                                         sizeof(ngx_http_realip_header_t));
         if (rlcf->headers == NULL) {
             return NGX_CONF_ERROR;
         }
@@ -543,13 +572,13 @@ ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             return NGX_CONF_ERROR;
         }
 
-        if (ngx_strcmp(value[1].data, "X-Real-IP") == 0) {
+        if (ngx_strcmp(value[i].data, "X-Real-IP") == 0) {
             header->type = NGX_HTTP_REALIP_XREALIP;
 
-        } else if (ngx_strcmp(value[1].data, "X-Forwarded-For") == 0) {
+        } else if (ngx_strcmp(value[i].data, "X-Forwarded-For") == 0) {
             header->type = NGX_HTTP_REALIP_XFWD;
 
-        } else if (ngx_strcmp(value[1].data, "proxy_protocol") == 0) {
+        } else if (ngx_strcmp(value[i].data, "proxy_protocol") == 0) {
             header->type = NGX_HTTP_REALIP_PROXY;
 
         } else {
