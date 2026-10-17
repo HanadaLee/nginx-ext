@@ -27,7 +27,6 @@ typedef struct ngx_stream_session_s  ngx_stream_session_t;
 
 
 #define NGX_STREAM_OK                        200
-#define NGX_STREAM_SPECIAL_RESPONSE          300
 #define NGX_STREAM_BAD_REQUEST               400
 #define NGX_STREAM_FORBIDDEN                 403
 #define NGX_STREAM_INTERNAL_SERVER_ERROR     500
@@ -313,15 +312,6 @@ typedef struct {
 } ngx_stream_module_t;
 
 
-typedef struct {
-    ngx_msec_t                       connect_timeout;
-    ngx_msec_t                       timeout;
-} ngx_stream_proxy_ctx_t;
-
-
-#define NGX_STREAM_HAVE_PROXY_TIMEOUT_FIELDS_PATCH 1
-
-
 #define NGX_STREAM_MODULE       0x4d525453     /* "STRM" */
 
 #define NGX_STREAM_MAIN_CONF    0x02000000
@@ -382,7 +372,6 @@ void ngx_stream_finalize_session(ngx_stream_session_t *s, ngx_uint_t rc);
 extern ngx_module_t  ngx_stream_module;
 extern ngx_uint_t    ngx_stream_max_module;
 extern ngx_module_t  ngx_stream_core_module;
-extern ngx_module_t  ngx_stream_proxy_module;
 
 
 typedef ngx_int_t (*ngx_stream_filter_pt)(ngx_stream_session_t *s,
@@ -390,9 +379,6 @@ typedef ngx_int_t (*ngx_stream_filter_pt)(ngx_stream_session_t *s,
 
 
 extern ngx_stream_filter_pt  ngx_stream_top_filter;
-
-
-#define HAS_NGX_STREAM_PROXY_GET_NEXT_UPSTREAM_TRIES_PATCH 1
 
 
 #endif /* _NGX_STREAM_H_INCLUDED_ */

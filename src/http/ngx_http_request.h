@@ -11,8 +11,7 @@
 
 #define NGX_HTTP_MAX_URI_CHANGES           10
 #define NGX_HTTP_MAX_SUBREQUESTS           50
-
-#define NGX_HTTP_OPENRESTY_LUA_SUBREQUEST  1
+#define NGX_HTTP_MAX_BLOCKED               250
 
 /* must be 2^n */
 #define NGX_HTTP_LC_HEADER_LEN             32
@@ -552,7 +551,6 @@ struct ngx_http_request_s {
     unsigned                          internal:1;
     unsigned                          error_page:1;
     unsigned                          filter_finalize:1;
-    unsigned                          lua_subrequest:1;
     unsigned                          post_action:1;
     unsigned                          request_complete:1;
     unsigned                          request_output:1;

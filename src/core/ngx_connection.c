@@ -1142,13 +1142,9 @@ ngx_close_listening_sockets(ngx_cycle_t *cycle)
     for (i = 0; i < cycle->listening.nelts; i++) {
 
 #if (NGX_QUIC)
-        if (ls[i].quic) {
-            continue;
-        }
-#endif
-
-#if (NGX_HAVE_REUSEPORT)
-        if (ls[i].fd == (ngx_socket_t) -1) {
+        if (ls[i].quic
+            && (!ls[i].reuseport || !ngx_quic_bpf_enabled(cycle)))
+        {
             continue;
         }
 #endif

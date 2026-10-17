@@ -15,8 +15,6 @@ static void ngx_start_worker_processes(ngx_cycle_t *cycle, ngx_int_t n,
     ngx_int_t type);
 static void ngx_start_cache_manager_processes(ngx_cycle_t *cycle,
     ngx_uint_t respawn);
-static void ngx_start_privileged_agent_processes(ngx_cycle_t *cycle,
-    ngx_uint_t respawn);
 static void ngx_pass_open_channel(ngx_cycle_t *cycle);
 static void ngx_signal_worker_processes(ngx_cycle_t *cycle, int signo);
 static ngx_uint_t ngx_reap_children(ngx_cycle_t *cycle);
@@ -26,7 +24,6 @@ static void ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker);
 static void ngx_worker_process_exit(ngx_cycle_t *cycle);
 static void ngx_channel_handler(ngx_event_t *ev);
 static void ngx_cache_manager_process_cycle(ngx_cycle_t *cycle, void *data);
-static void ngx_privileged_agent_process_cycle(ngx_cycle_t *cycle, void *data);
 static void ngx_cache_manager_process_handler(ngx_event_t *ev);
 static void ngx_cache_loader_process_handler(ngx_event_t *ev);
 
@@ -54,8 +51,6 @@ ngx_uint_t    ngx_daemonized;
 sig_atomic_t  ngx_noaccept;
 ngx_uint_t    ngx_noaccepting;
 ngx_uint_t    ngx_restart;
-
-ngx_uint_t    ngx_is_privileged_agent;
 
 
 static u_char  master_process[] = "master process";
@@ -135,7 +130,6 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
     ngx_start_worker_processes(cycle, ccf->worker_processes,
                                NGX_PROCESS_RESPAWN);
     ngx_start_cache_manager_processes(cycle, 0);
-    ngx_start_privileged_agent_processes(cycle, 0);
 
     ngx_new_binary = 0;
     delay = 0;
@@ -243,7 +237,6 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
                 ngx_start_worker_processes(cycle, ccf->worker_processes,
                                            NGX_PROCESS_RESPAWN);
                 ngx_start_cache_manager_processes(cycle, 0);
-                ngx_start_privileged_agent_processes(cycle, 0);
                 ngx_noaccepting = 0;
 
                 continue;
@@ -263,7 +256,6 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
             ngx_start_worker_processes(cycle, ccf->worker_processes,
                                        NGX_PROCESS_JUST_RESPAWN);
             ngx_start_cache_manager_processes(cycle, 1);
-            ngx_start_privileged_agent_processes(cycle, 1);
 
             /* allow new processes to start */
             ngx_msleep(100);
@@ -278,7 +270,6 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
             ngx_start_worker_processes(cycle, ccf->worker_processes,
                                        NGX_PROCESS_RESPAWN);
             ngx_start_cache_manager_processes(cycle, 0);
-            ngx_start_privileged_agent_processes(cycle, 0);
             live = 1;
         }
 
@@ -326,26 +317,11 @@ ngx_single_process_cycle(ngx_cycle_t *cycle)
     }
 
     for ( ;; ) {
-        if (ngx_exiting) {
-            if (ngx_event_no_timers_left() == NGX_OK) {
-                ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "exiting");
-
-                for (i = 0; cycle->modules[i]; i++) {
-                    if (cycle->modules[i]->exit_process) {
-                        cycle->modules[i]->exit_process(cycle);
-                    }
-                }
-
-                ngx_master_process_exit(cycle);
-            }
-        }
-
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, cycle->log, 0, "worker cycle");
 
         ngx_process_events_and_timers(cycle);
 
-        if (ngx_terminate) {
-            ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "exiting");
+        if (ngx_terminate || ngx_quit) {
 
             for (i = 0; cycle->modules[i]; i++) {
                 if (cycle->modules[i]->exit_process) {
@@ -354,20 +330,6 @@ ngx_single_process_cycle(ngx_cycle_t *cycle)
             }
 
             ngx_master_process_exit(cycle);
-        }
-
-        if (ngx_quit) {
-            ngx_quit = 0;
-            ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0,
-                          "gracefully shutting down");
-            ngx_setproctitle("process is shutting down");
-
-            if (!ngx_exiting) {
-                ngx_exiting = 1;
-                ngx_set_shutdown_timer(cycle);
-                ngx_close_listening_sockets(cycle);
-                ngx_close_idle_connections(cycle);
-            }
         }
 
         if (ngx_reconfigure) {
@@ -447,35 +409,6 @@ ngx_start_cache_manager_processes(ngx_cycle_t *cycle, ngx_uint_t respawn)
     ngx_spawn_process(cycle, ngx_cache_manager_process_cycle,
                       &ngx_cache_loader_ctx, "cache loader process",
                       respawn ? NGX_PROCESS_JUST_SPAWN : NGX_PROCESS_NORESPAWN);
-
-    ngx_pass_open_channel(cycle);
-}
-
-
-static void
-ngx_start_privileged_agent_processes(ngx_cycle_t *cycle, ngx_uint_t respawn)
-{
-    ngx_core_conf_t       *ccf;
-
-    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx,
-                                           ngx_core_module);
-
-    if (!ccf->privileged_agent) {
-        return;
-    }
-
-    /* 0 is an illegal value and may result in a core dump later */
-    if (ccf->privileged_agent_connections == 0) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
-                      "%ui worker_connection is not enough, "
-                      "privileged agent process cannot be spawned",
-                      ccf->privileged_agent_connections);
-        return;
-    }
-
-    ngx_spawn_process(cycle, ngx_privileged_agent_process_cycle,
-                      "privileged agent process", "privileged agent process",
-                      respawn ? NGX_PROCESS_JUST_RESPAWN : NGX_PROCESS_RESPAWN);
 
     ngx_pass_open_channel(cycle);
 }
@@ -786,11 +719,6 @@ ngx_master_process_exit(ngx_cycle_t *cycle)
     ngx_exit_cycle.files_n = ngx_cycle->files_n;
     ngx_cycle = &ngx_exit_cycle;
 
-    if (saved_init_cycle_pool != NULL && saved_init_cycle_pool != cycle->pool) {
-        ngx_destroy_pool(saved_init_cycle_pool);
-        saved_init_cycle_pool = NULL;
-    }
-
     ngx_destroy_pool(cycle->pool);
 
     exit(0);
@@ -902,10 +830,7 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
         }
     }
 
-    /*
-     * privileged agent process has the same permission as master process
-     */
-    if (!ngx_is_privileged_agent && geteuid() == 0) {
+    if (geteuid() == 0) {
         if (setgid(ccf->group) == -1) {
             ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
                           "setgid(%d) failed", ccf->group);
@@ -1062,12 +987,10 @@ ngx_worker_process_exit(ngx_cycle_t *cycle)
         for (i = 0; i < cycle->connection_n; i++) {
             if (c[i].fd != -1
                 && c[i].read
-#if (HAVE_SOCKET_CLOEXEC_PATCH)
-                && !c[i].read->skip_socket_leak_check
-#endif
                 && !c[i].read->accept
                 && !c[i].read->channel
-                && !c[i].read->resolver)
+                && !c[i].read->resolver
+                && !c[i].read->quic)
             {
                 ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
                               "*%uA open socket #%d left in connection %ui",
@@ -1240,49 +1163,7 @@ ngx_cache_manager_process_cycle(ngx_cycle_t *cycle, void *data)
 
         if (ngx_terminate || ngx_quit) {
             ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "exiting");
-            ngx_worker_process_exit(cycle);
-        }
-
-        if (ngx_reopen) {
-            ngx_reopen = 0;
-            ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "reopening logs");
-            ngx_reopen_files(cycle, -1);
-        }
-
-        ngx_process_events_and_timers(cycle);
-    }
-}
-
-
-static void
-ngx_privileged_agent_process_cycle(ngx_cycle_t *cycle, void *data)
-{
-    char   *name = data;
-    ngx_core_conf_t *ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
-
-    /*
-     * Set correct process type since closing listening Unix domain socket
-     * in a master process also removes the Unix domain socket file.
-     */
-    ngx_process = NGX_PROCESS_HELPER;
-    ngx_is_privileged_agent = 1;
-
-    ngx_close_listening_sockets(cycle);
-
-    /* Set a moderate number of connections for a helper process. */
-    cycle->connection_n = ccf->privileged_agent_connections;
-
-    ngx_worker_process_init(cycle, -1);
-
-    ngx_use_accept_mutex = 0;
-
-    ngx_setproctitle(name);
-
-    for ( ;; ) {
-
-        if (ngx_terminate || ngx_quit) {
-            ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "exiting");
-            ngx_worker_process_exit(cycle);
+            exit(0);
         }
 
         if (ngx_reopen) {

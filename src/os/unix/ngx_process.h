@@ -18,8 +18,6 @@ typedef pid_t       ngx_pid_t;
 #define NGX_INVALID_PID  -1
 
 typedef void (*ngx_spawn_proc_pt) (ngx_cycle_t *cycle, void *data);
-#define NGX_HAVE_PROC_EXIT 1
-typedef void (*ngx_proc_exit_pt)(ngx_pid_t pid);
 
 typedef struct {
     ngx_pid_t           pid;
@@ -68,7 +66,6 @@ ngx_pid_t ngx_spawn_process(ngx_cycle_t *cycle,
 ngx_pid_t ngx_execute(ngx_cycle_t *cycle, ngx_exec_ctx_t *ctx);
 ngx_int_t ngx_init_signals(ngx_log_t *log);
 void ngx_debug_point(void);
-void ngx_proc_exit_def_handler(ngx_pid_t pid);
 
 
 #if (NGX_HAVE_SCHED_YIELD)
@@ -88,7 +85,6 @@ extern ngx_socket_t   ngx_channel;
 extern ngx_int_t      ngx_process_slot;
 extern ngx_int_t      ngx_last_process;
 extern ngx_process_t  ngx_processes[NGX_MAX_PROCESSES];
-extern ngx_proc_exit_pt  ngx_proc_exit_top_handler;
 
 
 #endif /* _NGX_PROCESS_H_INCLUDED_ */

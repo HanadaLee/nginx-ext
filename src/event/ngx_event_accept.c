@@ -60,9 +60,7 @@ ngx_event_accept(ngx_event_t *ev)
 
 #if (NGX_HAVE_ACCEPT4)
         if (use_accept4) {
-            s = accept4(lc->fd, &sa.sockaddr, &socklen,
-                        SOCK_NONBLOCK | SOCK_CLOEXEC);
-
+            s = accept4(lc->fd, &sa.sockaddr, &socklen, SOCK_NONBLOCK);
         } else {
             s = accept(lc->fd, &sa.sockaddr, &socklen);
         }
@@ -202,16 +200,6 @@ ngx_event_accept(ngx_event_t *ev)
                     ngx_close_accepted_connection(c);
                     return;
                 }
-
-#if (NGX_HAVE_FD_CLOEXEC)
-                if (ngx_cloexec(s) == -1) {
-                    ngx_log_error(NGX_LOG_ALERT, ev->log, ngx_socket_errno,
-                                  ngx_cloexec_n " failed");
-                    ngx_close_accepted_connection(c);
-                    return;
-                }
-#endif
-
             }
         }
 

@@ -724,14 +724,7 @@ ngx_quic_handshake(ngx_connection_t *c)
             return NGX_ERROR;
         }
 
-        if (sslerr != SSL_ERROR_WANT_READ
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-            && sslerr != SSL_ERROR_WANT_X509_LOOKUP
-#endif
-#ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
-            && sslerr != SSL_ERROR_WANT_CLIENT_HELLO_CB
-#endif
-        ) {
+        if (sslerr != SSL_ERROR_WANT_READ) {
             ngx_ssl_connection_error(c, sslerr, 0, "SSL_do_handshake() failed");
             return NGX_ERROR;
         }

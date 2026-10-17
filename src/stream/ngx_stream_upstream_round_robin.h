@@ -146,16 +146,6 @@ struct ngx_stream_upstream_rr_peers_s {
         ngx_rwlock_unlock(&peer->lock);                                       \
     }
 
-#if (NGX_STREAM_SSL)
-ngx_int_t ngx_stream_upstream_set_round_robin_peer_session(
-    ngx_peer_connection_t *pc, void *data);
-void ngx_stream_upstream_save_round_robin_peer_session(
-    ngx_peer_connection_t *pc, void *data);
-#endif
-
-
-#define HAVE_NGX_STREAM_BALANCER_EXPORT_PATCH 1
-
 
 #define ngx_stream_upstream_rr_peer_ref(peers, peer)                          \
     (peer)->refs++;

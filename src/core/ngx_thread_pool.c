@@ -587,8 +587,7 @@ ngx_thread_pool_init_worker(ngx_cycle_t *cycle)
     ngx_thread_pool_conf_t   *tcf;
 
     if (ngx_process != NGX_PROCESS_WORKER
-        && ngx_process != NGX_PROCESS_SINGLE
-        && !ngx_is_privileged_agent)
+        && ngx_process != NGX_PROCESS_SINGLE)
     {
         return NGX_OK;
     }

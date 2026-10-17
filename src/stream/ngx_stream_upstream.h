@@ -166,9 +166,4 @@ ngx_stream_upstream_srv_conf_t *ngx_stream_upstream_add(ngx_conf_t *cf,
 extern ngx_module_t  ngx_stream_upstream_module;
 
 
-#ifndef HAVE_BALANCER_STATUS_CODE_PATCH
-#define HAVE_BALANCER_STATUS_CODE_PATCH
-#endif
-
-
 #endif /* _NGX_STREAM_UPSTREAM_H_INCLUDED_ */

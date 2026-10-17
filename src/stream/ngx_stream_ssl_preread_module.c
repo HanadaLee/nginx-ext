@@ -190,11 +190,11 @@ ngx_stream_ssl_preread_handler(ngx_stream_session_t *s)
         }
 
         if (rc == NGX_OK) {
-            rc = ngx_stream_ssl_preread_servername(s, &ctx->host);
+            return ngx_stream_ssl_preread_servername(s, &ctx->host);
         }
 
         if (rc != NGX_AGAIN) {
-            return rc == NGX_OK ? NGX_DECLINED : rc;
+            return rc;
         }
 
         p += len;

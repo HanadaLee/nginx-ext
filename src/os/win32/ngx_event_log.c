@@ -8,9 +8,7 @@
 #include <ngx_core.h>
 
 
-#ifndef NGX_MAX_ERROR_STR
-#define NGX_MAX_ERROR_STR   4096
-#endif
+#define NGX_MAX_ERROR_STR   2048
 
 
 void ngx_cdecl

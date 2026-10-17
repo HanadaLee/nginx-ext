@@ -266,9 +266,6 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
 
-#if !(NGX_WIN32)
-    ngx_proc_exit_top_handler = ngx_proc_exit_def_handler;
-#endif
     conf.ctx = cycle->conf_ctx;
     conf.cycle = cycle;
     conf.pool = pool;
@@ -784,10 +781,6 @@ old_shm_zone_done:
     ngx_destroy_pool(conf.temp_pool);
 
     if (ngx_process == NGX_PROCESS_MASTER || ngx_is_init_cycle(old_cycle)) {
-
-        if (ngx_is_init_cycle(old_cycle)) {
-            saved_init_cycle_pool = NULL;
-        }
 
         ngx_destroy_pool(old_cycle->pool);
         cycle->old_cycle = NULL;

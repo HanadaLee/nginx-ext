@@ -120,7 +120,7 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
     ngx_http_core_srv_conf_t  *cscf;
     u_char                     addr[NGX_SOCKADDR_STRLEN];
 
-    static const u_char nginx[8] = { 0x87, 0x3d, 0x65, 0xaa, 0xc2, 0xa1, 0x3e, 0xbf};
+    static const u_char nginx[5] = { 0x84, 0xaa, 0x63, 0x55, 0xe7 };
 #if (NGX_HTTP_GZIP)
     static const u_char accept_encoding[12] = {
         0x8b, 0x84, 0x84, 0x2d, 0x69, 0x5b, 0x05, 0x44, 0x3c, 0x86, 0xaa, 0x6f
@@ -1446,10 +1446,7 @@ ngx_http_v2_waiting_queue(ngx_http_v2_connection_t *h2c,
     {
         s = ngx_queue_data(q, ngx_http_v2_stream_t, queue);
 
-        if (s->node->rank < stream->node->rank
-            || (s->node->rank == stream->node->rank
-                && s->node->rel_weight >= stream->node->rel_weight))
-        {
+        if (ngx_http_v2_stream_precedes(s, stream)) {
             break;
         }
     }

@@ -29,7 +29,6 @@ static ngx_int_t ngx_http_upstream_empty_set_session(ngx_peer_connection_t *pc,
     void *data);
 static void ngx_http_upstream_empty_save_session(ngx_peer_connection_t *pc,
     void *data);
-static void ngx_http_upstream_rr_peers_ssl_session_cleanup(void *data);
 
 #endif
 
@@ -43,9 +42,6 @@ ngx_http_upstream_init_round_robin(ngx_conf_t *cf,
     ngx_http_upstream_server_t    *server;
     ngx_http_upstream_rr_peer_t   *peer, **peerp;
     ngx_http_upstream_rr_peers_t  *peers, *backup;
-#if (NGX_HTTP_SSL)
-    ngx_pool_cleanup_t            *cln;
-#endif
 #if (NGX_HTTP_UPSTREAM_ZONE)
     ngx_uint_t                     resolve;
     ngx_http_core_loc_conf_t      *clcf;
@@ -156,16 +152,6 @@ ngx_http_upstream_init_round_robin(ngx_conf_t *cf,
         if (peer == NULL) {
             return NGX_ERROR;
         }
-
-#if (NGX_HTTP_SSL)
-        cln = ngx_pool_cleanup_add(cf->pool, 0);
-        if (cln == NULL) {
-            return NGX_ERROR;
-        }
-
-        cln->handler = ngx_http_upstream_rr_peers_ssl_session_cleanup;
-        cln->data = peers;
-#endif
 
         peers->single = (n == 1);
         peers->number = n;
@@ -436,16 +422,6 @@ ngx_http_upstream_init_round_robin(ngx_conf_t *cf,
     if (peer == NULL) {
         return NGX_ERROR;
     }
-
-#if (NGX_HTTP_SSL)
-    cln = ngx_pool_cleanup_add(cf->pool, 0);
-    if (cln == NULL) {
-        return NGX_ERROR;
-    }
-
-    cln->handler = ngx_http_upstream_rr_peers_ssl_session_cleanup;
-    cln->data = peers;
-#endif
 
     peers->single = (n == 1);
     peers->number = n;
@@ -1298,35 +1274,6 @@ static void
 ngx_http_upstream_empty_save_session(ngx_peer_connection_t *pc, void *data)
 {
     return;
-}
-
-
-static void
-ngx_http_upstream_rr_peers_ssl_session_cleanup(void *data)
-{
-    ngx_http_upstream_rr_peers_t  *peers = data;
-
-    ngx_http_upstream_rr_peer_t   *peer;
-    ngx_http_upstream_rr_peers_t  *p;
-
-    for (p = peers; p; p = p->next) {
-#if (NGX_HTTP_UPSTREAM_ZONE)
-        /*
-         * peers backed by a shared-memory zone keep serialized session
-         * bytes in the slab pool, which is released together with the
-         * shm zone -- nothing to free here.
-         */
-        if (p->shpool) {
-            continue;
-        }
-#endif
-        for (peer = p->peer; peer; peer = peer->next) {
-            if (peer->ssl_session) {
-                ngx_ssl_free_session(peer->ssl_session);
-                peer->ssl_session = NULL;
-            }
-        }
-    }
 }
 
 #endif

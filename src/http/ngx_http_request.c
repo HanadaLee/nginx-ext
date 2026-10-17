@@ -2781,21 +2781,8 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
             return;
         }
 
-#if (NGX_HTTP_V2)
-        if (r->http_version >= NGX_HTTP_VERSION_20
-            && r != r->main
-            && r->post_subrequest
-            && r->lua_subrequest)
-        {
-            /* fall through to normal subrequest finalization */
-        } else {
-            ngx_http_terminate_request(r, rc);
-            return;
-        }
-#else
         ngx_http_terminate_request(r, rc);
         return;
-#endif
     }
 
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE

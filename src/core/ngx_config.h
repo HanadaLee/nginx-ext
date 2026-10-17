@@ -18,8 +18,6 @@
 #endif
 
 
-#define HAVE_QUIC_SSL_LUA_YIELD_PATCH  1
-
 #if (NGX_FREEBSD)
 #include <ngx_freebsd_config.h>
 

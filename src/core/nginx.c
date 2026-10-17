@@ -191,7 +191,6 @@ static u_char      *ngx_conf_params;
 static u_char      *ngx_control_addr;
 #endif
 static char        *ngx_signal;
-ngx_pool_t         *saved_init_cycle_pool = NULL;
 
 
 static char **ngx_os_environ;
@@ -259,8 +258,6 @@ main(int argc, char *const *argv)
     if (init_cycle.pool == NULL) {
         return 1;
     }
-
-    saved_init_cycle_pool = init_cycle.pool;
 
     if (ngx_save_argv(&init_cycle, argc, argv) != NGX_OK) {
         return 1;
@@ -1164,8 +1161,6 @@ ngx_core_module_create_conf(ngx_cycle_t *cycle)
 
     ccf->daemon = NGX_CONF_UNSET;
     ccf->master = NGX_CONF_UNSET;
-    ccf->privileged_agent = NGX_CONF_UNSET;
-    ccf->privileged_agent_connections = NGX_CONF_UNSET_UINT;
     ccf->timer_resolution = NGX_CONF_UNSET_MSEC;
     ccf->shutdown_timeout = NGX_CONF_UNSET_MSEC;
 
@@ -1195,8 +1190,6 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
 
     ngx_conf_init_value(ccf->daemon, 1);
     ngx_conf_init_value(ccf->master, 1);
-    ngx_conf_init_value(ccf->privileged_agent, 0);
-    ngx_conf_init_uint_value(ccf->privileged_agent_connections, 512);
     ngx_conf_init_msec_value(ccf->timer_resolution, 0);
     ngx_conf_init_msec_value(ccf->shutdown_timeout, 0);
 
