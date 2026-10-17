@@ -2211,6 +2211,15 @@ ngx_http_merge_types(ngx_conf_t *cf, ngx_array_t **keys, ngx_hash_t *types_hash,
 
         if (*prev_keys == NULL) {
 
+#if (NGX_RESTY_EXT)
+            /* A NULL default list allows any content type. */
+            if (default_types == NULL) {
+                *prev_keys = (void *) -1;
+                *keys = *prev_keys;
+                return NGX_CONF_OK;
+            }
+#endif
+
             if (ngx_http_set_default_types(cf, prev_keys, default_types)
                 != NGX_OK)
             {
