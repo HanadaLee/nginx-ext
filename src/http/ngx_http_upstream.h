@@ -494,6 +494,12 @@ struct ngx_http_upstream_s {
     ngx_array_t                     *caches;
 #endif
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_msec_t                       connect_timeout;
+    ngx_msec_t                       send_timeout;
+    ngx_msec_t                       read_timeout;
+#endif
+
     ngx_http_upstream_headers_in_t   headers_in;
 
     ngx_http_upstream_resolved_t    *resolved;

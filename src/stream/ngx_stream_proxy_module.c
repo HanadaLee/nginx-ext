@@ -87,6 +87,16 @@ typedef struct {
 } ngx_stream_proxy_srv_conf_t;
 
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+
+typedef struct {
+    ngx_msec_t                       connect_timeout;
+    ngx_msec_t                       timeout;
+} ngx_stream_proxy_ctx_t;
+
+#endif
+
+
 static void ngx_stream_proxy_handler(ngx_stream_session_t *s);
 static ngx_int_t ngx_stream_proxy_eval(ngx_stream_session_t *s,
     ngx_stream_proxy_srv_conf_t *pscf);
@@ -560,6 +570,9 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
     ngx_stream_proxy_srv_conf_t      *pscf;
     ngx_stream_upstream_srv_conf_t   *uscf, **uscfp;
     ngx_stream_upstream_main_conf_t  *umcf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_stream_proxy_ctx_t           *pctx;
+#endif
 
     c = s->connection;
 
@@ -568,21 +581,16 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
     ngx_log_debug0(NGX_LOG_DEBUG_STREAM, c->log, 0,
                    "proxy connection handler");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     pctx = ngx_palloc(c->pool, sizeof(ngx_stream_proxy_ctx_t));
     if (pctx == NULL) {
         ngx_stream_proxy_finalize(s, NGX_STREAM_INTERNAL_SERVER_ERROR);
         return;
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
     pctx->connect_timeout = ngx_stream_get_expr_msec_value(s,
                                                          pscf->connect_timeout);
     pctx->timeout = ngx_stream_get_expr_msec_value(s, pscf->timeout);
-#else
-    pctx->connect_timeout = pscf->connect_timeout;
-    pctx->timeout = pscf->timeout;
-#endif
 
     ngx_stream_set_ctx(s, pctx, ngx_stream_proxy_module);
 #endif
@@ -899,6 +907,11 @@ ngx_stream_proxy_connect(ngx_stream_session_t *s)
     ngx_connection_t             *c, *pc;
     ngx_stream_upstream_t        *u;
     ngx_stream_proxy_srv_conf_t  *pscf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_stream_proxy_ctx_t       *ctx;
+
+    ctx = ngx_stream_get_module_ctx(s, ngx_stream_proxy_module);
+#endif
 
     c = s->connection;
 
@@ -992,7 +1005,11 @@ ngx_stream_proxy_connect(ngx_stream_session_t *s)
     pc->read->handler = ngx_stream_proxy_connect_handler;
     pc->write->handler = ngx_stream_proxy_connect_handler;
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_add_timer(pc->write, ctx->connect_timeout);
+#else
     ngx_add_timer(pc->write, pscf->connect_timeout);
+#endif
 }
 
 
@@ -1179,7 +1196,11 @@ ngx_stream_proxy_send_proxy_protocol(ngx_stream_session_t *s)
     ssize_t                       n;
     ngx_connection_t             *c, *pc;
     ngx_stream_upstream_t        *u;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_stream_proxy_ctx_t       *ctx;
+#else
     ngx_stream_proxy_srv_conf_t  *pscf;
+#endif
     static u_char                 buf[NGX_PROXY_PROTOCOL_MAX_HEADER];
 
     c = s->connection;
@@ -1213,9 +1234,15 @@ ngx_stream_proxy_send_proxy_protocol(ngx_stream_session_t *s)
             return NGX_ERROR;
         }
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+        ctx = ngx_stream_get_module_ctx(s, ngx_stream_proxy_module);
+
+        ngx_add_timer(pc->write, ctx->timeout);
+#else
         pscf = ngx_stream_get_module_srv_conf(s, ngx_stream_proxy_module);
 
         ngx_add_timer(pc->write, pscf->timeout);
+#endif
 
         pc->write->handler = ngx_stream_proxy_connect_handler;
 
@@ -1439,6 +1466,11 @@ ngx_stream_proxy_ssl_init_connection(ngx_stream_session_t *s)
     ngx_connection_t             *pc;
     ngx_stream_upstream_t        *u;
     ngx_stream_proxy_srv_conf_t  *pscf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_stream_proxy_ctx_t       *ctx;
+
+    ctx = ngx_stream_get_module_ctx(s, ngx_stream_proxy_module);
+#endif
 
     u = s->upstream;
 
@@ -1507,7 +1539,11 @@ ngx_stream_proxy_ssl_init_connection(ngx_stream_session_t *s)
     if (rc == NGX_AGAIN) {
 
         if (!pc->write->timer_set) {
+#if (NGX_RESTY_EXT && NGX_EXPR)
+            ngx_add_timer(pc->write, ctx->connect_timeout);
+#else
             ngx_add_timer(pc->write, pscf->connect_timeout);
+#endif
         }
 
         pc->ssl->handler = ngx_stream_proxy_ssl_handshake;
@@ -1936,10 +1972,17 @@ ngx_stream_proxy_process_connection(ngx_event_t *ev, ngx_uint_t from_upstream)
     ngx_stream_session_t         *s;
     ngx_stream_upstream_t        *u;
     ngx_stream_proxy_srv_conf_t  *pscf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_stream_proxy_ctx_t       *ctx;
+#endif
 
     c = ev->data;
     s = c->data;
     u = s->upstream;
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ctx = ngx_stream_get_module_ctx(s, ngx_stream_proxy_module);
+#endif
 
     if (c->close) {
         ngx_log_error(NGX_LOG_INFO, c->log, 0, "shutdown timeout");
@@ -1966,7 +2009,11 @@ ngx_stream_proxy_process_connection(ngx_event_t *ev, ngx_uint_t from_upstream)
                 }
 
                 if (u->connected && !c->read->delayed && !pc->read->delayed) {
+#if (NGX_RESTY_EXT && NGX_EXPR)
+                    ngx_add_timer(c->write, ctx->timeout);
+#else
                     ngx_add_timer(c->write, pscf->timeout);
+#endif
                 }
 
                 return;
@@ -2128,6 +2175,11 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
     ngx_log_handler_pt            handler;
     ngx_stream_upstream_t        *u;
     ngx_stream_proxy_srv_conf_t  *pscf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_stream_proxy_ctx_t       *ctx;
+
+    ctx = ngx_stream_get_module_ctx(s, ngx_stream_proxy_module);
+#endif
 
     u = s->upstream;
 
@@ -2324,7 +2376,11 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
         }
 
         if (!c->read->delayed && !pc->read->delayed) {
+#if (NGX_RESTY_EXT && NGX_EXPR)
+            ngx_add_timer(c->write, ctx->timeout);
+#else
             ngx_add_timer(c->write, pscf->timeout);
+#endif
 
         } else if (c->write->timer_set) {
             ngx_del_timer(c->write);
@@ -3209,6 +3265,7 @@ ngx_stream_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 #if (NGX_RESTY_EXT)
+
 ngx_uint_t
 ngx_stream_proxy_get_next_upstream_tries(ngx_stream_session_t *s)
 {
@@ -3222,4 +3279,5 @@ ngx_stream_proxy_get_next_upstream_tries(ngx_stream_session_t *s)
     return pscf->next_upstream_tries;
 #endif
 }
+
 #endif

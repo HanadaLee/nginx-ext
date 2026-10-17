@@ -165,6 +165,10 @@ typedef struct {
 ngx_stream_upstream_srv_conf_t *ngx_stream_upstream_add(ngx_conf_t *cf,
     ngx_url_t *u, ngx_uint_t flags);
 
+#if (NGX_RESTY_EXT)
+ngx_uint_t ngx_stream_proxy_get_next_upstream_tries(ngx_stream_session_t *s);
+#endif
+
 
 #define ngx_stream_conf_upstream_srv_conf(uscf, module)                       \
     uscf->srv_conf[module.ctx_index]
