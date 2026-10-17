@@ -4943,10 +4943,8 @@ static ngx_int_t
 ngx_http_proxy_rewrite_cookie_values(ngx_http_request_t *r, ngx_array_t *attrs,
     ngx_array_t *values)
 {
-    ngx_str_t                       pattern;
-#if (NGX_PCRE)
+    ngx_str_t                       pattern, value;
     ngx_int_t                       rc;
-#endif
     ngx_uint_t                      i;
     ngx_keyval_t                   *attr;
     ngx_http_proxy_cookie_value_t  *pcv;
@@ -4992,8 +4990,19 @@ ngx_http_proxy_rewrite_cookie_values(ngx_http_request_t *r, ngx_array_t *attrs,
         return NGX_DECLINED;
     }
 
-    return pcv[i].pr->handler(r, &attr[0].value, 0, attr[0].value.len,
-                              pcv[i].pr);
+    value = attr[0].value;
+
+    if (value.data == NULL) {
+        ngx_str_set(&value, "");
+    }
+
+    rc = pcv[i].pr->handler(r, &value, 0, value.len, pcv[i].pr);
+
+    if (rc == NGX_OK) {
+        attr[0].value = value;
+    }
+
+    return rc;
 }
 
 
