@@ -2567,12 +2567,11 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
 {
     ngx_http_core_loc_conf_t   *clcf;
 
-    u_char                     *buf;
-    u_char                     *p;
+    u_char                      ch, *p, *buf;
     ngx_time_t                 *tp;
     ngx_list_part_t            *part;
     ngx_table_elt_t            *header;
-    ngx_uint_t                  i;
+    ngx_uint_t                  i, j;
     uint64_t                    random_bytes[2];
 
     static uint64_t             counter, key[2];
@@ -2609,9 +2608,30 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
             if (header[i].key.len == clcf->request_id_header.len
                 && ngx_strncasecmp(header[i].key.data,
                                    clcf->request_id_header.data,
-                                   clcf->request_id_header.len) == 0
-                && header[i].value.len > 0)
+                                   clcf->request_id_header.len) == 0)
             {
+                if (header[i].value.len == 0 || header[i].value.len > 1024) {
+                    break;
+                }
+
+                for (j = 0; j < header[i].value.len; j++) {
+                    ch = header[i].value.data[j];
+
+                    if ((ch >= 'a' && ch <= 'z')
+                        || (ch >= 'A' && ch <= 'Z')
+                        || (ch >= '0' && ch <= '9')
+                        || ch == '.' || ch == '-' || ch == '_')
+                    {
+                        continue;
+                    }
+
+                    break;
+                }
+
+                if (j != header[i].value.len) {
+                    break;
+                }
+
                 r->request_id = header[i].value;
                 *id = r->request_id;
                 return NGX_OK;
