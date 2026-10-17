@@ -3637,6 +3637,120 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 }
 
 
+#if (NGX_RESTY_EXT)
+static ngx_int_t
+ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
+    ngx_http_upstream_t *u)
+{
+    ngx_int_t                  status;
+#if !(NGX_RESTY_EXT && NGX_EXPR)
+    ngx_uint_t                 i;
+#endif
+    ngx_table_elt_t           *h, *ho, **ph;
+    ngx_http_err_page_t       *err_page;
+#if !(NGX_RESTY_EXT && NGX_EXPR)
+    ngx_http_core_loc_conf_t  *clcf;
+#endif
+
+    status = u->headers_in.status_n;
+
+    if (status == NGX_HTTP_NOT_FOUND && u->conf->intercept_404) {
+        ngx_http_upstream_finalize_request(r, u, NGX_HTTP_NOT_FOUND);
+        return NGX_OK;
+    }
+
+    if (!u->conf->intercept_errors) {
+        return NGX_DECLINED;
+    }
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    err_page = ngx_http_find_error_page(r, status);
+#else
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+    err_page = NULL;
+
+    if (clcf->error_pages) {
+        err_page = clcf->error_pages->elts;
+
+        for (i = 0; i < clcf->error_pages->nelts; i++) {
+            if (err_page[i].status == status) {
+                break;
+            }
+        }
+
+        if (i == clcf->error_pages->nelts) {
+            err_page = NULL;
+        }
+    }
+#endif
+
+    if (err_page == NULL) {
+        return NGX_DECLINED;
+    }
+
+    if (status == NGX_HTTP_UNAUTHORIZED
+        && u->headers_in.www_authenticate)
+    {
+        h = u->headers_in.www_authenticate;
+        ph = &r->headers_out.www_authenticate;
+
+        while (h) {
+            ho = ngx_list_push(&r->headers_out.headers);
+
+            if (ho == NULL) {
+                ngx_http_upstream_finalize_request(r, u,
+                                       NGX_HTTP_INTERNAL_SERVER_ERROR);
+                return NGX_OK;
+            }
+
+            *ho = *h;
+            ho->next = NULL;
+
+            *ph = ho;
+            ph = &ho->next;
+
+            h = h->next;
+        }
+    }
+
+#if (NGX_HTTP_CACHE)
+
+    if (r->cache) {
+
+        if (u->headers_in.no_cache || u->headers_in.expired) {
+            u->cacheable = 0;
+        }
+
+        if (u->cacheable) {
+            time_t  valid;
+
+            valid = r->cache->valid_sec;
+
+            if (valid == 0) {
+                valid = ngx_http_file_cache_valid(r,
+                                                  u->conf->cache_valid,
+                                                  status);
+                if (valid) {
+                    r->cache->valid_sec = ngx_time() + valid;
+                }
+            }
+
+            if (valid) {
+                r->cache->error = status;
+            }
+        }
+
+        ngx_http_file_cache_free(r->cache, u->pipe->temp_file);
+    }
+#endif
+
+    u->error_page = 1;
+
+    ngx_http_upstream_finalize_request(r, u, status);
+
+    return NGX_OK;
+}
+#else
 static ngx_int_t
 ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
     ngx_http_upstream_t *u)
@@ -3668,14 +3782,6 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
     for (i = 0; i < clcf->error_pages->nelts; i++) {
 
         if (err_page[i].status == status) {
-
-#if (NGX_RESTY_EXT && NGX_EXPR)
-            if (ngx_http_expr_get_result(r, err_page[i].expr_id)
-                != NGX_EXPR_WHEN_HIT)
-            {
-                continue;
-            }
-#endif
 
             if (status == NGX_HTTP_UNAUTHORIZED
                 && u->headers_in.www_authenticate)
@@ -3716,14 +3822,8 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
                     valid = r->cache->valid_sec;
 
                     if (valid == 0) {
-#if (NGX_RESTY_EXT)
-                        valid = ngx_http_file_cache_valid(r,
-                                                          u->conf->cache_valid,
-                                                          status);
-#else
                         valid = ngx_http_file_cache_valid(u->conf->cache_valid,
                                                           status);
-#endif
                         if (valid) {
                             r->cache->valid_sec = ngx_time() + valid;
                         }
@@ -3737,11 +3837,6 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
                 ngx_http_file_cache_free(r->cache, u->pipe->temp_file);
             }
 #endif
-
-#if (NGX_RESTY_EXT)
-            u->error_page = 1;
-#endif
-
             ngx_http_upstream_finalize_request(r, u, status);
 
             return NGX_OK;
@@ -3750,6 +3845,7 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
 
     return NGX_DECLINED;
 }
+#endif
 
 
 static ngx_int_t

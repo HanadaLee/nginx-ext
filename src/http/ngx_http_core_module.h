@@ -340,6 +340,11 @@ typedef struct {
 
 } ngx_http_err_page_t;
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+ngx_http_err_page_t *ngx_http_find_error_page(ngx_http_request_t *r,
+    ngx_int_t status);
+#endif
+
 
 #if (NGX_RESTY_EXT)
 
@@ -488,6 +493,9 @@ struct ngx_http_core_loc_conf_s {
     ngx_array_t  *early_hints;             /* early_hints */
 
     ngx_array_t  *error_pages;             /* error_page */
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_http_core_loc_conf_t  *error_pages_parent;
+#endif
 
     ngx_path_t   *client_body_temp_path;   /* client_body_temp_path */
 

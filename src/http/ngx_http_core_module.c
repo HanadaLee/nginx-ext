@@ -4219,9 +4219,13 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    conf->error_pages_parent = prev;
+#else
     if (conf->error_pages == NULL && prev->error_pages) {
         conf->error_pages = prev->error_pages;
     }
+#endif
 
     ngx_conf_merge_str_value(conf->default_type,
                               prev->default_type, "text/plain");

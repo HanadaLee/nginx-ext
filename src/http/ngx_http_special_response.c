@@ -1099,10 +1099,61 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
 #endif
 
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+
+ngx_http_err_page_t *
+ngx_http_find_error_page(ngx_http_request_t *r, ngx_int_t status)
+{
+    ngx_uint_t                 i, active;
+    ngx_http_err_page_t       *pages;
+    ngx_http_core_loc_conf_t  *clcf;
+
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+    for ( ; clcf; clcf = clcf->error_pages_parent) {
+        if (clcf->error_pages == NULL) {
+            continue;
+        }
+
+        active = 0;
+        pages = clcf->error_pages->elts;
+
+        for (i = 0; i < clcf->error_pages->nelts; i++) {
+            if (ngx_http_expr_get_result(r, pages[i].expr_id)
+                != NGX_EXPR_WHEN_HIT)
+            {
+                continue;
+            }
+
+            active = 1;
+
+            if (pages[i].status == status) {
+                return &pages[i];
+            }
+        }
+
+        if (active) {
+            break;
+        }
+    }
+
+    return NULL;
+}
+
+#endif
+
+
 ngx_int_t
 ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
 {
+#if (NGX_RESTY_EXT)
+    ngx_uint_t                 err;
+#if !(NGX_RESTY_EXT && NGX_EXPR)
+    ngx_uint_t                 i;
+#endif
+#else
     ngx_uint_t                 i, err;
+#endif
     ngx_http_err_page_t       *err_page;
     ngx_http_core_loc_conf_t  *clcf;
 
@@ -1140,6 +1191,19 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (!r->error_page && r->uri_changes != 0) {
+        err_page = ngx_http_find_error_page(r, error);
+
+        if (err_page) {
+            if (clcf->recursive_error_pages == 0) {
+                r->error_page = 1;
+            }
+
+            return ngx_http_send_error_page(r, err_page);
+        }
+    }
+#else
     if (!r->error_page && clcf->error_pages && r->uri_changes != 0) {
 
         if (clcf->recursive_error_pages == 0) {
@@ -1151,18 +1215,11 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
         for (i = 0; i < clcf->error_pages->nelts; i++) {
             if (err_page[i].status == error) {
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-                if (ngx_http_expr_get_result(r, err_page[i].expr_id)
-                    != NGX_EXPR_WHEN_HIT)
-                {
-                    continue;
-                }
-#endif
-
                 return ngx_http_send_error_page(r, &err_page[i]);
             }
         }
     }
+#endif
 
     r->expect_tested = 1;
 
