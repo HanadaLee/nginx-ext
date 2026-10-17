@@ -79,14 +79,20 @@ typedef struct {
 } ngx_stream_log_t;
 
 
+#if (NGX_RESTY_EXT)
+typedef struct ngx_stream_log_srv_conf_s {
+#else
 typedef struct {
+#endif
     ngx_array_t                 *logs;       /* array of ngx_stream_log_t */
 
     ngx_open_file_cache_t       *open_file_cache;
     time_t                       open_file_cache_valid;
     ngx_uint_t                   open_file_cache_min_uses;
 
-#if !(NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    struct ngx_stream_log_srv_conf_s  *parent;
+#else
     ngx_uint_t                   off;        /* unsigned  off:1 */
 #endif
 } ngx_stream_log_srv_conf_t;
@@ -228,6 +234,9 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
     ngx_stream_log_op_t        *op;
     ngx_stream_log_buf_t       *buffer;
     ngx_stream_log_srv_conf_t  *lscf;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_uint_t                  matched;
+#endif
 
     ngx_log_debug0(NGX_LOG_DEBUG_STREAM, s->connection->log, 0,
                    "stream log handler");
@@ -235,12 +244,22 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
     lscf = ngx_stream_get_module_srv_conf(s, ngx_stream_log_module);
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (lscf->logs == NULL) {
-#else
-    if (lscf->off || lscf->logs == NULL) {
-#endif
+next_level:
+
+    while (lscf && lscf->logs == NULL) {
+        lscf = lscf->parent;
+    }
+
+    if (lscf == NULL) {
         return NGX_OK;
     }
+
+    matched = 0;
+#else
+    if (lscf->off || lscf->logs == NULL) {
+        return NGX_OK;
+    }
+#endif
 
     log = lscf->logs->elts;
     for (l = 0; l < lscf->logs->nelts; l++) {
@@ -250,6 +269,9 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
         {
             continue;
         }
+
+        /* A matching entry selects this level even if if= skips it. */
+        matched = 1;
 
         if (log[l].off) {
             return NGX_OK;
@@ -389,6 +411,13 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
 
         ngx_stream_log_write(s, &log[l], line, p - line);
     }
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    if (!matched) {
+        lscf = lscf->parent;
+        goto next_level;
+    }
+#endif
 
     return NGX_OK;
 }
@@ -1056,11 +1085,7 @@ ngx_stream_log_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (conf->logs) {
-        return NGX_CONF_OK;
-    }
-
-    conf->logs = prev->logs;
+    conf->parent = prev;
 #else
     if (conf->logs || conf->off) {
         return NGX_CONF_OK;
