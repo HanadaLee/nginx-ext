@@ -229,9 +229,6 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     ngx_http_upstream_t         *u;
     ngx_http_proxy_v2_ctx_t     *ctx;
     ngx_http_proxy_loc_conf_t   *plcf;
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    ngx_http_proxy_loc_conf_t   *rcf, *dcf, *pcf, *fcf, *vcf, *mcf;
-#endif
 #if (NGX_HTTP_CACHE)
     ngx_http_proxy_main_conf_t  *pmcf;
 #endif
@@ -289,44 +286,19 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
     u->abort_request = ngx_http_proxy_v2_abort_request;
     u->finalize_request = ngx_http_proxy_v2_finalize_request;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    rcf = ngx_http_get_expr_ptr_value(r, plcf->redirects);
-
-    if (rcf && rcf->redirects) {
-#else
     if (plcf->redirects) {
-#endif
         u->rewrite_redirect = ngx_http_proxy_rewrite_redirect;
     }
 
 #if (NGX_RESTY_EXT)
-#if (NGX_EXPR)
-    dcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_domains);
-    pcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_paths);
-    fcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_flags);
-    vcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_values);
-    mcf = ngx_http_get_expr_ptr_value(r, plcf->cookie_max_age);
-
-    if ((dcf && dcf->cookie_domains)
-        || (pcf && pcf->cookie_paths)
-        || (fcf && fcf->cookie_flags)
-        || (vcf && vcf->cookie_values)
-        || (mcf && mcf->cookie_max_age))
-    {
-        u->rewrite_cookie = ngx_http_proxy_rewrite_cookie;
-    }
-#else
     if (plcf->cookie_domains || plcf->cookie_paths || plcf->cookie_flags
         || plcf->cookie_values || plcf->cookie_max_age)
     {
-        u->rewrite_cookie = ngx_http_proxy_rewrite_cookie;
-    }
-#endif
 #else
     if (plcf->cookie_domains || plcf->cookie_paths || plcf->cookie_flags) {
+#endif
         u->rewrite_cookie = ngx_http_proxy_rewrite_cookie;
     }
-#endif
 
 #if (NGX_RESTY_EXT && NGX_HTTP_PROXY_FILTER)
     rc = ngx_http_proxy_filter_access_hook(r);
