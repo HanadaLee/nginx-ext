@@ -1341,6 +1341,9 @@ ngx_http_fastcgi_create_request(ngx_http_request_t *r)
     ngx_http_fastcgi_params_t    *params;
     ngx_http_fastcgi_loc_conf_t  *flcf;
     ngx_http_script_len_code_pt   lcode;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_flag_t                    pass_request_headers;
+#endif
 
     len = 0;
     params_len = 0;
@@ -1391,9 +1394,11 @@ ngx_http_fastcgi_create_request(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_http_get_expr_flag_value(r,
-                                     flcf->upstream.pass_request_headers_conf))
-    {
+    /* Use the same decision for sizing and writing the request headers. */
+    pass_request_headers = ngx_http_get_expr_flag_value(r,
+                                      flcf->upstream.pass_request_headers_conf);
+
+    if (pass_request_headers) {
 #else
     if (flcf->upstream.pass_request_headers) {
 #endif
@@ -1637,9 +1642,7 @@ ngx_http_fastcgi_create_request(ngx_http_request_t *r)
 
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_http_get_expr_flag_value(r,
-                                     flcf->upstream.pass_request_headers_conf))
-    {
+    if (pass_request_headers) {
 #else
     if (flcf->upstream.pass_request_headers) {
 #endif
