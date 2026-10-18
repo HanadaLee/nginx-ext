@@ -7157,18 +7157,60 @@ ngx_http_upstream_rewrite_refresh(ngx_http_request_t *r, ngx_table_elt_t *h,
 }
 
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+
+static ngx_int_t
+ngx_http_upstream_hide_cookie_match(ngx_http_request_t *r,
+    ngx_http_upstream_hide_cookies_t *cookies, u_char *name, size_t len)
+{
+    ngx_uint_t                i, active;
+    ngx_conf_expr_str_ctx_t   *value;
+
+    for ( /* void */; cookies; cookies = cookies->parent) {
+        active = 0;
+        value = cookies->values.elts;
+
+        for (i = 0; i < cookies->values.nelts; i++) {
+            if (ngx_http_expr_get_result(r, value[i].expr_id)
+                != NGX_EXPR_WHEN_HIT)
+            {
+                continue;
+            }
+
+            active = 1;
+
+            if (value[i].value.len == len
+                && ngx_strncasecmp(name, value[i].value.data, len) == 0)
+            {
+                return 1;
+            }
+        }
+
+        if (active) {
+            break;
+        }
+    }
+
+    return 0;
+}
+
+#endif
+
+
 static ngx_int_t
 ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     ngx_uint_t offset)
 {
 #if (NGX_RESTY_EXT)
     ngx_http_upstream_t  *u;
+#if !(NGX_EXPR)
     ngx_array_t          *hide_cookies;
     ngx_str_t            *hide_cookie;
+    ngx_uint_t            i;
+#endif
 #if (NGX_HTTP_CACHE)
     ngx_flag_t            cache_hide;
 #endif
-    ngx_uint_t            i;
     u_char               *start, *p;
     size_t                len;
 #endif
@@ -7190,13 +7232,7 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     }
 #endif
 
-#if (NGX_EXPR)
-    hide_cookies = ngx_http_get_expr_str_array_value(r, u->conf->hide_cookies);
-#else
-    hide_cookies = u->conf->hide_cookies;
-#endif
-
-    if (hide_cookies) {
+    if (u->conf->hide_cookies) {
         start = h->value.data;
         p = (u_char *) ngx_strlchr(start, h->value.data + h->value.len, ';');
         if (p == NULL) {
@@ -7213,6 +7249,14 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
         len = p - start;
         while (len && *(start + len - 1) == ' ') { len--; }
 
+#if (NGX_EXPR)
+        if (ngx_http_upstream_hide_cookie_match(r, u->conf->hide_cookies,
+                                                start, len))
+        {
+            return NGX_OK;
+        }
+#else
+        hide_cookies = u->conf->hide_cookies;
         hide_cookie = hide_cookies->elts;
         for (i = 0; i < hide_cookies->nelts; i++) {
 
@@ -7223,6 +7267,7 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
                 return NGX_OK;
             }
         }
+#endif
     }
 #endif
 
@@ -8737,6 +8782,63 @@ ngx_http_upstream_param_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 
     return NGX_CONF_OK;
 }
+
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+
+char *
+ngx_http_upstream_hide_cookie(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_str_t                           *value;
+    ngx_conf_expr_str_ctx_t              *cookie;
+    ngx_http_upstream_hide_cookies_t    **cookies;
+
+    cookies = (ngx_http_upstream_hide_cookies_t **)
+                  ((u_char *) conf + cmd->offset);
+
+    if (*cookies == NGX_CONF_UNSET_PTR) {
+        *cookies = ngx_pcalloc(cf->pool,
+                               sizeof(ngx_http_upstream_hide_cookies_t));
+        if (*cookies == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        if (ngx_array_init(&(*cookies)->values, cf->pool, 4,
+                           sizeof(ngx_conf_expr_str_ctx_t)) != NGX_OK)
+        {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    cookie = ngx_array_push(&(*cookies)->values);
+    if (cookie == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    value = cf->args->elts;
+    cookie->value = value[1];
+    cookie->expr_id = ngx_expr_get_associated_when_id(cf);
+
+    return NGX_CONF_OK;
+}
+
+
+void
+ngx_http_upstream_merge_hide_cookies(ngx_http_upstream_conf_t *conf,
+    ngx_http_upstream_conf_t *prev)
+{
+    if (conf->hide_cookies == NGX_CONF_UNSET_PTR) {
+        ngx_conf_merge_ptr_value(conf->hide_cookies, prev->hide_cookies, NULL);
+
+    } else if (conf->hide_cookies != NULL
+               && conf->hide_cookies != prev->hide_cookies
+               && prev->hide_cookies != NGX_CONF_UNSET_PTR)
+    {
+        conf->hide_cookies->parent = prev->hide_cookies;
+    }
+}
+
+#endif
 
 
 ngx_int_t

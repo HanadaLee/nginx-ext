@@ -105,6 +105,17 @@ typedef enum {
 #define NGX_HTTP_UPSTREAM_NOTIFY_HEADER      0x1
 
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+typedef struct ngx_http_upstream_hide_cookies_s
+    ngx_http_upstream_hide_cookies_t;
+
+struct ngx_http_upstream_hide_cookies_s {
+    ngx_array_t                        values;
+    ngx_http_upstream_hide_cookies_t   *parent;
+};
+#endif
+
+
 typedef struct {
     ngx_uint_t                       status;
     ngx_msec_t                       response_time;
@@ -271,7 +282,11 @@ typedef struct {
     ngx_array_t                     *hide_headers;
     ngx_array_t                     *pass_headers;
 #if (NGX_RESTY_EXT)
+#if (NGX_EXPR)
+    ngx_http_upstream_hide_cookies_t *hide_cookies;
+#else
     ngx_array_t                     *hide_cookies;
+#endif
 #endif
 
     ngx_http_upstream_local_t       *local;
@@ -602,6 +617,10 @@ ngx_int_t ngx_http_upstream_hide_headers_hash(ngx_conf_t *cf,
     ngx_http_upstream_conf_t *conf, ngx_http_upstream_conf_t *prev,
     ngx_str_t *default_hide_headers, ngx_hash_init_t *hash);
 #if (NGX_RESTY_EXT && NGX_EXPR)
+char *ngx_http_upstream_hide_cookie(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+void ngx_http_upstream_merge_hide_cookies(ngx_http_upstream_conf_t *conf,
+    ngx_http_upstream_conf_t *prev);
 void ngx_http_upstream_init_conditional_conf(
     ngx_http_upstream_conf_t *conf);
 #endif
