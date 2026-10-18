@@ -110,6 +110,10 @@ typedef struct {
     ngx_http_proxy_vars_t          vars;
     off_t                          internal_body_length;
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_uint_t                     http_version;
+#endif
+
     ngx_chain_t                   *free;
     ngx_chain_t                   *busy;
 
