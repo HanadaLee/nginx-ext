@@ -1407,6 +1407,9 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
     ngx_http_script_engine_t      e, le;
     ngx_http_uwsgi_loc_conf_t    *uwcf;
     ngx_http_script_len_code_pt   lcode;
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_flag_t                    pass_request_headers;
+#endif
 
     len = 0;
     params_len = 0;
@@ -1454,9 +1457,11 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_http_get_expr_flag_value(r,
-                                     uwcf->upstream.pass_request_headers_conf))
-    {
+    /* Use the same decision for sizing and writing the request headers. */
+    pass_request_headers = ngx_http_get_expr_flag_value(r,
+                                      uwcf->upstream.pass_request_headers_conf);
+
+    if (pass_request_headers) {
 #else
     if (uwcf->upstream.pass_request_headers) {
 #endif
@@ -1669,9 +1674,7 @@ ngx_http_uwsgi_create_request(ngx_http_request_t *r)
     }
 
 #if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_http_get_expr_flag_value(r,
-                                     uwcf->upstream.pass_request_headers_conf))
-    {
+    if (pass_request_headers) {
 #else
     if (uwcf->upstream.pass_request_headers) {
 #endif
