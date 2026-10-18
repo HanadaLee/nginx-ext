@@ -860,7 +860,7 @@ static ngx_command_t ngx_http_scgi_commands[] = {
 #endif
                         |NGX_CONF_TAKE1,
 #if (NGX_EXPR)
-      ngx_conf_set_conditional_str_array_slot,
+      ngx_http_upstream_hide_cookie,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_scgi_loc_conf_t, upstream.hide_cookies),
 #else
@@ -2594,13 +2594,7 @@ ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
-    if (ngx_conf_merge_expr_ptr_value(cf,
-                                      &conf->upstream.hide_cookies,
-                                      prev->upstream.hide_cookies, NULL)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
+    ngx_http_upstream_merge_hide_cookies(&conf->upstream, &prev->upstream);
 #else
     ngx_conf_merge_ptr_value(conf->upstream.hide_cookies,
                              prev->upstream.hide_cookies, NULL);
