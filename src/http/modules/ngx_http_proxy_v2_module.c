@@ -242,6 +242,10 @@ ngx_http_proxy_v2_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ctx->ctx.http_version = NGX_HTTP_VERSION_20;
+#endif
+
     ngx_http_set_ctx(r, ctx, ngx_http_proxy_v2_module);
 
     ngx_http_set_ctx(r, &ctx->ctx, ngx_http_proxy_module);

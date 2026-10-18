@@ -1608,6 +1608,11 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    /* Keep the selected protocol across asynchronous request body reads. */
+    ctx->http_version = version;
+#endif
+
     ngx_http_set_ctx(r, ctx, ngx_http_proxy_module);
 
     u = r->upstream;
@@ -2033,10 +2038,6 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
 
     plcf = ngx_http_get_module_loc_conf(r, ngx_http_proxy_module);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    version = ngx_http_get_expr_enum_value(r, plcf->http_version);
-#endif
-
 #if (NGX_HTTP_CACHE)
     headers = u->cacheable ? &plcf->headers_cache : &plcf->headers;
 #else
@@ -2091,6 +2092,10 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
 #endif
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_proxy_module);
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    version = ctx->http_version;
+#endif
 
     host.len = 0;
 #if (NGX_SUPPRESS_WARN)
@@ -4289,10 +4294,7 @@ ngx_http_proxy_http_variable(ngx_http_request_t *r,
             }
 
 #if (NGX_EXPR)
-            if (host.len
-                || ngx_http_get_expr_enum_value(r, plcf->http_version)
-                   == NGX_HTTP_VERSION_10)
-            {
+            if (host.len || ctx->http_version == NGX_HTTP_VERSION_10) {
 #else
             if (host.len || plcf->http_version == NGX_HTTP_VERSION_10) {
 #endif
