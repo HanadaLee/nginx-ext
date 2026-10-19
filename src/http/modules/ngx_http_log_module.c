@@ -77,6 +77,9 @@ typedef struct {
     ngx_expr_when_id_t          expr_id;
 #endif
     ngx_http_complex_value_t   *filter;
+#if (NGX_RESTY_EXT)
+    ngx_http_complex_value_t   *sample;
+#endif
 } ngx_http_log_t;
 
 
@@ -111,6 +114,11 @@ typedef struct {
 #define NGX_HTTP_LOG_ESCAPE_NONE     2
 
 
+#if (NGX_RESTY_EXT)
+static ngx_int_t ngx_http_log_sample(ngx_http_request_t *r,
+    ngx_http_complex_value_t *cv);
+
+#endif
 static void ngx_http_log_write(ngx_http_request_t *r, ngx_http_log_t *log,
     u_char *buf, size_t len);
 static ssize_t ngx_http_log_script_write(ngx_http_request_t *r,
@@ -321,7 +329,7 @@ next_level:
             continue;
         }
 
-        /* A matching entry selects this level even if if= skips it. */
+        /* Filters and sampling do not change the selected level. */
         matched = 1;
 
         if (log[l].off) {
@@ -339,6 +347,12 @@ next_level:
             }
         }
 
+#if (NGX_RESTY_EXT)
+        if (log[l].sample && !ngx_http_log_sample(r, log[l].sample)) {
+            continue;
+        }
+
+#endif
         if (ngx_time() == log[l].disk_full_time) {
 
             /*
@@ -473,6 +487,49 @@ next_level:
 }
 
 
+#if (NGX_RESTY_EXT)
+static ngx_int_t
+ngx_http_log_sample(ngx_http_request_t *r, ngx_http_complex_value_t *cv)
+{
+    uint32_t   draw, limit;
+    ngx_int_t  sample;
+    ngx_str_t  value;
+
+    if (cv->lengths == NULL) {
+        sample = (ngx_int_t) cv->u.size;
+
+    } else {
+        if (ngx_http_complex_value(r, cv, &value) != NGX_OK) {
+            return 0;
+        }
+
+        sample = ngx_atoi(value.data, value.len);
+
+        if (sample == NGX_ERROR || sample > 2147483647) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "invalid access_log sample value \"%V\": "
+                          "expected an integer between 0 and 2147483647",
+                          &value);
+            return 0;
+        }
+    }
+
+    if (sample <= 1) {
+        return sample;
+    }
+
+    /* Reject the incomplete range to avoid modulo bias. */
+    limit = 0x80000000u - (0x80000000u % (uint32_t) sample);
+
+    do {
+        draw = (uint32_t) ngx_random();
+    } while (draw >= limit);
+
+    return draw % (uint32_t) sample == 0;
+}
+
+
+#endif
 static void
 ngx_http_log_write(ngx_http_request_t *r, ngx_http_log_t *log, u_char *buf,
     size_t len)
@@ -1673,6 +1730,52 @@ process_formats:
 #endif
         }
 
+#if (NGX_RESTY_EXT)
+        if (ngx_strncmp(value[i].data, "sample=", 7) == 0) {
+            if (log->sample) {
+                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                                   "duplicate sample parameter \"%V\"",
+                                   &value[i]);
+                return NGX_CONF_ERROR;
+            }
+
+            s.len = value[i].len - 7;
+            s.data = value[i].data + 7;
+
+            ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
+
+            ccv.cf = cf;
+            ccv.value = &s;
+            ccv.complex_value = ngx_palloc(cf->pool,
+                                           sizeof(ngx_http_complex_value_t));
+            if (ccv.complex_value == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            if (ngx_http_compile_complex_value(&ccv) != NGX_OK) {
+                return NGX_CONF_ERROR;
+            }
+
+            if (ccv.complex_value->lengths == NULL) {
+                n = ngx_atoi(s.data, s.len);
+
+                if (n == (ngx_uint_t) NGX_ERROR || n > 2147483647) {
+                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                                       "invalid access_log sample value \"%V\": "
+                                       "expected an integer between 0 and "
+                                       "2147483647", &s);
+                    return NGX_CONF_ERROR;
+                }
+
+                ccv.complex_value->u.size = n;
+            }
+
+            log->sample = ccv.complex_value;
+
+            continue;
+        }
+
+#endif
         if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
             s.len = value[i].len - 3;
             s.data = value[i].data + 3;
