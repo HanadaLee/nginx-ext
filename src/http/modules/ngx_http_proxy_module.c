@@ -7488,6 +7488,7 @@ ngx_http_proxy_merge_rewrites(ngx_conf_t *cf, ngx_array_t **rules,
 {
     u_char                              *p;
     ngx_uint_t                           i, n, level, inherited_level;
+    ngx_uint_t                           add_default;
     ngx_array_t                         *a;
     ngx_http_proxy_rewrite_condition_t   *condition, *fallback;
 
@@ -7504,29 +7505,33 @@ ngx_http_proxy_merge_rewrites(ngx_conf_t *cf, ngx_array_t **rules,
     }
 
     fallback = default_rule;
+    n = prev ? prev->nelts : 0;
+    condition = NULL;
 
-    if (*rules == NULL && prev) {
-        /* Share inherited arrays unless an empty implicit default changes. */
+    if (n) {
         condition = (ngx_http_proxy_rewrite_condition_t *)
-                    ((u_char *) prev->elts + (prev->nelts - 1) * size);
+                    ((u_char *) prev->elts + (n - 1) * size);
+    }
 
-        if (fallback == NULL || fallback->empty
-            || !condition->implicit || !condition->empty)
-        {
+    /* Rules declared at http level have not been merged with a default. */
+    add_default = fallback && (n == 0 || !condition->implicit);
+
+    if (*rules == NULL && prev && !add_default) {
+        /* Share inherited arrays unless an empty implicit default changes. */
+        if (fallback == NULL || fallback->empty || !condition->empty) {
             *rules = prev;
             return NGX_OK;
         }
     }
 
     a = *rules;
-    n = prev ? prev->nelts : (fallback ? 1 : 0);
 
-    if (n == 0) {
+    if (n == 0 && !add_default) {
         return NGX_OK;
     }
 
     if (a == NULL) {
-        a = ngx_array_create(cf->pool, n, size);
+        a = ngx_array_create(cf->pool, n + add_default, size);
         if (a == NULL) {
             return NGX_ERROR;
         }
@@ -7535,12 +7540,12 @@ ngx_http_proxy_merge_rewrites(ngx_conf_t *cf, ngx_array_t **rules,
     }
 
     level = a->nelts ? 1 : 0;
-    p = ngx_array_push_n(a, n);
+    p = ngx_array_push_n(a, n + add_default);
     if (p == NULL) {
         return NGX_ERROR;
     }
 
-    if (prev) {
+    if (n) {
         ngx_memcpy(p, prev->elts, n * size);
 
         for (i = 0; i < n; i++, p += size) {
@@ -7556,7 +7561,10 @@ ngx_http_proxy_merge_rewrites(ngx_conf_t *cf, ngx_array_t **rules,
             }
         }
 
-    } else {
+        level = condition->level + 1;
+    }
+
+    if (add_default) {
         ngx_memcpy(p, default_rule, size);
         condition = (ngx_http_proxy_rewrite_condition_t *) p;
         condition->level = level;
