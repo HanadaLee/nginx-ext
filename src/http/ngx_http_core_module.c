@@ -3846,6 +3846,7 @@ ngx_http_core_init_main_conf(ngx_conf_t *cf, void *conf)
 #else
     ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 1024);
 #endif
+
     ngx_conf_init_uint_value(cmcf->variables_hash_bucket_size, 64);
 
     cmcf->variables_hash_bucket_size =
@@ -4015,9 +4016,11 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->auth_delay = NGX_CONF_UNSET_MSEC;
     clcf->if_modified_since = NGX_CONF_UNSET_UINT;
     clcf->max_ranges = NGX_CONF_UNSET_UINT;
+
 #if (NGX_RESTY_EXT)
     clcf->ignore_invalid_range = NGX_CONF_UNSET;
 #endif
+
     clcf->client_body_in_file_only = NGX_CONF_UNSET_UINT;
     clcf->client_body_in_single_buffer = NGX_CONF_UNSET;
     clcf->internal = NGX_CONF_UNSET;
@@ -4060,9 +4063,11 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->recursive_error_pages = NGX_CONF_UNSET;
     clcf->chunked_transfer_encoding = NGX_CONF_UNSET;
     clcf->etag = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     clcf->set_auto_redirect = NGX_CONF_UNSET_UINT;
 #endif
+
     clcf->server_tokens = NGX_CONF_UNSET_UINT;
     clcf->early_hints = NGX_CONF_UNSET_PTR;
     clcf->types_hash_max_size = NGX_CONF_UNSET_UINT;
@@ -4263,10 +4268,12 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               NGX_HTTP_IMS_EXACT);
     ngx_conf_merge_uint_value(conf->max_ranges, prev->max_ranges,
                               NGX_MAX_INT32_VALUE);
+
 #if (NGX_RESTY_EXT)
     ngx_conf_merge_value(conf->ignore_invalid_range,
                          prev->ignore_invalid_range, 0);
 #endif
+
     ngx_conf_merge_uint_value(conf->client_body_in_file_only,
                               prev->client_body_in_file_only,
                               NGX_HTTP_REQUEST_BODY_FILE_OFF);
@@ -4827,6 +4834,7 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 #if (NGX_RESTY_EXT)
         if (ngx_strcmp(value[n].data, "https_allow_http") == 0) {
+
 #if (NGX_HTTP_SSL)
             lsopt.https_allow_http = 1;
             continue;
@@ -5489,6 +5497,7 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         err->value = cv;
         err->args = args;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
         err->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif

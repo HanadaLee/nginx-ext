@@ -401,6 +401,7 @@ ngx_http_gzip_header_filter(ngx_http_request_t *r)
 
     ctx->request = r;
     ctx->buffering = (conf->postpone_gzipping != 0);
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     ctx->level = ngx_http_get_expr_num_value(r, conf->level);
 #endif
@@ -1226,16 +1227,20 @@ ngx_http_gzip_create_conf(ngx_conf_t *cf)
 #else
     conf->enable = NGX_CONF_UNSET;
 #endif
+
     conf->no_buffer = NGX_CONF_UNSET;
 
     conf->postpone_gzipping = NGX_CONF_UNSET_SIZE;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->level = NGX_CONF_UNSET_PTR;
 #else
     conf->level = NGX_CONF_UNSET;
 #endif
+
     conf->wbits = NGX_CONF_UNSET_SIZE;
     conf->memlevel = NGX_CONF_UNSET_SIZE;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->min_length = NGX_CONF_UNSET_PTR;
 #else
@@ -1248,6 +1253,7 @@ ngx_http_gzip_create_conf(ngx_conf_t *cf)
 #else
     conf->max_length = NGX_CONF_UNSET;
 #endif
+
     conf->bypass = NGX_CONF_UNSET_PTR;
 #endif
 
@@ -1270,6 +1276,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 #else
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
 #endif
+
     ngx_conf_merge_value(conf->no_buffer, prev->no_buffer, 0);
 
     ngx_conf_merge_bufs_value(conf->bufs, prev->bufs,
@@ -1277,6 +1284,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_size_value(conf->postpone_gzipping, prev->postpone_gzipping,
                               0);
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf, &conf->level,
                                       prev->level, 1) != NGX_OK)
@@ -1286,9 +1294,11 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 #else
     ngx_conf_merge_value(conf->level, prev->level, 1);
 #endif
+
     ngx_conf_merge_size_value(conf->wbits, prev->wbits, MAX_WBITS);
     ngx_conf_merge_size_value(conf->memlevel, prev->memlevel,
                               MAX_MEM_LEVEL - 1);
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_size_value(cf, &conf->min_length,
                                        prev->min_length, 20) != NGX_OK)
@@ -1309,6 +1319,7 @@ ngx_http_gzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 #else
     ngx_conf_merge_value(conf->max_length, prev->max_length, 0);
 #endif
+
     ngx_conf_merge_ptr_value(conf->bypass, prev->bypass, NULL);
 #endif
 

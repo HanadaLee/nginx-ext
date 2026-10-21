@@ -694,6 +694,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream.local = NGX_CONF_UNSET_PTR;
     conf->upstream.socket_keepalive = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.next_upstream_tries_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.connect_timeout_conf = NGX_CONF_UNSET_PTR;
@@ -712,6 +713,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
 
     /* the hardcoded values */
     conf->upstream.cyclic_temp_file = 0;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.buffering_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.ignore_client_abort_conf = NGX_CONF_UNSET_PTR;
@@ -720,11 +722,13 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
 #else
     conf->upstream.buffering = 0;
     conf->upstream.ignore_client_abort = 0;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.pass_request_headers = 0;
     conf->upstream.pass_request_body = 0;
 #endif
 #endif
+
     conf->upstream.send_lowat = 0;
     conf->upstream.bufs.num = 0;
     conf->upstream.busy_buffers_size = 0;
@@ -732,6 +736,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.temp_file_write_size = 0;
     conf->upstream.intercept_errors = 1;
     conf->upstream.intercept_404 = 1;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.force_ranges_conf = NGX_CONF_UNSET_PTR;
 #else
@@ -739,6 +744,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.pass_request_headers = 0;
     conf->upstream.pass_request_body = 0;
 #endif
+
     conf->upstream.force_ranges = 1;
 #endif
 
