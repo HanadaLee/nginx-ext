@@ -1309,10 +1309,12 @@ ngx_http_uwsgi_eval(ngx_http_request_t *r, ngx_http_uwsgi_loc_conf_t * uwcf)
 #else
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "suwsgi protocol requires SSL support");
+
 #if (NGX_RESTY_EXT)
         ngx_http_upstream_set_error(r,
                              NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
 #endif
+
         return NGX_ERROR;
 #endif
 
@@ -1344,6 +1346,7 @@ ngx_http_uwsgi_eval(ngx_http_request_t *r, ngx_http_uwsgi_loc_conf_t * uwcf)
 #if (NGX_RESTY_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
 #endif
+
         return NGX_ERROR;
     }
 
@@ -2135,6 +2138,7 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream.store = NGX_CONF_UNSET;
     conf->upstream.store_access = NGX_CONF_UNSET_UINT;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.next_upstream_tries_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.buffering_conf = NGX_CONF_UNSET_PTR;
@@ -2147,10 +2151,12 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.next_upstream_tries = NGX_CONF_UNSET_UINT;
     conf->upstream.buffering = NGX_CONF_UNSET;
     conf->upstream.request_buffering = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.pass_request_headers = NGX_CONF_UNSET;
     conf->upstream.pass_request_body = NGX_CONF_UNSET;
 #endif
+
     conf->upstream.ignore_client_abort = NGX_CONF_UNSET;
     conf->upstream.force_ranges = NGX_CONF_UNSET;
 #endif
@@ -2186,6 +2192,7 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
 #endif
 #if (NGX_HTTP_CACHE)
     conf->upstream.cache = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_min_age = NGX_CONF_UNSET_PTR;
 #endif
@@ -2197,6 +2204,7 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_stale_if_error = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_stale_while_revalidate = NGX_CONF_UNSET_PTR;
+
 #if (NGX_EXPR)
     conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_hide_cookies = NGX_CONF_UNSET_PTR;
@@ -2214,9 +2222,11 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
 #else
     conf->upstream.cache_max_range_offset = NGX_CONF_UNSET;
 #endif
+
     conf->upstream.cache_bypass = NGX_CONF_UNSET_PTR;
     conf->upstream.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_valid = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.cache_lock_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_timeout_conf = NGX_CONF_UNSET_PTR;
@@ -2226,7 +2236,9 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream.cache_lock_age = NGX_CONF_UNSET_MSEC;
 #endif
+
     conf->upstream.cache_revalidate = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_convert_head = 1;
 #endif
@@ -2239,6 +2251,7 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream.hide_headers = NGX_CONF_UNSET_PTR;
     conf->upstream.pass_headers = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.hide_cookies = NGX_CONF_UNSET_PTR;
 #endif
@@ -2248,19 +2261,23 @@ ngx_http_uwsgi_create_loc_conf(ngx_conf_t *cf)
 #if (NGX_HTTP_SSL)
     conf->upstream.ssl_session_reuse = NGX_CONF_UNSET;
     conf->upstream.ssl_name = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.ssl_server_name_conf = NGX_CONF_UNSET_PTR;
 #else
     conf->upstream.ssl_server_name = NGX_CONF_UNSET;
 #endif
+
     conf->upstream.ssl_verify = NGX_CONF_UNSET;
     conf->ssl_verify_depth = NGX_CONF_UNSET_UINT;
     conf->upstream.ssl_certificate = NGX_CONF_UNSET_PTR;
     conf->upstream.ssl_certificate_key = NGX_CONF_UNSET_PTR;
     conf->upstream.ssl_certificate_cache = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.ssl_certificate_load = NGX_CONF_UNSET_UINT;
 #endif
+
     conf->upstream.ssl_passwords = NGX_CONF_UNSET_PTR;
     conf->ssl_conf_commands = NGX_CONF_UNSET_PTR;
 #endif
@@ -2942,6 +2959,7 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->upstream.ssl_server_name,
                               prev->upstream.ssl_server_name, 0);
 #endif
+
     ngx_conf_merge_value(conf->upstream.ssl_verify,
                               prev->upstream.ssl_verify, 0);
     ngx_conf_merge_uint_value(conf->ssl_verify_depth,

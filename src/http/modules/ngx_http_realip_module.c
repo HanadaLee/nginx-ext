@@ -648,6 +648,7 @@ ngx_http_realip_create_loc_conf(ngx_conf_t *cf)
 #else
     conf->type = NGX_CONF_UNSET_UINT;
 #endif
+
     conf->recursive = NGX_CONF_UNSET;
 
     return conf;
