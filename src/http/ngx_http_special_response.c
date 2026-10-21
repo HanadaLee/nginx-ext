@@ -1148,7 +1148,7 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
 {
 #if (NGX_RESTY_EXT)
     ngx_uint_t                 err;
-#if !(NGX_RESTY_EXT && NGX_EXPR)
+#if !(NGX_EXPR)
     ngx_uint_t                 i;
 #endif
 #else
@@ -1479,6 +1479,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     msie_padding = 0;
 
     if (ngx_http_error_pages[err].len) {
+
 #if (NGX_RESTY_EXT)
         r->headers_out.content_length_n = sizeof(ngx_http_error_head) - 1
                                           + ngx_http_error_pages[err].len

@@ -627,6 +627,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
     c->error_sec = h->error_sec;
     c->last_modified = h->last_modified;
     c->date = h->date;
+
 #if (NGX_RESTY_EXT)
     /*
      * NGX_HTTP_CACHE_MUST_REVALIDATE is encoded in the high bit of the
@@ -640,6 +641,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
 #else
     c->valid_msec = h->valid_msec;
 #endif
+
     c->body_start = h->body_start;
     c->etag.len = h->etag_len;
     c->etag.data = h->etag;
@@ -1344,6 +1346,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
     h->date = c->date;
     h->crc32 = c->crc32;
     h->valid_msec = (u_short) c->valid_msec;
+
 #if (NGX_RESTY_EXT)
     /*
      * Keep the cache header layout and version unchanged: only the on-disk
@@ -1354,6 +1357,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
         h->valid_msec |= NGX_HTTP_CACHE_MUST_REVALIDATE;
     }
 #endif
+
     h->header_start = (u_short) c->header_start;
     h->body_start = (u_short) c->body_start;
 
@@ -1618,6 +1622,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
     h.date = c->date;
     h.crc32 = c->crc32;
     h.valid_msec = (u_short) c->valid_msec;
+
 #if (NGX_RESTY_EXT)
     /*
      * Preserve the same high-bit encoding when a 304 response refreshes only
@@ -1628,6 +1633,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
         h.valid_msec |= NGX_HTTP_CACHE_MUST_REVALIDATE;
     }
 #endif
+
     h.header_start = (u_short) c->header_start;
     h.body_start = (u_short) c->body_start;
 
@@ -2866,6 +2872,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
             }
 
             v->status = statuses[i];
+
 #if (NGX_RESTY_EXT)
             v->valid = valid_cv;
 #else
@@ -2898,6 +2905,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
         }
 
         v->status = status;
+
 #if (NGX_RESTY_EXT)
         v->valid = valid_cv;
 #else

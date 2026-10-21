@@ -446,6 +446,7 @@ ngx_http_auth_basic_create_loc_conf(ngx_conf_t *cf)
 
     conf->realm = NGX_CONF_UNSET_PTR;
     conf->user_file = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT)
     conf->users = NGX_CONF_UNSET_PTR;
 #endif

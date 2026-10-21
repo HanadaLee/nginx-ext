@@ -353,6 +353,7 @@ next_level:
         }
 
 #endif
+
         if (ngx_time() == log[l].disk_full_time) {
 
             /*
@@ -488,6 +489,7 @@ next_level:
 
 
 #if (NGX_RESTY_EXT)
+
 static ngx_int_t
 ngx_http_log_sample(ngx_http_request_t *r, ngx_http_complex_value_t *cv)
 {
@@ -528,8 +530,9 @@ ngx_http_log_sample(ngx_http_request_t *r, ngx_http_complex_value_t *cv)
     return draw % (uint32_t) sample == 0;
 }
 
-
 #endif
+
+
 static void
 ngx_http_log_write(ngx_http_request_t *r, ngx_http_log_t *log, u_char *buf,
     size_t len)
@@ -1525,6 +1528,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     value = cf->args->elts;
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
         if (cf->args->nelts != 2) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -1577,6 +1581,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     ngx_memzero(log, sizeof(ngx_http_log_t));
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     log->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif
@@ -1776,6 +1781,7 @@ process_formats:
         }
 
 #endif
+
         if (ngx_strncmp(value[i].data, "if=", 3) == 0) {
             s.len = value[i].len - 3;
             s.data = value[i].data + 3;

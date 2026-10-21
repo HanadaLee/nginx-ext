@@ -1485,7 +1485,6 @@ ngx_stream_proxy_ssl_init_connection(ngx_stream_session_t *s)
         return;
     }
 
-#if (NGX_RESTY_EXT)
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (ngx_stream_get_expr_flag_value(s, pscf->ssl_server_name)
         || pscf->ssl_verify)
@@ -1493,9 +1492,6 @@ ngx_stream_proxy_ssl_init_connection(ngx_stream_session_t *s)
     if (pscf->ssl_server_name || pscf->ssl_verify)
 #endif
     {
-#else
-    if (pscf->ssl_server_name || pscf->ssl_verify) {
-#endif
         if (ngx_stream_proxy_ssl_name(s) != NGX_OK) {
             ngx_stream_proxy_finalize(s, NGX_STREAM_INTERNAL_SERVER_ERROR);
             return;
@@ -1539,6 +1535,7 @@ ngx_stream_proxy_ssl_init_connection(ngx_stream_session_t *s)
     if (rc == NGX_AGAIN) {
 
         if (!pc->write->timer_set) {
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
             ngx_add_timer(pc->write, ctx->connect_timeout);
 #else
@@ -1677,16 +1674,12 @@ ngx_stream_proxy_ssl_name(ngx_stream_session_t *s)
         name.len = p - name.data;
     }
 
-#if (NGX_RESTY_EXT)
 #if (NGX_RESTY_EXT && NGX_EXPR)
     if (!ngx_stream_get_expr_flag_value(s, pscf->ssl_server_name))
 #else
     if (!pscf->ssl_server_name)
 #endif
     {
-#else
-    if (!pscf->ssl_server_name) {
-#endif
         goto done;
     }
 
@@ -2009,6 +2002,7 @@ ngx_stream_proxy_process_connection(ngx_event_t *ev, ngx_uint_t from_upstream)
                 }
 
                 if (u->connected && !c->read->delayed && !pc->read->delayed) {
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
                     ngx_add_timer(c->write, ctx->timeout);
 #else
@@ -2376,6 +2370,7 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
         }
 
         if (!c->read->delayed && !pc->read->delayed) {
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
             ngx_add_timer(c->write, ctx->timeout);
 #else
@@ -2696,11 +2691,13 @@ ngx_stream_proxy_create_srv_conf(ngx_conf_t *cf)
     conf->timeout = NGX_CONF_UNSET_MSEC;
     conf->next_upstream_timeout = NGX_CONF_UNSET_MSEC;
 #endif
+
     conf->buffer_size = NGX_CONF_UNSET_SIZE;
     conf->upload_rate = NGX_CONF_UNSET_PTR;
     conf->download_rate = NGX_CONF_UNSET_PTR;
     conf->requests = NGX_CONF_UNSET_UINT;
     conf->responses = NGX_CONF_UNSET_UINT;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->next_upstream_tries = NGX_CONF_UNSET_PTR;
     conf->next_upstream = NGX_CONF_UNSET_PTR;
@@ -2708,6 +2705,7 @@ ngx_stream_proxy_create_srv_conf(ngx_conf_t *cf)
     conf->next_upstream_tries = NGX_CONF_UNSET_UINT;
     conf->next_upstream = NGX_CONF_UNSET;
 #endif
+
     conf->proxy_protocol = NGX_CONF_UNSET_UINT;
     conf->local = NGX_CONF_UNSET_PTR;
     conf->socket_keepalive = NGX_CONF_UNSET;
@@ -2719,11 +2717,13 @@ ngx_stream_proxy_create_srv_conf(ngx_conf_t *cf)
     conf->ssl_enable = NGX_CONF_UNSET;
     conf->ssl_session_reuse = NGX_CONF_UNSET;
     conf->ssl_name = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->ssl_server_name = NGX_CONF_UNSET_PTR;
 #else
     conf->ssl_server_name = NGX_CONF_UNSET;
 #endif
+
     conf->ssl_alpn = NGX_CONF_UNSET_PTR;
     conf->ssl_verify = NGX_CONF_UNSET;
     conf->ssl_verify_depth = NGX_CONF_UNSET_UINT;
@@ -3275,7 +3275,7 @@ ngx_stream_proxy_get_next_upstream_tries(ngx_stream_session_t *s)
 
     pscf = ngx_stream_get_module_srv_conf(s, ngx_stream_proxy_module);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXPR)
     return ngx_stream_get_expr_num_value(s, pscf->next_upstream_tries);
 #else
     return pscf->next_upstream_tries;
