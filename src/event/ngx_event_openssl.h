@@ -124,9 +124,11 @@ struct ngx_ssl_s {
 
     ngx_rbtree_t                staple_rbtree;
     ngx_rbtree_node_t           staple_sentinel;
+
 #if (NGX_RESTY_EXT)
     ngx_ssl_dynamic_record_t    dynamic_record;
 #endif
+
 };
 
 
@@ -417,6 +419,7 @@ ngx_int_t ngx_ssl_get_client_v_remain(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
 ngx_int_t ngx_ssl_get_client_sigalg(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
+
 #if (NGX_RESTY_EXT)
 ngx_int_t ngx_ssl_get_handshake_time(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);

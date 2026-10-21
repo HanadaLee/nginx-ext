@@ -2690,9 +2690,11 @@ ngx_stream_proxy_create_srv_conf(ngx_conf_t *cf)
     conf->ssl_certificate = NGX_CONF_UNSET_PTR;
     conf->ssl_certificate_key = NGX_CONF_UNSET_PTR;
     conf->ssl_certificate_cache = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT)
     conf->ssl_certificate_load = NGX_CONF_UNSET_UINT;
 #endif
+
     conf->ssl_passwords = NGX_CONF_UNSET_PTR;
     conf->ssl_conf_commands = NGX_CONF_UNSET_PTR;
 #endif

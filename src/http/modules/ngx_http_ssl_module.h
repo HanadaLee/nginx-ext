@@ -80,6 +80,7 @@ typedef struct {
 
     ngx_uint_t                      strict_server_name;
 #endif
+
 } ngx_http_ssl_srv_conf_t;
 
 
