@@ -328,6 +328,7 @@ ngx_http_tunnel_eval(ngx_http_request_t *r, ngx_http_tunnel_loc_conf_t *tlcf)
 #if (NGX_RESTY_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
 #endif
+
         return NGX_ERROR;
     }
 

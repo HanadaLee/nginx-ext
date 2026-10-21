@@ -1793,9 +1793,11 @@ ngx_http_script_if_code(ngx_http_script_engine_t *e)
         }
 
         e->ip += sizeof(ngx_http_script_if_code_t);
+
 #if (NGX_RESTY_EXT)
         e->if_matched = 1;
 #endif
+
         return;
     }
 

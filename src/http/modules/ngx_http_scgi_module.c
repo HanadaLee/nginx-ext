@@ -1069,6 +1069,7 @@ ngx_http_scgi_eval(ngx_http_request_t *r, ngx_http_scgi_loc_conf_t * scf)
 #if (NGX_RESTY_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
 #endif
+
         return NGX_ERROR;
     }
 
@@ -1834,6 +1835,7 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream.store = NGX_CONF_UNSET;
     conf->upstream.store_access = NGX_CONF_UNSET_UINT;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.next_upstream_tries_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.buffering_conf = NGX_CONF_UNSET_PTR;
@@ -1846,10 +1848,12 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.next_upstream_tries = NGX_CONF_UNSET_UINT;
     conf->upstream.buffering = NGX_CONF_UNSET;
     conf->upstream.request_buffering = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.pass_request_headers = NGX_CONF_UNSET;
     conf->upstream.pass_request_body = NGX_CONF_UNSET;
 #endif
+
     conf->upstream.ignore_client_abort = NGX_CONF_UNSET;
     conf->upstream.force_ranges = NGX_CONF_UNSET;
 #endif
@@ -1885,6 +1889,7 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
 #endif
 #if (NGX_HTTP_CACHE)
     conf->upstream.cache = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_min_age = NGX_CONF_UNSET_PTR;
 #endif
@@ -1896,6 +1901,7 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_stale_if_error = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_stale_while_revalidate = NGX_CONF_UNSET_PTR;
+
 #if (NGX_EXPR)
     conf->upstream.cache_vary = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_hide_cookies = NGX_CONF_UNSET_PTR;
@@ -1913,9 +1919,11 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
 #else
     conf->upstream.cache_max_range_offset = NGX_CONF_UNSET;
 #endif
+
     conf->upstream.cache_bypass = NGX_CONF_UNSET_PTR;
     conf->upstream.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_valid = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
     conf->upstream.cache_lock_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_timeout_conf = NGX_CONF_UNSET_PTR;
@@ -1925,7 +1933,9 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream.cache_lock_age = NGX_CONF_UNSET_MSEC;
 #endif
+
     conf->upstream.cache_revalidate = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.cache_convert_head = 1;
 #endif
@@ -1938,6 +1948,7 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream.hide_headers = NGX_CONF_UNSET_PTR;
     conf->upstream.pass_headers = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT)
     conf->upstream.hide_cookies = NGX_CONF_UNSET_PTR;
 #endif

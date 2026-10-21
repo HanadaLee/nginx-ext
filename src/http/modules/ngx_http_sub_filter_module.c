@@ -199,6 +199,7 @@ static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 
 
 #if (NGX_RESTY_EXT)
+
 static ngx_int_t
 ngx_http_sub_header_filter(ngx_http_request_t *r)
 {
@@ -208,7 +209,7 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
     ngx_http_sub_pair_t      *pairs;
     ngx_http_sub_match_t     *matches;
     ngx_http_sub_loc_conf_t  *slcf, *rules;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXPR)
     ngx_uint_t                active;
 #endif
 
@@ -216,7 +217,7 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
 
     rules = slcf;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXPR)
     while (rules && rules->pairs == NULL) {
         rules = rules->parent;
     }
@@ -236,7 +237,8 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
 
     while (rules) {
         if (rules->pairs == NULL) {
-#if (NGX_RESTY_EXT && NGX_EXPR)
+
+#if (NGX_EXPR)
             rules = rules->parent;
             continue;
 #else
@@ -258,11 +260,14 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
             }
 
             j = 0;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+
+#if (NGX_EXPR)
             active = 0;
 #endif
+
             for (i = 0; i < n; i++) {
-#if (NGX_RESTY_EXT && NGX_EXPR)
+
+#if (NGX_EXPR)
                 if (ngx_http_expr_get_result(r, pairs[i].expr_id)
                     != NGX_EXPR_WHEN_HIT)
                 {
@@ -293,7 +298,7 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
                 j++;
             }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXPR)
             if (!active) {
                 rules = rules->parent;
                 continue;
@@ -359,7 +364,9 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
 
     return ngx_http_next_header_filter(r);
 }
+
 #else
+
 static ngx_int_t
 ngx_http_sub_header_filter(ngx_http_request_t *r)
 {
@@ -472,6 +479,7 @@ ngx_http_sub_header_filter(ngx_http_request_t *r)
 
     return ngx_http_next_header_filter(r);
 }
+
 #endif
 
 
@@ -1088,6 +1096,7 @@ ngx_http_sub_create_conf(ngx_conf_t *cf)
 
 
 #if (NGX_RESTY_EXT)
+
 static char *
 ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 {
@@ -1105,7 +1114,7 @@ ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXPR)
     conf->parent = prev;
 
     /* The http-level configuration is not itself passed as a child. */
@@ -1165,7 +1174,9 @@ ngx_http_sub_init_static(ngx_conf_t *cf, ngx_http_sub_loc_conf_t *conf)
 
     return NGX_CONF_OK;
 }
+
 #else
+
 static char *
 ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 {
@@ -1226,6 +1237,7 @@ ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     return NGX_CONF_OK;
 }
+
 #endif
 
 
