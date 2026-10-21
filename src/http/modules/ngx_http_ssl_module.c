@@ -744,9 +744,11 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->certificates = NGX_CONF_UNSET_PTR;
     sscf->certificate_keys = NGX_CONF_UNSET_PTR;
     sscf->certificate_cache = NGX_CONF_UNSET_PTR;
+
 #if (NGX_RESTY_EXT)
     sscf->certificate_load = NGX_CONF_UNSET_UINT;
 #endif
+
     sscf->ech_files = NGX_CONF_UNSET_PTR;
     sscf->passwords = NGX_CONF_UNSET_PTR;
     sscf->conf_commands = NGX_CONF_UNSET_PTR;
@@ -758,6 +760,7 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->ocsp_cache_zone = NGX_CONF_UNSET_PTR;
     sscf->stapling = NGX_CONF_UNSET;
     sscf->stapling_verify = NGX_CONF_UNSET;
+
 #if (NGX_RESTY_EXT)
     sscf->dynamic_record_enable = NGX_CONF_UNSET;
     sscf->dynamic_record_timeout = NGX_CONF_UNSET_MSEC;
