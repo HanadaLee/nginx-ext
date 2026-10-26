@@ -1358,12 +1358,12 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         background = ngx_http_upstream_get_flag(r,
                                       u->conf->cache_background_update_conf,
                                       u->conf->cache_background_update);
-        if (!c->must_revalidate
+        if (!c->must_revalidate && !c->purged
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
             && background)
 #else
-        if (!c->must_revalidate
+        if (!c->must_revalidate && !c->purged
             && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
             && u->conf->cache_background_update)
@@ -1393,11 +1393,11 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         stale = ngx_http_upstream_get_bitmask(r,
                                               u->conf->cache_use_stale_conf,
                                               u->conf->cache_use_stale);
-        if (!c->must_revalidate
+        if (!c->must_revalidate && !c->purged
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background)
 #else
-        if (!c->must_revalidate
+        if (!c->must_revalidate && !c->purged
             && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background)
 #endif
@@ -3565,7 +3565,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
 #if (NGX_RESTY_EXT)
-            && !r->cache->must_revalidate
+            && !r->cache->must_revalidate && !r->cache->purged
 #endif
 #if (NGX_RESTY_EXT && NGX_EXPR)
             && (stale & un->mask))
@@ -3665,6 +3665,12 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
             r->cache->error_sec = error;
 
             r->cache->date = now;
+
+#if (NGX_RESTY_EXT)
+            if (rc == NGX_OK || rc == NGX_AGAIN) {
+                r->cache->purged = 0;
+            }
+#endif
 
             ngx_http_file_cache_update_header(r);
         }
@@ -5751,7 +5757,7 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
 #if (NGX_RESTY_EXT)
-            && !r->cache->must_revalidate
+            && !r->cache->must_revalidate && !r->cache->purged
 #endif
 #if (NGX_RESTY_EXT && NGX_EXPR)
             && ((stale & ft_type) || r->cache->stale_error))
