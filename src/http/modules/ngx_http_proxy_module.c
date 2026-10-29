@@ -4383,6 +4383,7 @@ ngx_http_proxy_rewrite_cookie(ngx_http_request_t *r, ngx_table_elt_t *h)
     ngx_http_proxy_loc_conf_t  *plcf;
 #if (NGX_RESTY_EXT)
     ngx_array_t                *values, *max_age;
+    ngx_flag_t                  bare;
 #endif
 
 #if (NGX_RESTY_EXT)
@@ -4399,7 +4400,14 @@ ngx_http_proxy_rewrite_cookie(ngx_http_request_t *r, ngx_table_elt_t *h)
 
     attr = attrs.elts;
 
-#if !(NGX_RESTY_EXT)
+#if (NGX_RESTY_EXT)
+    bare = attr[0].value.data == NULL;
+
+    if (bare) {
+        attr[0].value = attr[0].key;
+        ngx_str_set(&attr[0].key, "");
+    }
+#else
     if (attr[0].value.data == NULL) {
         return NGX_DECLINED;
     }
@@ -4556,6 +4564,13 @@ ngx_http_proxy_rewrite_cookie(ngx_http_request_t *r, ngx_table_elt_t *h)
 
         if (attr[i].value.data) {
             len += 1 + attr[i].value.len;
+
+#if (NGX_RESTY_EXT)
+            if (i == 0 && bare && attr[i].value.len != 0) {
+                len--;
+            }
+#endif
+
         }
     }
 
@@ -4581,6 +4596,14 @@ ngx_http_proxy_rewrite_cookie(ngx_http_request_t *r, ngx_table_elt_t *h)
         p = ngx_cpymem(p, attr[i].key.data, attr[i].key.len);
 
         if (attr[i].value.data) {
+
+#if (NGX_RESTY_EXT)
+            if (i == 0 && bare && attr[i].value.len != 0) {
+                p = ngx_cpymem(p, attr[i].value.data, attr[i].value.len);
+                continue;
+            }
+#endif
+
             *p++ = '=';
             p = ngx_cpymem(p, attr[i].value.data, attr[i].value.len);
         }
