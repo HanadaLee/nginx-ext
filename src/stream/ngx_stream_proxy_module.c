@@ -3230,7 +3230,7 @@ ngx_stream_proxy_get_next_upstream_tries(ngx_stream_session_t *s)
 
     pscf = ngx_stream_get_module_srv_conf(s, ngx_stream_proxy_module);
 
-#if (NGX_EXPR)
+#if (NGX_RESTY_EXT && NGX_EXPR)
     return ngx_stream_get_expr_num_value(s, pscf->next_upstream_tries);
 #else
     return pscf->next_upstream_tries;
