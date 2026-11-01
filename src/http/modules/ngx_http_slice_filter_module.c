@@ -9,22 +9,26 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT)
+#include "ngx_http_range_filter_module.h"
+#endif
+
 #if (NGX_RESTY_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
 
 typedef struct {
-    size_t               size;
+    size_t                       size;
 #if (NGX_RESTY_EXT)
 #if (NGX_EXPR)
-    ngx_array_t         *enable;
+    ngx_array_t                 *enable;
 #else
-    ngx_flag_t           enable;
+    ngx_flag_t                   enable;
 #endif
-    ngx_array_t         *bypass;
-    ngx_flag_t           verify_etag;
-    ngx_flag_t           verify_last_modified;
+    ngx_array_t                 *bypass;
+    ngx_flag_t                   verify_etag;
+    ngx_flag_t                   verify_last_modified;
 #endif
 } ngx_http_slice_loc_conf_t;
 
@@ -43,29 +47,60 @@ typedef enum {
     NGX_HTTP_SLICE_ERR_SUBREQUEST_FAILED
 } ngx_http_slice_error_e;
 
+
+typedef struct {
+    ngx_array_t                 *ranges;
+    ngx_str_t                   *boundary;
+    ngx_str_t                    closing;
+    off_t                        length;
+    off_t                        position;
+    off_t                        source_start;
+    off_t                        source_end;
+    off_t                        source_position;
+    ngx_uint_t                   index;
+    ngx_uint_t                   source_index;
+    unsigned                     header_sent:1;
+    unsigned                     closed:1;
+} ngx_http_slice_multipart_t;
+
 #endif
 
 
 typedef struct {
-    off_t                start;
-    off_t                end;
-    ngx_str_t            range;
-    ngx_str_t            etag;
+    off_t                        start;
+    off_t                        end;
+    ngx_str_t                    range;
+    ngx_str_t                    etag;
 #if (NGX_RESTY_EXT)
-    ngx_str_t            last_modified;
-    ngx_http_slice_error_e  error;
-    unsigned             done:1;
+    ngx_str_t                    last_modified;
+    ngx_http_slice_error_e       error;
+    unsigned                     done:1;
 #endif
-    unsigned             last:1;
-    unsigned             active:1;
-    ngx_http_request_t  *sr;
+    unsigned                     last:1;
+    unsigned                     active:1;
+    ngx_http_request_t          *sr;
+#if (NGX_RESTY_EXT)
+    ngx_http_slice_multipart_t  *multipart;
+#endif
 } ngx_http_slice_ctx_t;
 
 
+#if (NGX_RESTY_EXT)
+
 typedef struct {
-    off_t                start;
-    off_t                end;
-    off_t                complete_length;
+    ngx_http_range_filter_t      filter;
+    ngx_http_slice_ctx_t        *ctx;
+    ngx_chain_t                 *free;
+    ngx_chain_t                 *busy;
+} ngx_http_slice_filter_ctx_t;
+
+#endif
+
+
+typedef struct {
+    off_t                        start;
+    off_t                        end;
+    off_t                        complete_length;
 } ngx_http_slice_content_range_t;
 
 
@@ -82,6 +117,13 @@ static ngx_int_t ngx_http_slice_error_variable(ngx_http_request_t *r,
 static void ngx_http_slice_set_error(ngx_http_slice_ctx_t *ctx,
     ngx_http_slice_error_e code);
 static ngx_str_t *ngx_http_slice_strerror(ngx_http_slice_error_e code);
+static ngx_int_t ngx_http_slice_multipart_body(ngx_http_request_t *r,
+    ngx_chain_t *in, ngx_http_range_filter_t *filter,
+    ngx_http_output_body_filter_pt next);
+static ngx_chain_t *ngx_http_slice_get_buf(ngx_http_request_t *r,
+    ngx_http_slice_filter_ctx_t *ctx);
+static void ngx_http_slice_update_chains(ngx_http_slice_filter_ctx_t *ctx,
+    ngx_chain_t *out);
 #endif
 static off_t ngx_http_slice_get_start(ngx_http_request_t *r);
 static void *ngx_http_slice_create_loc_conf(ngx_conf_t *cf);
@@ -237,8 +279,15 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     off_t                            end;
     ngx_int_t                        rc;
     ngx_table_elt_t                 *h;
+#if (NGX_RESTY_EXT)
+    ngx_http_range_t                *range;
+#endif
     ngx_http_slice_ctx_t            *ctx;
     ngx_http_slice_loc_conf_t       *slcf;
+#if (NGX_RESTY_EXT)
+    ngx_http_slice_multipart_t      *mp;
+    ngx_http_slice_filter_ctx_t     *fctx;
+#endif
     ngx_http_slice_content_range_t   cr;
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
@@ -394,13 +443,93 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     r->subrequest_ranges = 1;
     r->single_range = 1;
 
+#if (NGX_RESTY_EXT)
+    fctx = NULL;
+
+    if (r == r->main
+        && r->method == NGX_HTTP_GET
+        && r->headers_in.range != NULL
+        && ngx_strlchr(r->headers_in.range->value.data,
+                      r->headers_in.range->value.data
+                      + r->headers_in.range->value.len, ',') != NULL)
+    {
+        ctx->multipart = ngx_pcalloc(r->pool,
+                                     sizeof(ngx_http_slice_multipart_t));
+        if (ctx->multipart == NULL) {
+            return NGX_ERROR;
+        }
+
+        mp = ctx->multipart;
+        mp->length = cr.complete_length;
+    }
+
+    if (ctx->multipart != NULL) {
+        mp = ctx->multipart;
+
+        if (mp->length != cr.complete_length) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "complete length mismatch in slice response");
+            ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_UNEXPECTED_RANGE);
+            return NGX_ERROR;
+        }
+
+        fctx = ngx_pcalloc(r->pool, sizeof(ngx_http_slice_filter_ctx_t));
+        if (fctx == NULL) {
+            return NGX_ERROR;
+        }
+
+        fctx->ctx = ctx;
+        fctx->filter.handler = ngx_http_slice_multipart_body;
+        fctx->filter.data = fctx;
+        ngx_http_range_set_filter(r, &fctx->filter);
+        r->single_range = 0;
+    }
+
+#endif
+
     rc = ngx_http_next_header_filter(r);
+
+#if (NGX_RESTY_EXT)
+    if (fctx != NULL) {
+        if (fctx->filter.ranges == NULL) {
+            if (r != r->main) {
+                return NGX_ERROR;
+            }
+
+            ctx->multipart = NULL;
+
+        } else {
+            mp = ctx->multipart;
+
+            if (r == r->main) {
+                mp->ranges = fctx->filter.ranges;
+                mp->boundary = fctx->filter.boundary;
+                range = mp->ranges->elts;
+                mp->position = range[0].start;
+            }
+
+            mp->source_start = cr.start;
+            mp->source_end = cr.end;
+            mp->source_index = mp->index;
+            mp->source_position = mp->position;
+        }
+    }
+
+#endif
 
     if (r != r->main) {
         return rc;
     }
 
     r->preserve_body = 1;
+
+#if (NGX_RESTY_EXT)
+    if (ctx->multipart != NULL) {
+        ctx->end = cr.complete_length;
+        return rc;
+    }
+
+#endif
 
     if (r->headers_out.status == NGX_HTTP_PARTIAL_CONTENT) {
         if (ctx->start + (off_t) slcf->size <= r->headers_out.content_offset) {
@@ -422,10 +551,13 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
-    ngx_int_t                   rc;
-    ngx_chain_t                *cl;
-    ngx_http_slice_ctx_t       *ctx;
-    ngx_http_slice_loc_conf_t  *slcf;
+    ngx_int_t                    rc;
+    ngx_chain_t                 *cl;
+    ngx_http_slice_ctx_t        *ctx;
+    ngx_http_slice_loc_conf_t   *slcf;
+#if (NGX_RESTY_EXT)
+    ngx_http_slice_multipart_t  *mp;
+#endif
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
 
@@ -468,6 +600,34 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
         return NGX_ERROR;
     }
+
+#if (NGX_RESTY_EXT)
+    mp = ctx->multipart;
+
+    if (mp != NULL) {
+        if (mp->index == mp->ranges->nelts) {
+            ctx->start = ctx->end;
+
+        } else {
+            if (mp->index == mp->source_index
+                && mp->position == mp->source_position
+                && mp->position >= mp->source_start
+                && mp->position < mp->source_end)
+            {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                              "incomplete multipart slice response");
+                ngx_http_slice_set_error(ctx,
+                                         NGX_HTTP_SLICE_ERR_MISSING_RESPONSE);
+                return NGX_ERROR;
+            }
+
+            slcf = ngx_http_get_module_loc_conf(r,
+                                                ngx_http_slice_filter_module);
+            ctx->start = slcf->size * (mp->position / slcf->size);
+        }
+    }
+
+#endif
 
     if (ctx->start >= ctx->end) {
 
@@ -514,6 +674,251 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     return rc;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static ngx_chain_t *
+ngx_http_slice_get_buf(ngx_http_request_t *r, ngx_http_slice_filter_ctx_t *ctx)
+{
+    ngx_chain_t  *cl;
+
+    cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
+    if (cl == NULL) {
+        return NULL;
+    }
+
+    ngx_memzero(cl->buf, sizeof(ngx_buf_t));
+    cl->next = NULL;
+
+    return cl;
+}
+
+
+static void
+ngx_http_slice_update_chains(ngx_http_slice_filter_ctx_t *ctx, ngx_chain_t *out)
+{
+    ngx_buf_t    *b;
+    ngx_chain_t  *cl;
+
+    if (ctx->busy == NULL) {
+        ctx->busy = out;
+
+    } else {
+        for (cl = ctx->busy; cl->next; cl = cl->next) { /* void */ }
+
+        cl->next = out;
+    }
+
+    while (ctx->busy) {
+
+        cl = ctx->busy;
+        b = cl->buf;
+
+        if (ngx_buf_size(b) != 0) {
+            break;
+        }
+
+        if (b->shadow != NULL) {
+            b->shadow->pos = b->shadow->last;
+
+            if (b->shadow->in_file) {
+                b->shadow->file_pos = b->shadow->file_last;
+            }
+        }
+
+        ctx->busy = cl->next;
+
+        cl->next = ctx->free;
+        ctx->free = cl;
+    }
+}
+
+
+static ngx_int_t
+ngx_http_slice_multipart_body(ngx_http_request_t *r, ngx_chain_t *in,
+    ngx_http_range_filter_t *filter, ngx_http_output_body_filter_pt next)
+{
+    off_t                         start, last, end, size;
+    ngx_buf_t                    *b, *buf, *shadow;
+    ngx_int_t                     rc;
+    ngx_chain_t                  *out, *cl, *tl, **ll;
+    ngx_http_range_t             *range;
+    ngx_http_slice_multipart_t   *mp;
+    ngx_http_slice_filter_ctx_t  *ctx;
+
+    ctx = filter->data;
+
+    if (in == NULL || ctx->ctx->done) {
+        rc = next(r, in);
+        ngx_http_slice_update_chains(ctx, NULL);
+
+        return rc;
+    }
+
+    mp = ctx->ctx->multipart;
+    range = mp->ranges->elts;
+    out = NULL;
+    ll = &out;
+
+    for (cl = in; cl; cl = cl->next) {
+
+        buf = cl->buf;
+
+        if (ngx_buf_special(buf)) {
+            tl = ngx_http_slice_get_buf(r, ctx);
+            if (tl == NULL) {
+                return NGX_ERROR;
+            }
+
+            *tl->buf = *buf;
+            tl->buf->last_buf = 0;
+            tl->buf->shadow = buf;
+
+            *ll = tl;
+            ll = &tl->next;
+            continue;
+        }
+
+        start = filter->offset;
+        size = ngx_buf_size(buf);
+
+        if (size < 0
+            || start > mp->source_end
+            || size > mp->source_end - start)
+        {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                          "too much data in multipart slice response");
+            ngx_http_slice_set_error(ctx->ctx,
+                                     NGX_HTTP_SLICE_ERR_UNEXPECTED_RANGE);
+            return NGX_ERROR;
+        }
+
+        last = start + size;
+        filter->offset = last;
+        shadow = NULL;
+
+        while (mp->index < mp->ranges->nelts
+               && mp->position >= start
+               && mp->position < last)
+        {
+            if (!mp->header_sent) {
+                tl = ngx_http_slice_get_buf(r, ctx);
+                if (tl == NULL) {
+                    return NGX_ERROR;
+                }
+
+                tl->buf->memory = 1;
+                tl->buf->pos = mp->boundary->data;
+                tl->buf->last = mp->boundary->data + mp->boundary->len;
+
+                *ll = tl;
+                ll = &tl->next;
+
+                tl = ngx_http_slice_get_buf(r, ctx);
+                if (tl == NULL) {
+                    return NGX_ERROR;
+                }
+
+                tl->buf->memory = 1;
+                tl->buf->pos = range[mp->index].content_range.data;
+                tl->buf->last = tl->buf->pos
+                               + range[mp->index].content_range.len;
+
+                *ll = tl;
+                ll = &tl->next;
+
+                mp->header_sent = 1;
+            }
+
+            end = ngx_min(range[mp->index].end, last);
+
+            tl = ngx_http_slice_get_buf(r, ctx);
+            if (tl == NULL) {
+                return NGX_ERROR;
+            }
+
+            b = tl->buf;
+            *b = *buf;
+            b->shadow = NULL;
+            b->last_shadow = 0;
+            b->last_buf = 0;
+            b->last_in_chain = 0;
+            b->flush = 0;
+
+            if (b->in_file) {
+                b->file_pos += mp->position - start;
+                b->file_last = b->file_pos + end - mp->position;
+            }
+
+            if (ngx_buf_in_memory(b)) {
+                b->pos += (size_t) (mp->position - start);
+                b->last = b->pos + (size_t) (end - mp->position);
+            }
+
+            *ll = tl;
+            ll = &tl->next;
+
+            shadow = b;
+            mp->position = end;
+
+            if (end == range[mp->index].end) {
+                mp->index++;
+                mp->header_sent = 0;
+
+                if (mp->index < mp->ranges->nelts) {
+                    mp->position = range[mp->index].start;
+                }
+            }
+        }
+
+        if (shadow != NULL) {
+            shadow->shadow = buf;
+            shadow->last_shadow = 1;
+            shadow->last_in_chain = buf->last_in_chain;
+            shadow->flush = buf->flush;
+
+        } else {
+            buf->pos = buf->last;
+
+            if (buf->in_file) {
+                buf->file_pos = buf->file_last;
+            }
+        }
+    }
+
+    if (mp->index == mp->ranges->nelts && !mp->closed) {
+        mp->closing.len = sizeof(CRLF "--") - 1 + NGX_ATOMIC_T_LEN
+                          + sizeof("--" CRLF) - 1;
+
+        mp->closing.data = ngx_pnalloc(r->pool, mp->closing.len);
+        if (mp->closing.data == NULL) {
+            return NGX_ERROR;
+        }
+
+        tl = ngx_http_slice_get_buf(r, ctx);
+        if (tl == NULL) {
+            return NGX_ERROR;
+        }
+
+        b = tl->buf;
+        b->memory = 1;
+        b->pos = mp->closing.data;
+        b->last = ngx_cpymem(b->pos, mp->boundary->data,
+                             sizeof(CRLF "--") - 1 + NGX_ATOMIC_T_LEN);
+        b->last = ngx_cpymem(b->last, "--" CRLF, sizeof("--" CRLF) - 1);
+
+        *ll = tl;
+        mp->closed = 1;
+    }
+
+    rc = next(r, out);
+    ngx_http_slice_update_chains(ctx, out);
+
+    return rc;
+}
+
+#endif
 
 
 static ngx_int_t

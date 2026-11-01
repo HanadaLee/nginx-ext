@@ -9,6 +9,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT)
+#include "ngx_http_range_filter_module.h"
+#endif
+
 
 /*
  * the single part format:
@@ -45,11 +49,15 @@
  */
 
 
+#if !(NGX_RESTY_EXT)
+
 typedef struct {
     off_t        start;
     off_t        end;
     ngx_str_t    content_range;
 } ngx_http_range_t;
+
+#endif
 
 
 typedef struct {
@@ -143,14 +151,32 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 
 
+#if (NGX_RESTY_EXT)
+
+void
+ngx_http_range_set_filter(ngx_http_request_t *r,
+    ngx_http_range_filter_t *filter)
+{
+    ngx_http_set_ctx(r, filter, ngx_http_range_header_filter_module);
+}
+
+#endif
+
+
 static ngx_int_t
 ngx_http_range_header_filter(ngx_http_request_t *r)
 {
     time_t                        if_range_time;
     ngx_str_t                    *if_range, *etag;
     ngx_uint_t                    ranges;
+#if (NGX_RESTY_EXT)
+    ngx_http_range_filter_t      *filter, *mfilter;
+#endif
     ngx_http_core_loc_conf_t     *clcf;
     ngx_http_range_filter_ctx_t  *ctx;
+#if (NGX_RESTY_EXT)
+    ngx_http_range_filter_ctx_t  *mctx;
+#endif
 
     if (r->http_version < NGX_HTTP_VERSION_10
         || r->headers_out.status != NGX_HTTP_OK
@@ -237,6 +263,49 @@ parse:
         if (ctx->ranges.nelts == 1) {
             return ngx_http_range_singlepart_header(r, ctx);
         }
+
+#if (NGX_RESTY_EXT)
+        filter = ngx_http_get_module_ctx(r,
+                                         ngx_http_range_header_filter_module);
+
+        if (filter != NULL) {
+            filter->ranges = &ctx->ranges;
+            filter->boundary = &ctx->boundary_header;
+            filter->offset = ctx->offset;
+
+            if (r != r->main) {
+                mctx = ngx_http_get_module_ctx(r->main,
+                                            ngx_http_range_body_filter_module);
+                mfilter = ngx_http_get_module_ctx(r->main,
+                                          ngx_http_range_header_filter_module);
+
+                if (mctx == NULL
+                    || mfilter == NULL
+                    || mfilter->ranges == NULL
+                    || mfilter->handler != filter->handler)
+                {
+                    return NGX_ERROR;
+                }
+
+                ctx->boundary_header = mctx->boundary_header;
+                r->headers_out.content_type = r->main->headers_out.content_type;
+                r->headers_out.content_type_len =
+                                          r->main->headers_out.content_type_len;
+                r->headers_out.content_type_lowcase = NULL;
+                r->headers_out.charset.len = 0;
+                r->headers_out.content_length_n =
+                                          r->main->headers_out.content_length_n;
+
+                if (r->headers_out.content_length != NULL) {
+                    r->headers_out.content_length->hash = 0;
+                    r->headers_out.content_length = NULL;
+                }
+
+                return ngx_http_next_header_filter(r);
+            }
+        }
+
+#endif
 
         return ngx_http_range_multipart_header(r, ctx);
 
@@ -662,7 +731,19 @@ ngx_http_range_not_satisfiable(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_range_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
+#if (NGX_RESTY_EXT)
+    ngx_http_range_filter_t      *filter;
+#endif
     ngx_http_range_filter_ctx_t  *ctx;
+
+#if (NGX_RESTY_EXT)
+    filter = ngx_http_get_module_ctx(r, ngx_http_range_header_filter_module);
+
+    if (filter != NULL && filter->ranges != NULL) {
+        return filter->handler(r, in, filter, ngx_http_next_body_filter);
+    }
+
+#endif
 
     if (in == NULL) {
         return ngx_http_next_body_filter(r, in);
