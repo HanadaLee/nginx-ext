@@ -1,5 +1,6 @@
 
 /*
+ * Copyright (C) 2025 Web Server LLC
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
@@ -130,6 +131,11 @@ ngx_http_file_cache_init(ngx_shm_zone_t *shm_zone, void *data)
         cache->sh = cache->shpool->data;
         cache->bsize = ngx_fs_bsize(cache->path->name.data);
         cache->max_size /= cache->bsize;
+
+#if (NGX_RESTY_EXT)
+        cache->sh->rbtree.insert = ngx_http_file_cache_rbtree_insert_value;
+        cache->shpool->log_nomem = 0;
+#endif
 
         return NGX_OK;
     }
@@ -2476,6 +2482,9 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_uint_t              i, n, use_temp_path;
     ngx_array_t            *caches;
     ngx_http_file_cache_t  *cache, **ce;
+#if (NGX_RESTY_EXT)
+    ngx_shm_zone_params_t   zp;
+#endif
 
     cache = ngx_pcalloc(cf->pool, sizeof(ngx_http_file_cache_t));
     if (cache == NULL) {
@@ -2498,6 +2507,12 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     manager_files = 100;
     manager_sleep = 50;
     manager_threshold = 200;
+
+#if (NGX_RESTY_EXT)
+    ngx_memzero(&zp, sizeof(ngx_shm_zone_params_t));
+    zp.tag = cmd->post;
+    zp.restorable = 1;
+#endif
 
     name.len = 0;
     size = 0;
@@ -2607,6 +2622,31 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
             continue;
         }
+
+#if (NGX_RESTY_EXT)
+        if (ngx_strncmp(value[i].data, "keys_state=", 11) == 0) {
+            if (zp.file.data != NULL) {
+                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                                   "duplicate keys_state parameter");
+                return NGX_CONF_ERROR;
+            }
+
+            if (value[i].len == 11) {
+                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                                   "keys_state requires a file name");
+                return NGX_CONF_ERROR;
+            }
+
+            zp.file.data = value[i].data + 11;
+            zp.file.len = value[i].len - 11;
+
+            if (ngx_conf_full_name(cf->cycle, &zp.file, 0) != NGX_OK) {
+                return NGX_CONF_ERROR;
+            }
+
+            continue;
+        }
+#endif
 
         if (ngx_strncmp(value[i].data, "inactive=", 9) == 0) {
 
@@ -2773,7 +2813,26 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
+#if (NGX_RESTY_EXT)
+    zp.name = name;
+    zp.size = size;
+    zp.signature.len = sizeof(NGX_HTTP_CACHE_SH_SIGNATURE)
+                       + 2 * NGX_INT64_LEN + 3;
+    zp.signature.data = ngx_pnalloc(cf->pool, zp.signature.len);
+    if (zp.signature.data == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    zp.signature.len = ngx_sprintf(zp.signature.data, "%s:%z:%z;",
+                                   NGX_HTTP_CACHE_SH_SIGNATURE,
+                                   sizeof(ngx_http_file_cache_node_t),
+                                   sizeof(ngx_http_file_cache_sh_t))
+                       - zp.signature.data;
+
+    cache->shm_zone = ngx_shared_memory_add_ext(cf, &zp);
+#else
     cache->shm_zone = ngx_shared_memory_add(cf, &name, size, cmd->post);
+#endif
     if (cache->shm_zone == NULL) {
         return NGX_CONF_ERROR;
     }

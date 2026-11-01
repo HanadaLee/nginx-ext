@@ -1,5 +1,6 @@
 
 /*
+ * Copyright (C) 2025 Web Server LLC
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
@@ -293,6 +294,10 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
         if (ngx_change_binary) {
             ngx_change_binary = 0;
             ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "changing binary");
+#if (NGX_RESTY_EXT)
+            ngx_save_zones(cycle);
+#endif
+
             ngx_new_binary = ngx_exec_new_binary(cycle, ngx_argv);
         }
 
@@ -761,6 +766,10 @@ ngx_master_process_exit(ngx_cycle_t *cycle)
     }
 
     ngx_close_listening_sockets(cycle);
+
+#if (NGX_RESTY_EXT)
+    ngx_save_zones(cycle);
+#endif
 
 #if (NGX_CONTROL_API)
     ngx_control_uninit();

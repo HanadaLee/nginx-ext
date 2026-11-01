@@ -1,5 +1,6 @@
 
 /*
+ * Copyright (C) 2025 Web Server LLC
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
@@ -600,6 +601,10 @@ ngx_event_module_init(ngx_cycle_t *cycle)
            + cl          /* ngx_stat_writing */
            + cl;         /* ngx_stat_waiting */
 
+#endif
+
+#if (NGX_RESTY_EXT)
+    ngx_memzero(&shm, sizeof(ngx_shm_t));
 #endif
 
     shm.size = size;

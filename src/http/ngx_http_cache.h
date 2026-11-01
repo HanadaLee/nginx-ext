@@ -1,5 +1,6 @@
 
 /*
+ * Copyright (C) 2025 Web Server LLC
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
@@ -28,6 +29,15 @@
 #define NGX_HTTP_CACHE_VARY_LEN      128
 
 #define NGX_HTTP_CACHE_VERSION       5
+
+#if (NGX_RESTY_EXT)
+#define NGX_HTTP_CACHE_SH_SIGNATURE                                           \
+    "http-proxy-cache:1:"                                                    \
+    ngx_value(NGX_PTR_SIZE) ":"                                               \
+    ngx_value(NGX_SIG_ATOMIC_T_SIZE) ":"                                      \
+    ngx_value(NGX_TIME_T_SIZE) ":"                                            \
+    ngx_value(NGX_HTTP_CACHE_KEY_LEN)
+#endif
 
 #if (NGX_RESTY_EXT)
 /*
