@@ -99,6 +99,9 @@
 #endif
 
 
+#define HAVE_PROXY_SSL_PATCH 1
+
+
 typedef struct ngx_ssl_ocsp_s   ngx_ssl_ocsp_t;
 
 

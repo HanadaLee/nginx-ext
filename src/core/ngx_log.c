@@ -112,6 +112,8 @@ ngx_log_error_core(ngx_uint_t level, ngx_log_t *log, ngx_err_t err,
     ngx_uint_t   wrote_stderr, debug_connection;
     u_char       errstr[NGX_MAX_ERROR_STR];
 
+    ngx_log_intercept_pt    log_intercept = NULL;
+
     last = errstr + NGX_MAX_ERROR_STR;
 
     p = ngx_cpymem(errstr, ngx_cached_err_log_time.data,
@@ -151,6 +153,16 @@ ngx_log_error_core(ngx_uint_t level, ngx_log_t *log, ngx_err_t err,
 
     if (p > last - NGX_LINEFEED_SIZE) {
         p = last - NGX_LINEFEED_SIZE;
+    }
+
+    if (ngx_cycle) {
+        log_intercept = ngx_cycle->intercept_error_log_handler;
+    }
+
+    if (log_intercept && !ngx_cycle->entered_logger) {
+        ngx_cycle->entered_logger = 1;
+        log_intercept(log, level, errstr, p - errstr);
+        ngx_cycle->entered_logger = 0;
     }
 
     ngx_linefeed(p);

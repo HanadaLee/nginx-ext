@@ -76,7 +76,9 @@ struct ngx_log_s {
 };
 
 
-#define NGX_MAX_ERROR_STR   2048
+#ifndef NGX_MAX_ERROR_STR
+#define NGX_MAX_ERROR_STR   4096
+#endif
 
 
 /*********************************/

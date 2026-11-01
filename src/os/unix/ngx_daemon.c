@@ -23,6 +23,8 @@ ngx_daemon(ngx_log_t *log)
         break;
 
     default:
+        /* just to make it ASAN or Valgrind clean */
+        ngx_destroy_pool(ngx_cycle->pool);
         exit(0);
     }
 

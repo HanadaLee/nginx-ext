@@ -2317,6 +2317,34 @@ ngx_ssl_handshake(ngx_connection_t *c)
         return NGX_AGAIN;
     }
 
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+    if (sslerr == SSL_ERROR_WANT_X509_LOOKUP
+#   ifdef SSL_ERROR_PENDING_SESSION
+        || sslerr == SSL_ERROR_PENDING_SESSION
+#   endif
+#   ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
+        || sslerr == SSL_ERROR_WANT_CLIENT_HELLO_CB
+#   endif
+#   ifdef SSL_ERROR_WANT_RETRY_VERIFY
+        || sslerr == SSL_ERROR_WANT_RETRY_VERIFY
+#   endif
+       )
+    {
+        c->read->handler = ngx_ssl_handshake_handler;
+        c->write->handler = ngx_ssl_handshake_handler;
+
+        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        return NGX_AGAIN;
+    }
+#endif
+
     err = (sslerr == SSL_ERROR_SYSCALL) ? ngx_errno : 0;
 
     if (sslerr == SSL_ERROR_SYSCALL && ERR_peek_error() == 0 && err == 0) {
@@ -2474,6 +2502,72 @@ ngx_ssl_try_early_data(ngx_connection_t *c)
 
         return NGX_AGAIN;
     }
+
+    if (sslerr == SSL_ERROR_WANT_X509_LOOKUP) {
+        c->read->handler = ngx_ssl_handshake_handler;
+        c->write->handler = ngx_ssl_handshake_handler;
+
+        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        return NGX_AGAIN;
+    }
+
+#ifdef SSL_ERROR_PENDING_SESSION
+    if (sslerr == SSL_ERROR_PENDING_SESSION) {
+        c->read->handler = ngx_ssl_handshake_handler;
+        c->write->handler = ngx_ssl_handshake_handler;
+
+        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        return NGX_AGAIN;
+    }
+#endif
+
+#ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
+    if (sslerr == SSL_ERROR_WANT_CLIENT_HELLO_CB) {
+        c->read->handler = ngx_ssl_handshake_handler;
+        c->write->handler = ngx_ssl_handshake_handler;
+
+        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        return NGX_AGAIN;
+    }
+#endif
+
+#ifdef SSL_ERROR_WANT_RETRY_VERIFY
+    if (sslerr == SSL_ERROR_WANT_RETRY_VERIFY) {
+        c->read->handler = ngx_ssl_handshake_handler;
+        c->write->handler = ngx_ssl_handshake_handler;
+
+        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        return NGX_AGAIN;
+    }
+#endif
 
     err = (sslerr == SSL_ERROR_SYSCALL) ? ngx_errno : 0;
 
@@ -3811,6 +3905,19 @@ failed:
 
 done:
 
+#if (defined BIO_get_ktls_recv && NGX_LINUX)
+
+    /*
+     * with kernel TLS, recv() fails with EIO on a record
+     * other than application data, such as "close notify"
+     */
+
+    if (BIO_get_ktls_recv(SSL_get_rbio(c->ssl->connection)) == 1) {
+        c->ktls_recv = 1;
+    }
+
+#endif
+
     if (c->ssl->shutdown_without_free) {
         c->ssl->shutdown_without_free = 0;
         c->recv = ngx_recv;
@@ -4449,7 +4556,7 @@ ngx_ssl_new_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
 
     /* do not cache too big session */
 
-    if (len > NGX_SSL_MAX_SESSION_SIZE) {
+    if (len <= 0 || len > NGX_SSL_MAX_SESSION_SIZE) {
         return 0;
     }
 

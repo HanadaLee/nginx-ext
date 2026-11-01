@@ -45,6 +45,7 @@ extern ngx_pid_t       ngx_new_binary;
 extern ngx_uint_t      ngx_inherited;
 extern ngx_uint_t      ngx_daemonized;
 extern ngx_uint_t      ngx_exiting;
+extern ngx_uint_t      ngx_is_privileged_agent;
 
 extern sig_atomic_t    ngx_reap;
 extern sig_atomic_t    ngx_sigio;

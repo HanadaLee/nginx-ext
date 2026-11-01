@@ -34,6 +34,7 @@ ngx_int_t        ngx_process_slot;
 ngx_socket_t     ngx_channel;
 ngx_int_t        ngx_last_process;
 ngx_process_t    ngx_processes[NGX_MAX_PROCESSES];
+ngx_proc_exit_pt ngx_proc_exit_top_handler;
 
 
 ngx_signal_t  signals[] = {
@@ -83,11 +84,18 @@ ngx_signal_t  signals[] = {
 };
 
 
+void
+ngx_proc_exit_def_handler(ngx_pid_t pid)
+{
+    /* do nothing */
+}
+
+
 ngx_pid_t
 ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
     char *name, ngx_int_t respawn)
 {
-    u_long     on;
+    int        on;
     ngx_pid_t  pid;
     ngx_int_t  s;
 
@@ -362,8 +370,15 @@ ngx_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
 
         case ngx_signal_value(NGX_RECONFIGURE_SIGNAL):
-            ngx_reconfigure = 1;
-            action = ", reconfiguring";
+            if (ngx_process == NGX_PROCESS_SINGLE) {
+                ngx_terminate = 1;
+                action = ", exiting";
+
+            } else {
+                ngx_reconfigure = 1;
+                action = ", reconfiguring";
+            }
+
             break;
 
         case ngx_signal_value(NGX_REOPEN_SIGNAL):
@@ -557,6 +572,7 @@ ngx_process_get_status(void)
         }
 
         ngx_unlock_mutexes(pid);
+        ngx_proc_exit_top_handler(pid);
     }
 }
 

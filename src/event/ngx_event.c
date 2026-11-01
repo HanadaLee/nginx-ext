@@ -197,6 +197,9 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     ngx_uint_t  flags;
     ngx_msec_t  timer, delta;
 
+    ngx_queue_t     *q;
+    ngx_event_t     *ev;
+
     if (ngx_timer_resolution) {
         timer = NGX_TIMER_INFINITE;
         flags = 0;
@@ -214,6 +217,13 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         }
 
 #endif
+    }
+
+    if (!ngx_queue_empty(&ngx_posted_delayed_events)) {
+        ngx_log_debug0(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
+                       "posted delayed event queue not empty"
+                       " making poll timeout 0");
+        timer = 0;
     }
 
     if (ngx_use_accept_mutex) {
@@ -261,6 +271,35 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     ngx_event_expire_timers();
 
     ngx_event_process_posted(cycle, &ngx_posted_events);
+
+    while (!ngx_queue_empty(&ngx_posted_delayed_events)) {
+        q = ngx_queue_head(&ngx_posted_delayed_events);
+
+        ev = ngx_queue_data(q, ngx_event_t, queue);
+        if (ev->delayed) {
+            /* start of newly inserted nodes */
+            for (/* void */;
+                 q != ngx_queue_sentinel(&ngx_posted_delayed_events);
+                 q = ngx_queue_next(q))
+            {
+                ev = ngx_queue_data(q, ngx_event_t, queue);
+                ev->delayed = 0;
+
+                ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
+                               "skipping delayed posted event %p,"
+                               " till next iteration", ev);
+            }
+
+            break;
+        }
+
+        ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
+                       "delayed posted event %p", ev);
+
+        ngx_delete_posted_event(ev);
+
+        ev->handler(ev);
+    }
 }
 
 
@@ -337,8 +376,6 @@ ngx_handle_read_event(ngx_event_t *rev, ngx_uint_t flags)
             return NGX_OK;
         }
     }
-
-    /* iocp */
 
     return NGX_OK;
 }
@@ -422,8 +459,6 @@ ngx_handle_write_event(ngx_event_t *wev, size_t lowat)
             return NGX_OK;
         }
     }
-
-    /* iocp */
 
     return NGX_OK;
 }
@@ -671,6 +706,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     ngx_queue_init(&ngx_posted_accept_events);
     ngx_queue_init(&ngx_posted_next_events);
     ngx_queue_init(&ngx_posted_events);
+    ngx_queue_init(&ngx_posted_delayed_events);
 
     if (ngx_event_timer_init(cycle->log) == NGX_ERROR) {
         return NGX_ERROR;
@@ -806,6 +842,18 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #if (NGX_HAVE_REUSEPORT)
         if (ls[i].reuseport && ls[i].worker != ngx_worker) {
+            ngx_log_debug2(NGX_LOG_DEBUG_CORE, cycle->log, 0,
+                           "closing unused fd:%d listening on %V",
+                           ls[i].fd, &ls[i].addr_text);
+
+            if (ngx_close_socket(ls[i].fd) == -1) {
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_socket_errno,
+                              ngx_close_socket_n " %V failed",
+                              &ls[i].addr_text);
+            }
+
+            ls[i].fd = (ngx_socket_t) -1;
+
             continue;
         }
 #endif
@@ -831,9 +879,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         rev->deferred_accept = ls[i].deferred_accept;
 #endif
 
-        if (!(ngx_event_flags & NGX_USE_IOCP_EVENT)
-            && cycle->old_cycle)
-        {
+        if (cycle->old_cycle) {
             if (ls[i].previous) {
 
                 /*
@@ -855,38 +901,14 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #if (NGX_WIN32)
 
-        if (ngx_event_flags & NGX_USE_IOCP_EVENT) {
-            ngx_iocp_conf_t  *iocpcf;
+        rev->handler = ngx_event_accept;
 
-            rev->handler = ngx_event_acceptex;
+        if (ngx_use_accept_mutex) {
+            continue;
+        }
 
-            if (ngx_use_accept_mutex) {
-                continue;
-            }
-
-            if (ngx_add_event(rev, 0, NGX_IOCP_ACCEPT) == NGX_ERROR) {
-                return NGX_ERROR;
-            }
-
-            ls[i].log.handler = ngx_acceptex_log_error;
-
-            iocpcf = ngx_event_get_conf(cycle->conf_ctx, ngx_iocp_module);
-            if (ngx_event_post_acceptex(&ls[i], iocpcf->post_acceptex)
-                == NGX_ERROR)
-            {
-                return NGX_ERROR;
-            }
-
-        } else {
-            rev->handler = ngx_event_accept;
-
-            if (ngx_use_accept_mutex) {
-                continue;
-            }
-
-            if (ngx_add_event(rev, NGX_READ_EVENT, 0) == NGX_ERROR) {
-                return NGX_ERROR;
-            }
+        if (ngx_add_event(rev, NGX_READ_EVENT, 0) == NGX_ERROR) {
+            return NGX_ERROR;
         }
 
 #else

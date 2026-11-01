@@ -8,6 +8,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_stream.h>
+#include <ngx_stream_upstream_round_robin.h>
 
 
 #define ngx_stream_upstream_tries(p) ((p)->tries                              \
@@ -21,10 +22,6 @@ static void ngx_stream_upstream_notify_round_robin_peer(
 
 #if (NGX_STREAM_SSL)
 
-static ngx_int_t ngx_stream_upstream_set_round_robin_peer_session(
-    ngx_peer_connection_t *pc, void *data);
-static void ngx_stream_upstream_save_round_robin_peer_session(
-    ngx_peer_connection_t *pc, void *data);
 static ngx_int_t ngx_stream_upstream_empty_set_session(
     ngx_peer_connection_t *pc, void *data);
 static void ngx_stream_upstream_empty_save_session(ngx_peer_connection_t *pc,
@@ -933,7 +930,7 @@ ngx_stream_upstream_notify_round_robin_peer_locked(ngx_peer_connection_t *pc,
 
 #if (NGX_STREAM_SSL)
 
-static ngx_int_t
+ngx_int_t
 ngx_stream_upstream_set_round_robin_peer_session(ngx_peer_connection_t *pc,
     void *data)
 {
@@ -995,7 +992,7 @@ ngx_stream_upstream_set_round_robin_peer_session(ngx_peer_connection_t *pc,
 }
 
 
-static void
+void
 ngx_stream_upstream_save_round_robin_peer_session(ngx_peer_connection_t *pc,
     void *data)
 {
@@ -1027,7 +1024,7 @@ ngx_stream_upstream_save_round_robin_peer_session(ngx_peer_connection_t *pc,
 
         /* do not cache too big session */
 
-        if (len > NGX_SSL_MAX_SESSION_SIZE) {
+        if (len <= 0 || len > NGX_SSL_MAX_SESSION_SIZE) {
             return;
         }
 

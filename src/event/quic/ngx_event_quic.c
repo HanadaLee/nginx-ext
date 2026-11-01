@@ -15,7 +15,6 @@ static ngx_quic_connection_t *ngx_quic_new_connection(ngx_connection_t *c,
     ngx_quic_conf_t *conf, ngx_quic_header_t *pkt);
 static ngx_int_t ngx_quic_handle_stateless_reset(ngx_connection_t *c,
     ngx_quic_header_t *pkt);
-static void ngx_quic_input_handler(ngx_event_t *rev);
 static void ngx_quic_close_handler(ngx_event_t *ev);
 
 static ngx_int_t ngx_quic_handle_datagram(ngx_connection_t *c, ngx_buf_t *b,
@@ -402,7 +401,7 @@ ngx_quic_handle_stateless_reset(ngx_connection_t *c, ngx_quic_header_t *pkt)
 }
 
 
-static void
+void
 ngx_quic_input_handler(ngx_event_t *rev)
 {
     ngx_int_t               rc;

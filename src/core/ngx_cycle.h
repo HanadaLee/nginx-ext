@@ -22,9 +22,17 @@
 #define NGX_DEBUG_POINTS_ABORT  2
 
 
+#define HAVE_PRIVILEGED_PROCESS_PATCH   1
+
+
+#define HAVE_INTERCEPT_ERROR_LOG_PATCH
+
+
 typedef struct ngx_shm_zone_s  ngx_shm_zone_t;
 
 typedef ngx_int_t (*ngx_shm_zone_init_pt) (ngx_shm_zone_t *zone, void *data);
+typedef ngx_int_t (*ngx_log_intercept_pt) (ngx_log_t *log, ngx_uint_t level,
+    u_char *buf, size_t len);
 
 struct ngx_shm_zone_s {
     void                     *data;
@@ -83,12 +91,18 @@ struct ngx_cycle_s {
     ngx_str_t                 error_log;
     ngx_str_t                 lock_file;
     ngx_str_t                 hostname;
+
+    ngx_log_intercept_pt      intercept_error_log_handler;
+    void                     *intercept_error_log_data;
+    unsigned                  entered_logger;    /* :1 */
 };
 
 
 typedef struct {
     ngx_flag_t                daemon;
     ngx_flag_t                master;
+    ngx_flag_t                privileged_agent;
+    ngx_uint_t                privileged_agent_connections;
 
     ngx_msec_t                timer_resolution;
     ngx_msec_t                shutdown_timeout;

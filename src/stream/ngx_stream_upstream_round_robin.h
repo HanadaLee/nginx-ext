@@ -248,5 +248,15 @@ void ngx_stream_upstream_free_round_robin_peer_locked(ngx_peer_connection_t *pc,
 void ngx_stream_upstream_notify_round_robin_peer_locked(
     ngx_peer_connection_t *pc, void *data, ngx_uint_t type);
 
+#if (NGX_STREAM_SSL)
+ngx_int_t ngx_stream_upstream_set_round_robin_peer_session(
+    ngx_peer_connection_t *pc, void *data);
+void ngx_stream_upstream_save_round_robin_peer_session(
+    ngx_peer_connection_t *pc, void *data);
+#endif
+
+
+#define HAVE_NGX_STREAM_BALANCER_EXPORT_PATCH 1
+
 
 #endif /* _NGX_STREAM_UPSTREAM_ROUND_ROBIN_H_INCLUDED_ */

@@ -45,6 +45,9 @@ void ngx_event_move_posted_next(ngx_cycle_t *cycle);
 extern ngx_queue_t  ngx_posted_accept_events;
 extern ngx_queue_t  ngx_posted_next_events;
 extern ngx_queue_t  ngx_posted_events;
+extern ngx_queue_t  ngx_posted_delayed_events;
+
+#define HAVE_POSTED_DELAYED_EVENTS_PATCH
 
 
 #endif /* _NGX_EVENT_POSTED_H_INCLUDED_ */
