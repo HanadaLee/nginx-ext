@@ -690,6 +690,30 @@ ngx_quic_handle_crypto_frame(ngx_connection_t *c, ngx_quic_header_t *pkt,
 }
 
 
+#if (NGX_RESTY_EXT)
+
+void
+ngx_quic_resume_handshake(ngx_connection_t *c)
+{
+    ngx_quic_connection_t  *qc;
+
+    qc = ngx_quic_get_connection(c);
+
+    if (qc->closing || qc->draining) {
+        return;
+    }
+
+    if (ngx_quic_handshake(c) != NGX_OK) {
+        ngx_quic_close_connection(c, NGX_ERROR);
+        return;
+    }
+
+    ngx_post_event(&qc->push, &ngx_posted_events);
+}
+
+#endif
+
+
 static ngx_int_t
 ngx_quic_handshake(ngx_connection_t *c)
 {
@@ -731,6 +755,11 @@ ngx_quic_handshake(ngx_connection_t *c)
 #ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
             && sslerr != SSL_ERROR_WANT_CLIENT_HELLO_CB
 #endif
+
+#if (NGX_RESTY_EXT && defined SSL_ERROR_PENDING_CERTIFICATE)
+            && sslerr != SSL_ERROR_PENDING_CERTIFICATE
+#endif
+
         ) {
             ngx_ssl_connection_error(c, sslerr, 0, "SSL_do_handshake() failed");
             return NGX_ERROR;
