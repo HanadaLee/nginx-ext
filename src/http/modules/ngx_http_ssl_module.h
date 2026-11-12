@@ -20,7 +20,20 @@ typedef struct {
     ngx_flag_t                      prefer_server_ciphers;
     ngx_flag_t                      certificate_compression;
     ngx_flag_t                      early_data;
+
+#if (NGX_RESTY_EXT && NGX_EXPR)
+    ngx_array_t                    *reject_handshake;
+#else
     ngx_flag_t                      reject_handshake;
+#endif
+
+#if (NGX_RESTY_EXT)
+#if (NGX_EXPR)
+    ngx_array_t                    *delay_handshake;
+#else
+    ngx_http_complex_value_t       *delay_handshake;
+#endif
+#endif
 
     ngx_uint_t                      protocols;
 

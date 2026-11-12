@@ -9,6 +9,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if (NGX_RESTY_EXT && NGX_EXPR)
+#include <ngx_http_expr_module.h>
+#endif
+
 
 static void ngx_http_wait_request_handler(ngx_event_t *ev);
 static ngx_http_request_t *ngx_http_alloc_request(ngx_connection_t *c);
@@ -59,6 +63,11 @@ static u_char *ngx_http_log_error_handler(ngx_http_request_t *r,
 #if (NGX_HTTP_SSL)
 static void ngx_http_ssl_handshake(ngx_event_t *rev);
 static void ngx_http_ssl_handshake_handler(ngx_connection_t *c);
+
+#if (NGX_RESTY_EXT && defined SSL_CTRL_SET_TLSEXT_HOSTNAME)
+static int ngx_http_ssl_check_handshake(ngx_connection_t *c, int *ad);
+#endif
+
 #endif
 
 
@@ -916,7 +925,11 @@ ngx_http_ssl_servername(ngx_ssl_conn_t *ssl_conn, int *ad, void *arg)
     }
 
     if (c->ssl->sni_accepted) {
+#if (NGX_RESTY_EXT)
+        return ngx_http_ssl_check_handshake(c, ad);
+#else
         return SSL_TLSEXT_ERR_OK;
+#endif
     }
 
     if (c->ssl->handshake_rejected) {
@@ -1033,6 +1046,10 @@ done:
 
     sscf = ngx_http_get_module_srv_conf(hc->conf_ctx, ngx_http_ssl_module);
 
+#if (NGX_RESTY_EXT)
+    c->ssl->sni_accepted = 1;
+    return ngx_http_ssl_check_handshake(c, ad);
+#else
     if (sscf->reject_handshake) {
         c->ssl->handshake_rejected = 1;
         *ad = SSL_AD_UNRECOGNIZED_NAME;
@@ -1041,12 +1058,143 @@ done:
 
     c->ssl->sni_accepted = 1;
     return SSL_TLSEXT_ERR_OK;
+#endif
 
 error:
 
     *ad = SSL_AD_INTERNAL_ERROR;
     return SSL_TLSEXT_ERR_ALERT_FATAL;
 }
+
+
+#if (NGX_RESTY_EXT)
+
+static int
+ngx_http_ssl_check_handshake(ngx_connection_t *c, int *ad)
+{
+    char                      *action;
+    ngx_str_t                  value;
+    ngx_int_t                  rc;
+    ngx_uint_t                 complex;
+    ngx_flag_t                 reject;
+    ngx_msec_t                 delay;
+    ngx_http_request_t        *r;
+    ngx_http_connection_t     *hc;
+    ngx_http_ssl_srv_conf_t   *sscf;
+    ngx_http_complex_value_t  *cv;
+
+#if (NGX_EXPR)
+    ngx_conf_expr_flag_ctx_t           *reject_values;
+    ngx_http_expr_complex_value_ctx_t  *delay_values;
+#endif
+
+    if (c->ssl->handshake_checked) {
+        rc = ngx_ssl_delay_handshake(c, 0);
+        goto apply;
+    }
+
+    hc = c->data;
+    sscf = ngx_http_get_module_srv_conf(hc->conf_ctx, ngx_http_ssl_module);
+
+    complex = 0;
+
+#if (NGX_EXPR)
+    reject_values = sscf->reject_handshake->elts;
+    delay_values = sscf->delay_handshake->elts;
+    reject = reject_values[0].value;
+    cv = delay_values[0].value;
+
+    complex = reject_values[0].expr_id != NGX_EXPR_NO_WHEN_ID
+              || delay_values[0].expr_id != NGX_EXPR_NO_WHEN_ID;
+#else
+    reject = sscf->reject_handshake;
+    cv = sscf->delay_handshake;
+#endif
+
+    if (complex || (cv != NULL && cv->lengths != NULL)) {
+        action = c->log->action;
+
+        r = ngx_http_alloc_request(c);
+        if (r == NULL) {
+            goto error;
+        }
+
+        r->logged = 1;
+
+#if (NGX_PCRE)
+        if (hc->ssl_servername_regex
+            && ngx_http_regex_exec(r, hc->ssl_servername_regex,
+                                   hc->ssl_servername) != NGX_OK)
+        {
+            ngx_http_free_request(r, 0);
+            c->log->action = action;
+            c->destroyed = 0;
+            goto error;
+        }
+#endif
+
+#if (NGX_EXPR)
+        reject = ngx_http_get_expr_flag_value(r, sscf->reject_handshake);
+        rc = ngx_http_get_expr_complex_value(r, sscf->delay_handshake,
+                                             &value);
+#else
+        rc = ngx_http_complex_value(r, cv, &value);
+#endif
+
+        delay = 0;
+
+        if (rc == NGX_OK) {
+            delay = ngx_parse_time(&value, 0);
+            if (delay == (ngx_msec_t) NGX_ERROR) {
+                ngx_log_error(NGX_LOG_ERR, c->log, 0,
+                              "invalid \"ssl_delay_handshake\" value \"%V\"",
+                              &value);
+                rc = NGX_ERROR;
+            }
+        }
+
+        ngx_http_free_request(r, 0);
+        c->log->action = action;
+        c->destroyed = 0;
+
+        if (rc != NGX_OK && rc != NGX_DECLINED) {
+            goto error;
+        }
+
+    } else {
+        delay = cv ? cv->u.msec : 0;
+    }
+
+    c->ssl->handshake_checked = 1;
+    c->ssl->reject_handshake = (reject == 1);
+
+    rc = ngx_ssl_delay_handshake(c, delay);
+
+apply:
+
+    if (rc == NGX_ERROR) {
+        goto error;
+    }
+
+    if (rc == NGX_AGAIN) {
+        return NGX_AGAIN;
+    }
+
+    if (c->ssl->reject_handshake) {
+        c->ssl->handshake_rejected = 1;
+        *ad = SSL_AD_UNRECOGNIZED_NAME;
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+
+    return SSL_TLSEXT_ERR_OK;
+
+error:
+
+    *ad = SSL_AD_INTERNAL_ERROR;
+    return SSL_TLSEXT_ERR_ALERT_FATAL;
+}
+
+#endif
 
 #endif
 

@@ -146,6 +146,7 @@ struct ngx_ssl_connection_s {
 #if (NGX_RESTY_EXT)
     ngx_msec_t                  handshake_start_msec;
     ngx_msec_t                  handshake_end_msec;
+    ngx_event_t                *handshake_delay;
 
     ngx_ssl_dynamic_record_t    dynamic_record;
     ngx_msec_t                  dynamic_record_last_write;
@@ -172,6 +173,11 @@ struct ngx_ssl_connection_s {
     unsigned                    early_preread:1;
     unsigned                    write_blocked:1;
     unsigned                    sni_accepted:1;
+
+#if (NGX_RESTY_EXT)
+    unsigned                    handshake_checked:1;
+    unsigned                    reject_handshake:1;
+#endif
 };
 
 
@@ -424,6 +430,10 @@ ngx_int_t ngx_ssl_get_handshake_end_msec(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
 #endif
 
+
+#if (NGX_RESTY_EXT)
+ngx_int_t ngx_ssl_delay_handshake(ngx_connection_t *c, ngx_msec_t delay);
+#endif
 
 ngx_int_t ngx_ssl_handshake(ngx_connection_t *c);
 #if (NGX_DEBUG)
