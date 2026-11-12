@@ -23,6 +23,13 @@ typedef struct {
 
 
 static ngx_inline ngx_int_t ngx_ssl_cert_already_in_hash(void);
+
+#if (NGX_RESTY_EXT                                                            \
+     && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
+static enum ssl_select_cert_result_t ngx_ssl_select_certificate_callback(
+    const SSL_CLIENT_HELLO *client_hello);
+#endif
+
 #if (NGX_ZLIB && defined TLSEXT_cert_compression_zlib)
 static int ngx_ssl_cert_compression_callback(ngx_ssl_conn_t *ssl_conn,
     CBB *out, const uint8_t *in, size_t in_len);
@@ -42,6 +49,12 @@ static int ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn,
 static ngx_int_t ngx_ssl_try_early_data(ngx_connection_t *c);
 #endif
 static void ngx_ssl_handshake_handler(ngx_event_t *ev);
+
+#if (NGX_RESTY_EXT)
+static void ngx_ssl_handshake_delay_handler(ngx_event_t *ev);
+static void ngx_ssl_handshake_delay_cleanup(void *data);
+#endif
+
 #ifdef SSL_READ_EARLY_DATA_SUCCESS
 static ssize_t ngx_ssl_recv_early(ngx_connection_t *c, u_char *buf,
     size_t size);
@@ -1981,6 +1994,21 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
 ngx_int_t
 ngx_ssl_set_client_hello_callback(ngx_ssl_t *ssl, ngx_ssl_client_hello_arg *cb)
 {
+#if (NGX_RESTY_EXT                                                            \
+     && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
+
+    SSL_CTX_set_select_certificate_cb(ssl->ctx,
+                                      ngx_ssl_select_certificate_callback);
+
+    if (SSL_CTX_set_ex_data(ssl->ctx, ngx_ssl_client_hello_arg_index, cb) == 0)
+    {
+        ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0,
+                      "SSL_CTX_set_ex_data() failed");
+        return NGX_ERROR;
+    }
+
+#else
+
 #ifdef SSL_CLIENT_HELLO_SUCCESS
 
     SSL_CTX_set_client_hello_cb(ssl->ctx, ngx_ssl_client_hello_callback, NULL);
@@ -2005,8 +2033,45 @@ ngx_ssl_set_client_hello_callback(ngx_ssl_t *ssl, ngx_ssl_client_hello_arg *cb)
 
 #endif
 
+#endif
+
     return NGX_OK;
 }
+
+
+#if (NGX_RESTY_EXT                                                            \
+     && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
+
+static enum ssl_select_cert_result_t
+ngx_ssl_select_certificate_callback(const SSL_CLIENT_HELLO *client_hello)
+{
+    int                        ad;
+    ngx_int_t                  rc;
+    ngx_ssl_conn_t            *ssl_conn;
+    ngx_connection_t          *c;
+    ngx_ssl_client_hello_arg  *cb;
+
+    ssl_conn = client_hello->ssl;
+    c = ngx_ssl_get_connection(ssl_conn);
+    cb = SSL_CTX_get_ex_data(c->ssl->session_ctx,
+                             ngx_ssl_client_hello_arg_index);
+
+    rc = cb->servername(ssl_conn, &ad, NULL);
+
+    if (rc == NGX_AGAIN) {
+        return ssl_select_cert_retry;
+    }
+
+    /* Preserve rejection alerts in the subsequent servername callback. */
+
+    if (rc == SSL_TLSEXT_ERR_ALERT_FATAL && ad == SSL_AD_INTERNAL_ERROR) {
+        return ssl_select_cert_error;
+    }
+
+    return ssl_select_cert_success;
+}
+
+#endif
 
 
 #ifdef SSL_CLIENT_HELLO_SUCCESS
@@ -2061,6 +2126,12 @@ ngx_ssl_client_hello_callback(ngx_ssl_conn_t *ssl_conn, int *ad, void *arg)
 done:
 
     rc = cb->servername(ssl_conn, ad, &host);
+
+#if (NGX_RESTY_EXT)
+    if (rc == NGX_AGAIN) {
+        return SSL_CLIENT_HELLO_RETRY;
+    }
+#endif
 
     if (rc == SSL_TLSEXT_ERR_ALERT_FATAL) {
         return SSL_CLIENT_HELLO_ERROR;
@@ -2201,6 +2272,78 @@ ngx_ssl_set_session(ngx_connection_t *c, ngx_ssl_session_t *session)
 }
 
 
+#if (NGX_RESTY_EXT)
+
+ngx_int_t
+ngx_ssl_delay_handshake(ngx_connection_t *c, ngx_msec_t delay)
+{
+    ngx_event_t         *ev;
+    ngx_pool_cleanup_t  *cln;
+
+    ev = c->ssl->handshake_delay;
+
+    if (ev != NULL) {
+        return ev->timer_set ? NGX_AGAIN : NGX_OK;
+    }
+
+    if (delay == 0) {
+        return NGX_OK;
+    }
+
+    cln = ngx_pool_cleanup_add(c->pool, sizeof(ngx_event_t));
+    if (cln == NULL) {
+        return NGX_ERROR;
+    }
+
+    ev = cln->data;
+    ngx_memzero(ev, sizeof(ngx_event_t));
+    ev->data = c;
+    ev->log = c->log;
+    ev->handler = ngx_ssl_handshake_delay_handler;
+
+    cln->handler = ngx_ssl_handshake_delay_cleanup;
+    c->ssl->handshake_delay = ev;
+
+    ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0,
+                   "SSL handshake delayed for %M ms", delay);
+
+    ngx_add_timer(ev, delay);
+
+    return NGX_AGAIN;
+}
+
+
+static void
+ngx_ssl_handshake_delay_handler(ngx_event_t *ev)
+{
+    ngx_connection_t  *c;
+
+    c = ev->data;
+
+#if (NGX_QUIC)
+    if (c->listening->quic) {
+        ngx_quic_resume_handshake(c);
+        return;
+    }
+#endif
+
+    ngx_ssl_handshake_handler(c->write);
+}
+
+
+static void
+ngx_ssl_handshake_delay_cleanup(void *data)
+{
+    ngx_event_t  *ev = data;
+
+    if (ev->timer_set) {
+        ngx_del_timer(ev);
+    }
+}
+
+#endif
+
+
 ngx_int_t
 ngx_ssl_handshake(ngx_connection_t *c)
 {
@@ -2338,6 +2481,11 @@ ngx_ssl_handshake(ngx_connection_t *c)
 #   ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
         || sslerr == SSL_ERROR_WANT_CLIENT_HELLO_CB
 #   endif
+
+#if (NGX_RESTY_EXT && defined SSL_ERROR_PENDING_CERTIFICATE)
+        || sslerr == SSL_ERROR_PENDING_CERTIFICATE
+#endif
+
 #   ifdef SSL_ERROR_WANT_RETRY_VERIFY
         || sslerr == SSL_ERROR_WANT_RETRY_VERIFY
 #   endif
@@ -6155,7 +6303,31 @@ ngx_ssl_get_server_name(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
     size_t       len;
     const char  *name;
 
+#if (NGX_RESTY_EXT && defined SSL_CLIENT_HELLO_SUCCESS)
+    const u_char  *p;
+#endif
+
     name = SSL_get_servername(c->ssl->connection, TLSEXT_NAMETYPE_host_name);
+
+#if (NGX_RESTY_EXT && defined SSL_CLIENT_HELLO_SUCCESS)
+    if (name == NULL
+        && SSL_client_hello_get0_ext(c->ssl->connection,
+                                     TLSEXT_TYPE_server_name, &p, &len)
+        && len >= 5
+        && (size_t) (p[0] << 8) + p[1] + 2 == len
+        && p[2] == TLSEXT_NAMETYPE_host_name
+        && (size_t) (p[3] << 8) + p[4] + 5 == len)
+    {
+        s->len = len - 5;
+        s->data = ngx_pnalloc(pool, s->len);
+        if (s->data == NULL) {
+            return NGX_ERROR;
+        }
+
+        ngx_memcpy(s->data, p + 5, s->len);
+        return NGX_OK;
+    }
+#endif
 
     if (name) {
         len = ngx_strlen(name);
