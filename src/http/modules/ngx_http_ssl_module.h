@@ -91,7 +91,6 @@ typedef struct {
     size_t                          dynamic_record_high_size;
     ngx_uint_t                      dynamic_record_threshold;
 
-    ngx_uint_t                      strict_server_name;
 #endif
 
 } ngx_http_ssl_srv_conf_t;
