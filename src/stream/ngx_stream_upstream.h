@@ -103,10 +103,6 @@ typedef struct {
     off_t                              bytes_sent;
     off_t                              bytes_received;
 
-#if (NGX_RESTY_EXT)
-    ngx_msec_t                         start_msec;
-#endif
-
     ngx_str_t                         *peer;
 
     NGX_COMPAT_BEGIN(2)
