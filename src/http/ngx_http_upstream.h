@@ -127,14 +127,6 @@ typedef struct {
 
 #if (NGX_RESTY_EXT)
     ngx_http_upstream_error_e        error;
-    ngx_msec_t                       start_msec;
-
-#if (NGX_HTTP_SSL)
-    ngx_msec_t                       ssl_start_msec;
-#endif
-
-    ngx_msec_t                       send_start_msec;
-    ngx_msec_t                       send_end_msec;
 #endif
 
     off_t                            response_length;

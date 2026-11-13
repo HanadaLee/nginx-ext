@@ -1723,10 +1723,6 @@ ngx_http_process_request_headers(ngx_event_t *rev)
 
             r->request_length += r->header_in->pos - r->header_name_start;
 
-#if (NGX_RESTY_EXT)
-            r->request_header_length = r->request_length;
-#endif
-
             r->http_state = NGX_HTTP_PROCESS_REQUEST_STATE;
 
             rc = ngx_http_process_request_header(r);
@@ -2685,16 +2681,12 @@ ngx_http_set_virtual_server(ngx_http_request_t *r, ngx_str_t *host)
 #if (NGX_HTTP_SSL && defined SSL_CTRL_SET_TLSEXT_HOSTNAME)
 
     if (hc->ssl_servername) {
-#if !(NGX_RESTY_EXT && NGX_HTTP_SSL_STRICT_SERVER_NAME)
         ngx_http_ssl_srv_conf_t  *sscf;
-#endif
 
         if (rc == NGX_DECLINED) {
             cscf = hc->addr_conf->default_server;
             rc = NGX_OK;
         }
-
-#if !(NGX_RESTY_EXT && NGX_HTTP_SSL_STRICT_SERVER_NAME)
 
         sscf = ngx_http_get_module_srv_conf(cscf->ctx, ngx_http_ssl_module);
 
@@ -2705,8 +2697,6 @@ ngx_http_set_virtual_server(ngx_http_request_t *r, ngx_str_t *host)
             ngx_http_finalize_request(r, NGX_HTTP_MISDIRECTED_REQUEST);
             return NGX_ERROR;
         }
-
-#endif
     }
 
 #endif
