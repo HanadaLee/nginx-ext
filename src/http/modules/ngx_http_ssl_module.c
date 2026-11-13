@@ -104,16 +104,6 @@ static ngx_conf_enum_t  ngx_http_ssl_ocsp[] = {
 };
 
 
-#if (NGX_RESTY_EXT)
-static ngx_conf_enum_t  ngx_http_ssl_strict_server_name[] = {
-    { ngx_string("off"), 0 },
-    { ngx_string("on"), 1 },
-    { ngx_string("mtls_only"), 2 },
-    { ngx_null_string, 0 }
-};
-#endif
-
-
 static ngx_conf_post_t  ngx_http_ssl_conf_command_post =
     { ngx_http_ssl_conf_command_check };
 
@@ -415,13 +405,6 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, dynamic_record_threshold),
       NULL },
-
-    { ngx_string("ssl_strict_server_name"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_enum_slot,
-      NGX_HTTP_SRV_CONF_OFFSET,
-      offsetof(ngx_http_ssl_srv_conf_t, strict_server_name),
-      &ngx_http_ssl_strict_server_name },
 #endif
 
       ngx_null_command
@@ -844,7 +827,6 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->dynamic_record_low_size = NGX_CONF_UNSET_SIZE;
     sscf->dynamic_record_high_size = NGX_CONF_UNSET_SIZE;
     sscf->dynamic_record_threshold = NGX_CONF_UNSET_UINT;
-    sscf->strict_server_name = NGX_CONF_UNSET_UINT;
 #endif
 
     return sscf;
@@ -1007,9 +989,6 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->dynamic_record_high_size, 4229);
     ngx_conf_merge_uint_value(conf->dynamic_record_threshold,
                               prev->dynamic_record_threshold, 40);
-
-    ngx_conf_merge_uint_value(conf->strict_server_name,
-                              prev->strict_server_name, 2);
 #endif
 
     conf->ssl.log = cf->log;
