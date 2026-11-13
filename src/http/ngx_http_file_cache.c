@@ -318,15 +318,7 @@ ngx_http_file_cache_open(ngx_http_request_t *r)
     if (rc == NGX_OK) {
 
         if (c->error) {
-#if (NGX_RESTY_EXT)
-            if (!c->purged) {
-                return c->error;
-            }
-
-            c->error = 0;
-#else
             return c->error;
-#endif
         }
 
         c->temp_file = 1;
@@ -644,7 +636,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
 
 #if (NGX_RESTY_EXT)
     /*
-     * Restore the origin policy without changing the request's purged flag.
+     * Restore the origin policy.
      * Keep the in-memory millisecond value free of policy bits.
      */
     c->must_revalidate =
@@ -681,11 +673,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
 
     now = ngx_time();
 
-#if (NGX_RESTY_EXT)
-    if (c->valid_sec < now || c->purged) {
-#else
     if (c->valid_sec < now) {
-#endif
         c->stale_updating = c->valid_sec + c->updating_sec >= now;
         c->stale_error = c->valid_sec + c->error_sec >= now;
 
@@ -1369,9 +1357,6 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
      * valid_msec copy carries this flag. c->valid_msec remains a plain
      * millisecond value in memory and is masked back on cache reads.
      */
-    /* A new cache entity no longer inherits the old purge requirement. */
-    c->purged = 0;
-
     if (c->must_revalidate) {
         h->valid_msec |= NGX_HTTP_CACHE_MUST_REVALIDATE;
     }

@@ -1358,12 +1358,12 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         background = ngx_http_upstream_get_flag(r,
                                       u->conf->cache_background_update_conf,
                                       u->conf->cache_background_update);
-        if (!c->must_revalidate && !c->purged
+        if (!c->must_revalidate
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
             && background)
 #else
-        if (!c->must_revalidate && !c->purged
+        if (!c->must_revalidate
             && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
             && u->conf->cache_background_update)
@@ -1393,11 +1393,11 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         stale = ngx_http_upstream_get_bitmask(r,
                                               u->conf->cache_use_stale_conf,
                                               u->conf->cache_use_stale);
-        if (!c->must_revalidate && !c->purged
+        if (!c->must_revalidate
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background)
 #else
-        if (!c->must_revalidate && !c->purged
+        if (!c->must_revalidate
             && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background)
 #endif
@@ -2094,17 +2094,6 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     u->start_time = ngx_current_msec;
 
-#if (NGX_RESTY_EXT)
-    u->state->start_msec = ngx_current_msec;
-
-#if (NGX_HTTP_SSL)
-    u->state->ssl_start_msec = (ngx_msec_t) -1;
-#endif
-
-    u->state->send_start_msec = (ngx_msec_t) -1;
-    u->state->send_end_msec = (ngx_msec_t) -1;
-#endif
-
     u->state->response_time = (ngx_msec_t) -1;
     u->state->connect_time = (ngx_msec_t) -1;
     u->state->header_time = (ngx_msec_t) -1;
@@ -2390,12 +2379,6 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
             return;
         }
     }
-
-#if (NGX_RESTY_EXT)
-    if (u->state && u->state->ssl_start_msec == (ngx_msec_t) -1) {
-        u->state->ssl_start_msec = ngx_current_msec;
-    }
-#endif
 
     r->connection->log->action = "SSL handshaking to upstream";
 
@@ -2805,12 +2788,6 @@ ngx_http_upstream_send_request(ngx_http_request_t *r, ngx_http_upstream_t *u,
         return;
     }
 
-#if (NGX_RESTY_EXT)
-    if (u->state->send_start_msec == (ngx_msec_t) -1) {
-        u->state->send_start_msec = ngx_current_msec;
-    }
-#endif
-
     c->log->action = "sending request to upstream";
 
     rc = ngx_http_upstream_send_request_body(r, u, do_write);
@@ -2868,10 +2845,6 @@ ngx_http_upstream_send_request(ngx_http_request_t *r, ngx_http_upstream_t *u,
     if (c->write->timer_set) {
         ngx_del_timer(c->write);
     }
-
-#if (NGX_RESTY_EXT)
-    u->state->send_end_msec = ngx_current_msec;
-#endif
 
     if (c->tcp_nopush == NGX_TCP_NOPUSH_SET) {
         if (ngx_tcp_push(c->fd) == -1) {
@@ -3565,7 +3538,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
 #if (NGX_RESTY_EXT)
-            && !r->cache->must_revalidate && !r->cache->purged
+            && !r->cache->must_revalidate
 #endif
 #if (NGX_RESTY_EXT && NGX_EXPR)
             && (stale & un->mask))
@@ -3665,12 +3638,6 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
             r->cache->error_sec = error;
 
             r->cache->date = now;
-
-#if (NGX_RESTY_EXT)
-            if (rc == NGX_OK || rc == NGX_AGAIN) {
-                r->cache->purged = 0;
-            }
-#endif
 
             ngx_http_file_cache_update_header(r);
         }
@@ -5757,7 +5724,7 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
 #if (NGX_RESTY_EXT)
-            && !r->cache->must_revalidate && !r->cache->purged
+            && !r->cache->must_revalidate
 #endif
 #if (NGX_RESTY_EXT && NGX_EXPR)
             && ((stale & ft_type) || r->cache->stale_error))

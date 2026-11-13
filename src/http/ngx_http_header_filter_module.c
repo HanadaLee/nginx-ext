@@ -197,9 +197,6 @@ ngx_http_header_filter(ngx_http_request_t *r)
     ngx_connection_t          *c;
     ngx_http_core_loc_conf_t  *clcf;
     ngx_http_core_srv_conf_t  *cscf;
-#if (NGX_RESTY_EXT)
-    ngx_time_t                *tp;
-#endif
     u_char                     addr[NGX_SOCKADDR_STRLEN];
 
     if (r->header_sent) {
@@ -207,12 +204,6 @@ ngx_http_header_filter(ngx_http_request_t *r)
     }
 
     r->header_sent = 1;
-
-#if (NGX_RESTY_EXT)
-    tp = ngx_timeofday();
-    r->header_sent_sec = tp->sec;
-    r->header_sent_msec = tp->msec;
-#endif
 
     if (r != r->main) {
         return NGX_OK;

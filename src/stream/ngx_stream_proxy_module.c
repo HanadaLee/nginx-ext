@@ -927,10 +927,6 @@ ngx_stream_proxy_connect(ngx_stream_session_t *s)
 
     u->start_time = ngx_current_msec;
 
-#if (NGX_RESTY_EXT)
-    u->state->start_msec = ngx_current_msec;
-#endif
-
     u->state->connect_time = (ngx_msec_t) -1;
     u->state->first_byte_time = (ngx_msec_t) -1;
     u->state->response_time = (ngx_msec_t) -1;
