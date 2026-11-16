@@ -12,24 +12,9 @@
 
 #include <zlib.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-#include <ngx_http_expr_module.h>
-#endif
-
 
 typedef struct {
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    ngx_array_t         *enable;
-#else
     ngx_flag_t           enable;
-#endif
-#if (NGX_RESTY_EXT)
-#if (NGX_EXPR)
-    ngx_array_t         *force;
-#else
-    ngx_flag_t           force;
-#endif
-#endif
     ngx_bufs_t           bufs;
 } ngx_http_gunzip_conf_t;
 
@@ -80,40 +65,11 @@ static char *ngx_http_gunzip_merge_conf(ngx_conf_t *cf,
 static ngx_command_t  ngx_http_gunzip_filter_commands[] = {
 
     { ngx_string("gunzip"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
-                        |NGX_HTTP_LOC_WHEN_CONF
-                        |NGX_CONF_FLAG,
-#else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-#endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
-      ngx_conf_set_conditional_flag_slot,
-#else
       ngx_conf_set_flag_slot,
-#endif
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_gunzip_conf_t, enable),
       NULL },
-
-#if (NGX_RESTY_EXT)
-    { ngx_string("gunzip_force"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_EXPR)
-                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
-                        |NGX_HTTP_LOC_WHEN_CONF
-#endif
-                        |NGX_CONF_FLAG,
-#if (NGX_EXPR)
-      ngx_conf_set_conditional_flag_slot,
-#else
-      ngx_conf_set_flag_slot,
-#endif
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_gunzip_conf_t, force),
-      NULL },
-#endif
 
     { ngx_string("gunzip_buffers"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
@@ -173,11 +129,7 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
     /* TODO always gunzip - due to configuration or module request */
     /* TODO ignore content encoding? */
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    if (!ngx_http_get_expr_flag_value(r, conf->enable)
-#else
     if (!conf->enable
-#endif
         || r->headers_out.content_encoding == NULL
         || r->headers_out.content_encoding->value.len != 4
         || ngx_strncasecmp(r->headers_out.content_encoding->value.data,
@@ -185,14 +137,6 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
     {
         return ngx_http_next_header_filter(r);
     }
-
-#if (NGX_RESTY_EXT)
-#if (NGX_EXPR)
-    if (!ngx_http_get_expr_flag_value(r, conf->force)) {
-#else
-    if (!conf->force) {
-#endif
-#endif
 
     r->gzip_vary = 1;
 
@@ -204,10 +148,6 @@ ngx_http_gunzip_header_filter(ngx_http_request_t *r)
     } else if (r->gzip_ok) {
         return ngx_http_next_header_filter(r);
     }
-
-#if (NGX_RESTY_EXT)
-    }
-#endif
 
     ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_gunzip_ctx_t));
     if (ctx == NULL) {
@@ -723,19 +663,7 @@ ngx_http_gunzip_create_conf(ngx_conf_t *cf)
      *     conf->bufs.num = 0;
      */
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    conf->enable = NGX_CONF_UNSET_PTR;
-#else
     conf->enable = NGX_CONF_UNSET;
-#endif
-
-#if (NGX_RESTY_EXT)
-#if (NGX_EXPR)
-    conf->force = NGX_CONF_UNSET_PTR;
-#else
-    conf->force = NGX_CONF_UNSET;
-#endif
-#endif
 
     return conf;
 }
@@ -747,29 +675,7 @@ ngx_http_gunzip_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_gunzip_conf_t *prev = parent;
     ngx_http_gunzip_conf_t *conf = child;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
-    if (ngx_conf_merge_expr_flag_value(cf, &conf->enable,
-                                       prev->enable, 0)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-#else
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
-#endif
-
-#if (NGX_RESTY_EXT)
-#if (NGX_EXPR)
-    if (ngx_conf_merge_expr_flag_value(cf, &conf->force,
-                                       prev->force, 0)
-        != NGX_OK)
-    {
-        return NGX_CONF_ERROR;
-    }
-#else
-    ngx_conf_merge_value(conf->force, prev->force, 0);
-#endif
-#endif
 
     ngx_conf_merge_bufs_value(conf->bufs, prev->bufs,
                               (128 * 1024) / ngx_pagesize, ngx_pagesize);
