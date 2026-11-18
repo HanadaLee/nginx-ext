@@ -858,6 +858,38 @@ static ngx_command_t  ngx_http_core_commands[] = {
 
 #if (NGX_RESTY_EXT)
 
+    { ngx_string("resolver_next_nameserver"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_resolver_set_next_nameserver,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, resolver_next_nameserver),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_tries"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, resolver_next_nameserver_tries),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_timeout"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_core_loc_conf_t, resolver_next_nameserver_timeout),
+      NULL },
+
+    { ngx_string("nameserver"),
+      NGX_HTTP_MAIN_CONF|NGX_CONF_BLOCK|NGX_CONF_TAKE1,
+      ngx_resolver_nameserver,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(ngx_http_core_main_conf_t, nameservers),
+      NULL },
+
+#endif
+
+#if (NGX_RESTY_EXT)
+
     { ngx_string("request_id_algorithm"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
@@ -3856,7 +3888,11 @@ ngx_http_core_init_main_conf(ngx_conf_t *cf, void *conf)
         cmcf->ncaptures = (cmcf->ncaptures + 1) * 3;
     }
 
+#if (NGX_RESTY_EXT)
+    return ngx_resolver_init_nameservers(cf, &cmcf->nameservers);
+#else
     return NGX_CONF_OK;
+#endif
 }
 
 
@@ -4052,6 +4088,10 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->lingering_time = NGX_CONF_UNSET_MSEC;
     clcf->lingering_timeout = NGX_CONF_UNSET_MSEC;
     clcf->resolver_timeout = NGX_CONF_UNSET_MSEC;
+#if (NGX_RESTY_EXT)
+    clcf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
+    clcf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
+#endif
     clcf->reset_timedout_connection = NGX_CONF_UNSET;
     clcf->absolute_redirect = NGX_CONF_UNSET;
     clcf->server_name_in_redirect = NGX_CONF_UNSET;
@@ -4346,6 +4386,27 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
         conf->resolver = prev->resolver;
     }
+
+#if (NGX_RESTY_EXT)
+
+    ngx_conf_merge_bitmask_value(conf->resolver_next_nameserver,
+                                 prev->resolver_next_nameserver,
+                                 NGX_RESOLVER_FT_DEFAULT);
+    ngx_conf_merge_value(conf->resolver_next_nameserver_tries,
+                         prev->resolver_next_nameserver_tries, 0);
+    ngx_conf_merge_msec_value(conf->resolver_next_nameserver_timeout,
+                              prev->resolver_next_nameserver_timeout, 0);
+
+    if (ngx_resolver_set_retry(cf, &conf->resolver,
+                               conf->resolver_next_nameserver,
+                               conf->resolver_next_nameserver_tries,
+                               conf->resolver_next_nameserver_timeout)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+#endif
 
     if (ngx_conf_merge_path_value(cf, &conf->client_body_temp_path,
                               prev->client_body_temp_path,
@@ -5666,7 +5727,12 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_core_loc_conf_t  *clcf = conf;
 
+#if (NGX_RESTY_EXT)
+    ngx_str_t                  *value;
+    ngx_http_core_main_conf_t  *cmcf;
+#else
     ngx_str_t  *value;
+#endif
 
     if (clcf->resolver) {
         return "is duplicate";
@@ -5674,7 +5740,17 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
+#if (NGX_RESTY_EXT)
+
+    cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+    clcf->resolver = ngx_resolver_create_conf(cf, &value[1],
+                                              cf->args->nelts - 1,
+                                              &cmcf->nameservers);
+
+#else
     clcf->resolver = ngx_resolver_create(cf, &value[1], cf->args->nelts - 1);
+#endif
+
     if (clcf->resolver == NULL) {
         return NGX_CONF_ERROR;
     }
