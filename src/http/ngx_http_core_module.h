@@ -198,6 +198,10 @@ typedef struct {
     ngx_array_t               *ports;
 
     ngx_http_phase_t           phases[NGX_HTTP_LOG_PHASE + 1];
+
+#if (NGX_RESTY_EXT)
+    ngx_array_t               *nameservers;
+#endif
 } ngx_http_core_main_conf_t;
 
 
@@ -431,6 +435,12 @@ struct ngx_http_core_loc_conf_s {
     ngx_msec_t    auth_delay;              /* auth_delay */
 
     ngx_resolver_t  *resolver;             /* resolver */
+
+#if (NGX_RESTY_EXT)
+    ngx_uint_t       resolver_next_nameserver;
+    ngx_int_t        resolver_next_nameserver_tries;
+    ngx_msec_t       resolver_next_nameserver_timeout;
+#endif
 
     time_t        keepalive_header;        /* keepalive_timeout */
 

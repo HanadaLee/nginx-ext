@@ -40,6 +40,43 @@
 typedef struct ngx_resolver_s  ngx_resolver_t;
 
 
+#if (NGX_RESTY_EXT)
+
+typedef struct ngx_resolver_cache_s        ngx_resolver_cache_t;
+typedef struct ngx_resolver_node_state_s   ngx_resolver_node_state_t;
+typedef struct ngx_resolver_query_state_s  ngx_resolver_query_state_t;
+
+
+#define NGX_RESOLVER_FT_ERROR             0x00000001
+#define NGX_RESOLVER_FT_TIMEOUT           0x00000002
+#define NGX_RESOLVER_FT_INVALID_RESPONSE  0x00000004
+#define NGX_RESOLVER_FT_NODATA            0x00000008
+#define NGX_RESOLVER_FT_FORMERR           0x00000010
+#define NGX_RESOLVER_FT_SERVFAIL          0x00000020
+#define NGX_RESOLVER_FT_NXDOMAIN          0x00000040
+#define NGX_RESOLVER_FT_NOTIMP            0x00000080
+#define NGX_RESOLVER_FT_REFUSED           0x00000100
+#define NGX_RESOLVER_FT_OFF               0x80000000
+
+#define NGX_RESOLVER_FT_DEFAULT                                               \
+    (NGX_RESOLVER_FT_ERROR|NGX_RESOLVER_FT_TIMEOUT)
+
+
+typedef struct {
+    ngx_uint_t                level;
+    ngx_uint_t                level_start;
+    ngx_uint_t                weight;
+    ngx_uint_t                max_fails;
+    time_t                    fail_timeout;
+
+    ngx_int_t                 current_weight;
+    ngx_uint_t                fails;
+    time_t                    accessed;
+} ngx_resolver_peer_t;
+
+#endif
+
+
 typedef struct {
     ngx_connection_t         *udp;
     ngx_connection_t         *tcp;
@@ -50,6 +87,10 @@ typedef struct {
     ngx_buf_t                *read_buf;
     ngx_buf_t                *write_buf;
     ngx_resolver_t           *resolver;
+
+#if (NGX_RESTY_EXT)
+    ngx_resolver_peer_t      *peer;
+#endif
 } ngx_resolver_connection_t;
 
 
@@ -142,6 +183,12 @@ typedef struct {
     ngx_uint_t                last_connection;
 
     ngx_resolver_ctx_t       *waiting;
+
+#if (NGX_RESTY_EXT)
+    ngx_uint_t                  retry_mask;
+    ngx_resolver_node_state_t  *state;
+    ngx_resolver_cache_t       *cache;
+#endif
 } ngx_resolver_node_t;
 
 
@@ -191,6 +238,24 @@ struct ngx_resolver_s {
     time_t                    valid;
 
     ngx_uint_t                log_level;
+
+#if (NGX_RESTY_EXT)
+    ngx_resolver_t           *owner;
+    time_t                    min_ttl;
+    time_t                    max_ttl;
+    time_t                    negative_valid;
+    time_t                    error_valid;
+    time_t                    stale_valid;
+    ngx_uint_t                next_nameserver;
+    ngx_uint_t                next_nameserver_tries;
+    ngx_msec_t                next_nameserver_timeout;
+    ngx_rbtree_t              queries;
+    ngx_rbtree_node_t         queries_sentinel;
+    ngx_queue_t               contexts;
+
+    unsigned                  nameserver:1;
+    unsigned                  retry_mask_lookup:1;
+#endif
 };
 
 
@@ -225,6 +290,11 @@ struct ngx_resolver_ctx_s {
     unsigned                  cancelable:1;
     ngx_uint_t                recursion;
     ngx_event_t              *event;
+
+#if (NGX_RESTY_EXT)
+    ngx_resolver_t              *retry;
+    ngx_resolver_query_state_t  *query_state;
+#endif
 };
 
 
@@ -237,6 +307,20 @@ void ngx_resolve_name_done(ngx_resolver_ctx_t *ctx);
 ngx_int_t ngx_resolve_addr(ngx_resolver_ctx_t *ctx);
 void ngx_resolve_addr_done(ngx_resolver_ctx_t *ctx);
 char *ngx_resolver_strerror(ngx_int_t err);
+
+
+#if (NGX_RESTY_EXT)
+
+char *ngx_resolver_nameserver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+char *ngx_resolver_init_nameservers(ngx_conf_t *cf, ngx_array_t **nameservers);
+ngx_resolver_t *ngx_resolver_create_conf(ngx_conf_t *cf, ngx_str_t *names,
+    ngx_uint_t n, ngx_array_t **nameservers);
+char *ngx_resolver_set_next_nameserver(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+ngx_int_t ngx_resolver_set_retry(ngx_conf_t *cf, ngx_resolver_t **resolver,
+    ngx_uint_t mask, ngx_uint_t tries, ngx_msec_t timeout);
+
+#endif
 
 
 #endif /* _NGX_RESOLVER_H_INCLUDED_ */
