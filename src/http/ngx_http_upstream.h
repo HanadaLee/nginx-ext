@@ -212,6 +212,13 @@ struct ngx_http_upstream_srv_conf_s {
     ngx_shm_zone_t                  *shm_zone;
     ngx_resolver_t                  *resolver;
     ngx_msec_t                       resolver_timeout;
+
+#if (NGX_RESTY_EXT)
+    ngx_uint_t                       resolver_next_nameserver;
+    ngx_int_t                        resolver_next_nameserver_tries;
+    ngx_msec_t                       resolver_next_nameserver_timeout;
+#endif
+
 #endif
 };
 

@@ -111,6 +111,28 @@ ngx_stream_upstream_init_round_robin(ngx_conf_t *cf,
             ngx_conf_merge_msec_value(us->resolver_timeout,
                                       cscf->resolver_timeout, 30000);
 
+#if (NGX_RESTY_EXT)
+
+            ngx_conf_merge_bitmask_value(us->resolver_next_nameserver,
+                                         cscf->resolver_next_nameserver,
+                                         NGX_RESOLVER_FT_DEFAULT);
+            ngx_conf_merge_value(us->resolver_next_nameserver_tries,
+                                 cscf->resolver_next_nameserver_tries, 0);
+            ngx_conf_merge_msec_value(us->resolver_next_nameserver_timeout,
+                                      cscf->resolver_next_nameserver_timeout,
+                                      0);
+
+            if (ngx_resolver_set_retry(cf, &us->resolver,
+                                       us->resolver_next_nameserver,
+                                       us->resolver_next_nameserver_tries,
+                                       us->resolver_next_nameserver_timeout)
+                != NGX_OK)
+            {
+                return NGX_ERROR;
+            }
+
+#endif
+
             if (resolve
                 && (us->resolver == NULL
                     || us->resolver->connections.nelts == 0))

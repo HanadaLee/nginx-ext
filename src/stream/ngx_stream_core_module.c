@@ -105,6 +105,38 @@ static ngx_command_t  ngx_stream_core_commands[] = {
       offsetof(ngx_stream_core_srv_conf_t, resolver_timeout),
       NULL },
 
+#if (NGX_RESTY_EXT)
+
+    { ngx_string("resolver_next_nameserver"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_1MORE,
+      ngx_resolver_set_next_nameserver,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_core_srv_conf_t, resolver_next_nameserver),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_tries"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_core_srv_conf_t, resolver_next_nameserver_tries),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_timeout"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_msec_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_core_srv_conf_t, resolver_next_nameserver_timeout),
+      NULL },
+
+    { ngx_string("nameserver"),
+      NGX_STREAM_MAIN_CONF|NGX_CONF_BLOCK|NGX_CONF_TAKE1,
+      ngx_resolver_nameserver,
+      NGX_STREAM_MAIN_CONF_OFFSET,
+      offsetof(ngx_stream_core_main_conf_t, nameservers),
+      NULL },
+
+#endif
+
     { ngx_string("proxy_protocol_timeout"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
@@ -772,7 +804,11 @@ ngx_stream_core_init_main_conf(ngx_conf_t *cf, void *conf)
         cmcf->ncaptures = (cmcf->ncaptures + 1) * 3;
     }
 
+#if (NGX_RESTY_EXT)
+    return ngx_resolver_init_nameservers(cf, &cmcf->nameservers);
+#else
     return NGX_CONF_OK;
+#endif
 }
 
 
@@ -803,6 +839,10 @@ ngx_stream_core_create_srv_conf(ngx_conf_t *cf)
     cscf->file_name = cf->conf_file->file.name.data;
     cscf->line = cf->conf_file->line;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
+#if (NGX_RESTY_EXT)
+    cscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
+    cscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
+#endif
     cscf->proxy_protocol_timeout = NGX_CONF_UNSET_MSEC;
     cscf->tcp_nodelay = NGX_CONF_UNSET;
     cscf->preread_buffer_size = NGX_CONF_UNSET_SIZE;
@@ -841,6 +881,27 @@ ngx_stream_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
         conf->resolver = prev->resolver;
     }
+
+#if (NGX_RESTY_EXT)
+
+    ngx_conf_merge_bitmask_value(conf->resolver_next_nameserver,
+                                 prev->resolver_next_nameserver,
+                                 NGX_RESOLVER_FT_DEFAULT);
+    ngx_conf_merge_value(conf->resolver_next_nameserver_tries,
+                         prev->resolver_next_nameserver_tries, 0);
+    ngx_conf_merge_msec_value(conf->resolver_next_nameserver_timeout,
+                              prev->resolver_next_nameserver_timeout, 0);
+
+    if (ngx_resolver_set_retry(cf, &conf->resolver,
+                               conf->resolver_next_nameserver,
+                               conf->resolver_next_nameserver_tries,
+                               conf->resolver_next_nameserver_timeout)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+#endif
 
     if (conf->error_log == NULL) {
         if (prev->error_log) {
@@ -1506,7 +1567,12 @@ ngx_stream_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_stream_core_srv_conf_t  *cscf = conf;
 
+#if (NGX_RESTY_EXT)
+    ngx_str_t                    *value;
+    ngx_stream_core_main_conf_t  *cmcf;
+#else
     ngx_str_t  *value;
+#endif
 
     if (cscf->resolver) {
         return "is duplicate";
@@ -1514,7 +1580,17 @@ ngx_stream_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
+#if (NGX_RESTY_EXT)
+
+    cmcf = ngx_stream_conf_get_module_main_conf(cf, ngx_stream_core_module);
+    cscf->resolver = ngx_resolver_create_conf(cf, &value[1],
+                                              cf->args->nelts - 1,
+                                              &cmcf->nameservers);
+
+#else
     cscf->resolver = ngx_resolver_create(cf, &value[1], cf->args->nelts - 1);
+#endif
+
     if (cscf->resolver == NULL) {
         return NGX_CONF_ERROR;
     }

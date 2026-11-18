@@ -12,6 +12,9 @@
 
 
 static void *ngx_mail_core_create_main_conf(ngx_conf_t *cf);
+#if (NGX_RESTY_EXT)
+static char *ngx_mail_core_init_main_conf(ngx_conf_t *cf, void *conf);
+#endif
 static void *ngx_mail_core_create_srv_conf(ngx_conf_t *cf);
 static char *ngx_mail_core_merge_srv_conf(ngx_conf_t *cf, void *parent,
     void *child);
@@ -85,6 +88,38 @@ static ngx_command_t  ngx_mail_core_commands[] = {
       offsetof(ngx_mail_core_srv_conf_t, resolver_timeout),
       NULL },
 
+#if (NGX_RESTY_EXT)
+
+    { ngx_string("resolver_next_nameserver"),
+      NGX_MAIL_MAIN_CONF|NGX_MAIL_SRV_CONF|NGX_CONF_1MORE,
+      ngx_resolver_set_next_nameserver,
+      NGX_MAIL_SRV_CONF_OFFSET,
+      offsetof(ngx_mail_core_srv_conf_t, resolver_next_nameserver),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_tries"),
+      NGX_MAIL_MAIN_CONF|NGX_MAIL_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_MAIL_SRV_CONF_OFFSET,
+      offsetof(ngx_mail_core_srv_conf_t, resolver_next_nameserver_tries),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_timeout"),
+      NGX_MAIL_MAIN_CONF|NGX_MAIL_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_msec_slot,
+      NGX_MAIL_SRV_CONF_OFFSET,
+      offsetof(ngx_mail_core_srv_conf_t, resolver_next_nameserver_timeout),
+      NULL },
+
+    { ngx_string("nameserver"),
+      NGX_MAIL_MAIN_CONF|NGX_CONF_BLOCK|NGX_CONF_TAKE1,
+      ngx_resolver_nameserver,
+      NGX_MAIL_MAIN_CONF_OFFSET,
+      offsetof(ngx_mail_core_main_conf_t, nameservers),
+      NULL },
+
+#endif
+
     { ngx_string("max_errors"),
       NGX_MAIL_MAIN_CONF|NGX_MAIL_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
@@ -100,7 +135,11 @@ static ngx_mail_module_t  ngx_mail_core_module_ctx = {
     NULL,                                  /* protocol */
 
     ngx_mail_core_create_main_conf,        /* create main configuration */
+#if (NGX_RESTY_EXT)
+    ngx_mail_core_init_main_conf,          /* init main configuration */
+#else
     NULL,                                  /* init main configuration */
+#endif
 
     ngx_mail_core_create_srv_conf,         /* create server configuration */
     ngx_mail_core_merge_srv_conf           /* merge server configuration */
@@ -150,6 +189,19 @@ ngx_mail_core_create_main_conf(ngx_conf_t *cf)
 }
 
 
+#if (NGX_RESTY_EXT)
+
+static char *
+ngx_mail_core_init_main_conf(ngx_conf_t *cf, void *conf)
+{
+    ngx_mail_core_main_conf_t  *cmcf = conf;
+
+    return ngx_resolver_init_nameservers(cf, &cmcf->nameservers);
+}
+
+#endif
+
+
 static void *
 ngx_mail_core_create_srv_conf(ngx_conf_t *cf)
 {
@@ -169,6 +221,10 @@ ngx_mail_core_create_srv_conf(ngx_conf_t *cf)
 
     cscf->timeout = NGX_CONF_UNSET_MSEC;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
+#if (NGX_RESTY_EXT)
+    cscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
+    cscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
+#endif
 
     cscf->max_errors = NGX_CONF_UNSET_UINT;
 
@@ -215,6 +271,27 @@ ngx_mail_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     ngx_conf_merge_ptr_value(conf->resolver, prev->resolver, NULL);
+
+#if (NGX_RESTY_EXT)
+
+    ngx_conf_merge_bitmask_value(conf->resolver_next_nameserver,
+                                 prev->resolver_next_nameserver,
+                                 NGX_RESOLVER_FT_DEFAULT);
+    ngx_conf_merge_value(conf->resolver_next_nameserver_tries,
+                         prev->resolver_next_nameserver_tries, 0);
+    ngx_conf_merge_msec_value(conf->resolver_next_nameserver_timeout,
+                              prev->resolver_next_nameserver_timeout, 0);
+
+    if (ngx_resolver_set_retry(cf, &conf->resolver,
+                               conf->resolver_next_nameserver,
+                               conf->resolver_next_nameserver_tries,
+                               conf->resolver_next_nameserver_timeout)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+#endif
 
     return NGX_CONF_OK;
 }
@@ -680,7 +757,12 @@ ngx_mail_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_mail_core_srv_conf_t  *cscf = conf;
 
+#if (NGX_RESTY_EXT)
+    ngx_str_t                  *value;
+    ngx_mail_core_main_conf_t  *cmcf;
+#else
     ngx_str_t  *value;
+#endif
 
     value = cf->args->elts;
 
@@ -693,7 +775,17 @@ ngx_mail_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_OK;
     }
 
+#if (NGX_RESTY_EXT)
+
+    cmcf = ngx_mail_conf_get_module_main_conf(cf, ngx_mail_core_module);
+    cscf->resolver = ngx_resolver_create_conf(cf, &value[1],
+                                              cf->args->nelts - 1,
+                                              &cmcf->nameservers);
+
+#else
     cscf->resolver = ngx_resolver_create(cf, &value[1], cf->args->nelts - 1);
+#endif
+
     if (cscf->resolver == NULL) {
         return NGX_CONF_ERROR;
     }

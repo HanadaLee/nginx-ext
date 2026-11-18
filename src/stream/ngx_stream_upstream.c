@@ -67,6 +67,32 @@ static ngx_command_t  ngx_stream_upstream_commands[] = {
       offsetof(ngx_stream_upstream_srv_conf_t, resolver_timeout),
       NULL },
 
+#if (NGX_RESTY_EXT)
+
+    { ngx_string("resolver_next_nameserver"),
+      NGX_STREAM_UPS_CONF|NGX_CONF_1MORE,
+      ngx_resolver_set_next_nameserver,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_upstream_srv_conf_t, resolver_next_nameserver),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_tries"),
+      NGX_STREAM_UPS_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_upstream_srv_conf_t, resolver_next_nameserver_tries),
+      NULL },
+
+    { ngx_string("resolver_next_nameserver_timeout"),
+      NGX_STREAM_UPS_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_msec_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_upstream_srv_conf_t,
+               resolver_next_nameserver_timeout),
+      NULL },
+
+#endif
+
 #endif
 
       ngx_null_command
@@ -757,7 +783,12 @@ ngx_stream_upstream_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_stream_upstream_srv_conf_t  *uscf = conf;
 
+#if (NGX_RESTY_EXT)
+    ngx_str_t                    *value;
+    ngx_stream_core_main_conf_t  *cmcf;
+#else
     ngx_str_t  *value;
+#endif
 
     if (uscf->resolver) {
         return "is duplicate";
@@ -765,7 +796,17 @@ ngx_stream_upstream_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
+#if (NGX_RESTY_EXT)
+
+    cmcf = ngx_stream_conf_get_module_main_conf(cf, ngx_stream_core_module);
+    uscf->resolver = ngx_resolver_create_conf(cf, &value[1],
+                                              cf->args->nelts - 1,
+                                              &cmcf->nameservers);
+
+#else
     uscf->resolver = ngx_resolver_create(cf, &value[1], cf->args->nelts - 1);
+#endif
+
     if (uscf->resolver == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -856,6 +897,10 @@ ngx_stream_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
     uscf->no_port = u->no_port;
 #if (NGX_STREAM_UPSTREAM_ZONE)
     uscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
+#if (NGX_RESTY_EXT)
+    uscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
+    uscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
+#endif
 #endif
 
     if (u->naddrs == 1 && (u->port || u->family == AF_UNIX)) {

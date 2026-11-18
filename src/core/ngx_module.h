@@ -201,7 +201,7 @@
 #if (NGX_RESTY_EXT)
 
 /* Bump when an extension changes the public ABI without a version change. */
-#define NGX_RESTY_ABI_VERSION  2
+#define NGX_RESTY_ABI_VERSION  3
 
 #if (NGX_EXPR)
 #define NGX_MODULE_SIGNATURE_RESTY_EXPR  "1"
