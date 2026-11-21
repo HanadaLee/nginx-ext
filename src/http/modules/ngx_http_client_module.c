@@ -13,6 +13,10 @@
 #if (NGX_EXT && NGX_CLIENT)
 
 
+#define NGX_HTTP_CLIENT_CHUNK_OVERHEAD                                       \
+    (2 * sizeof(size_t) + sizeof(CRLF CRLF) - 1)
+
+
 #define ngx_http_client_from_connection(c)                                   \
     (ngx_client_http_t *) ((u_char *) (c)                                    \
                            - offsetof(ngx_client_http_t, connection))
@@ -32,6 +36,19 @@ typedef struct {
 } ngx_http_client_conf_t;
 
 
+typedef struct {
+    ngx_event_t                    *notify;
+    ngx_buf_t                      *input;
+    ngx_str_t                      *read_buffer;
+    off_t                           rest;
+
+    unsigned                        request_body_streaming:1;
+    unsigned                        eof:1;
+    unsigned                        headers:1;
+    unsigned                        done:1;
+} ngx_http_client_stream_t;
+
+
 struct ngx_client_http_s {
     ngx_connection_t                connection;
     ngx_listening_t                 listening;
@@ -49,6 +66,7 @@ struct ngx_client_http_s {
     ngx_http_request_t             *request;
     ngx_http_core_srv_conf_t       *server;
     ngx_client_http_post_request_t  post;
+    ngx_http_client_stream_t       *stream;
 
     ngx_client_http_response_t      response;
     ngx_chain_t                    *out;
@@ -74,8 +92,14 @@ static ngx_int_t ngx_http_client_header_filter(ngx_http_request_t *r);
 static ngx_int_t ngx_http_client_early_hints_filter(ngx_http_request_t *r);
 static ngx_int_t ngx_http_client_body_filter(ngx_http_request_t *r,
     ngx_chain_t *in);
-static ngx_int_t ngx_http_client_header(ngx_http_request_t *r);
-static ngx_int_t ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in);
+static ngx_int_t ngx_http_client_process_response_headers(
+    ngx_http_request_t *r);
+static ngx_int_t ngx_http_client_process_response_body(ngx_http_request_t *r,
+    ngx_chain_t *in);
+static ssize_t ngx_http_client_recv(ngx_connection_t *c, u_char *buf,
+    size_t size);
+static ngx_chain_t *ngx_http_client_send_chain(ngx_connection_t *c,
+    ngx_chain_t *in, off_t limit);
 static ngx_buf_t *ngx_http_client_get_body_buf(ngx_client_http_t *client,
     size_t size);
 static ngx_int_t ngx_http_client_init_request(ngx_client_http_t *client,
@@ -244,7 +268,7 @@ ngx_http_client_bind_servers(ngx_cycle_t *cycle)
 
 
 ngx_client_http_server_t *
-ngx_http_client_add_server(ngx_cycle_t *cycle, const ngx_str_t *name)
+ngx_http_client_add_server_reference(ngx_cycle_t *cycle, const ngx_str_t *name)
 {
     ngx_http_client_conf_t    *ccf;
     ngx_client_http_server_t  *server, **p;
@@ -397,7 +421,8 @@ ngx_http_client_register_server(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf)
 
 
 ngx_int_t
-ngx_http_client_prepare(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
+ngx_http_client_init_default_server(ngx_conf_t *cf,
+    ngx_http_core_main_conf_t *cmcf)
 {
     ngx_str_t                  chunk;
     ngx_uint_t                 i, j;
@@ -481,7 +506,8 @@ ngx_http_client_find_server(ngx_cycle_t *cycle, const ngx_str_t *name)
 ngx_int_t
 ngx_http_client_create_request(ngx_cycle_t *cycle, ngx_log_t *log,
     ngx_client_http_request_t *request, ngx_client_http_t **pclient,
-    ngx_client_http_post_request_t *post)
+    ngx_client_http_post_request_t *post,
+    const ngx_client_http_stream_t *stream)
 {
     ngx_pool_t                *pool;
     ngx_connection_t          *c;
@@ -515,6 +541,19 @@ ngx_http_client_create_request(ngx_cycle_t *cycle, ngx_log_t *log,
     client->post = *post;
     client->last = &client->out;
     client->rc = NGX_ERROR;
+
+    if (stream) {
+        client->stream = ngx_pcalloc(pool, sizeof(ngx_http_client_stream_t));
+        if (client->stream == NULL) {
+            ngx_destroy_pool(pool);
+            return NGX_ERROR;
+        }
+
+        client->stream->notify = stream->notify;
+        client->stream->request_body_streaming = stream->request_body_streaming;
+        client->connection.recv = ngx_http_client_recv;
+        client->connection.send_chain = ngx_http_client_send_chain;
+    }
 
     client->log = *log;
     client->log.handler = ngx_http_client_log_error;
@@ -684,10 +723,21 @@ ngx_http_client_init_request(ngx_client_http_t *client,
     }
 
     r->headers_in.content_length_n = request->body.len;
+    if (client->stream && client->stream->request_body_streaming) {
+        r->headers_in.content_length_n = -1;
+        r->expect_tested = 1;
+    }
+
     r->request_length = len + sizeof(CRLF) - 1 + request->body.len;
 
     if (ngx_http_client_init_headers(r, request) != NGX_OK) {
         return NGX_ERROR;
+    }
+
+    if (client->stream && client->stream->request_body_streaming) {
+        client->stream->rest = r->headers_in.content_length_n;
+        r->headers_in.chunked = (client->stream->rest == -1);
+        return NGX_OK;
     }
 
     rb = ngx_pcalloc(r->pool, sizeof(ngx_http_request_body_t));
@@ -809,11 +859,12 @@ static ngx_int_t
 ngx_http_client_init_headers(ngx_http_request_t *r,
     ngx_client_http_request_t *request)
 {
+    off_t                       length;
     u_char                     *p, *last, ch;
     ngx_uint_t                  i;
     ngx_keyval_t               *kv;
-    ngx_http_header_t          *hh;
     ngx_table_elt_t            *h;
+    ngx_http_header_t          *hh;
     ngx_http_core_main_conf_t  *cmcf;
 
     if (request->headers == NULL) {
@@ -893,14 +944,16 @@ ngx_http_client_init_headers(ngx_http_request_t *r,
         }
 
         if (hh->offset == offsetof(ngx_http_headers_in_t, content_length)) {
-            if (r->headers_in.content_length
-                || ngx_atoof(h->value.data, h->value.len)
-                   != r->headers_in.content_length_n)
+            length = ngx_atoof(h->value.data, h->value.len);
+            if (r->headers_in.content_length || length < 0
+                || (r->headers_in.content_length_n >= 0
+                    && length != r->headers_in.content_length_n))
             {
                 return NGX_ERROR;
             }
 
             r->headers_in.content_length = h;
+            r->headers_in.content_length_n = length;
             continue;
         }
 
@@ -973,6 +1026,19 @@ void
 ngx_http_client_close_request(ngx_client_http_t *client)
 {
     ngx_memzero(&client->post, sizeof(ngx_client_http_post_request_t));
+
+    if (client->stream) {
+        if (client->stream->notify && client->stream->notify->posted) {
+            ngx_delete_posted_event(client->stream->notify);
+        }
+
+        client->stream->notify = NULL;
+
+        if (client->stream->done) {
+            ngx_destroy_pool(client->pool);
+            return;
+        }
+    }
 
     if (client->request == NULL || client->closing) {
         return;
@@ -1109,7 +1175,7 @@ static ngx_int_t
 ngx_http_client_header_filter(ngx_http_request_t *r)
 {
     if (r->connection->stub) {
-        return ngx_http_client_header(r);
+        return ngx_http_client_process_response_headers(r);
     }
 
     return ngx_http_next_header_filter(r);
@@ -1131,7 +1197,7 @@ static ngx_int_t
 ngx_http_client_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
     if (r->connection->stub) {
-        return ngx_http_client_body(r, in);
+        return ngx_http_client_process_response_body(r, in);
     }
 
     return ngx_http_next_body_filter(r, in);
@@ -1139,7 +1205,7 @@ ngx_http_client_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
 
 static ngx_int_t
-ngx_http_client_header(ngx_http_request_t *r)
+ngx_http_client_process_response_headers(ngx_http_request_t *r)
 {
     u_char                    *p;
     off_t                      content_length;
@@ -1330,12 +1396,17 @@ ngx_http_client_header(ngx_http_request_t *r)
         }
     }
 
+    if (client->stream) {
+        client->stream->headers = 1;
+        ngx_post_event(client->stream->notify, &ngx_posted_events);
+    }
+
     return NGX_OK;
 }
 
 
 static ngx_int_t
-ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in)
+ngx_http_client_process_response_body(ngx_http_request_t *r, ngx_chain_t *in)
 {
     off_t               size;
     ngx_buf_t          *b;
@@ -1343,6 +1414,18 @@ ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_client_http_t  *client;
 
     client = ngx_http_client_from_connection(r->connection);
+
+    if (client->stream && !r->header_only) {
+        if (client->closing || client->error) {
+            return NGX_ERROR;
+        }
+
+        if (in || r->out) {
+            return ngx_http_write_filter(r, in);
+        }
+
+        return NGX_OK;
+    }
 
     for ( /* void */; in; in = in->next) {
         size = ngx_buf_size(in->buf);
@@ -1403,6 +1486,287 @@ ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in)
 }
 
 
+ngx_int_t
+ngx_http_client_get_response_headers(ngx_client_http_t *client,
+    ngx_client_http_response_t **response)
+{
+    if (client->stream->headers) {
+        *response = &client->response;
+        return NGX_OK;
+    }
+
+    if (client->stream->done) {
+        return (client->rc == NGX_OK) ? NGX_ERROR : client->rc;
+    }
+
+    return NGX_AGAIN;
+}
+
+
+ssize_t
+ngx_http_client_write_request_body(ngx_client_http_t *client, const u_char *buf,
+    size_t size)
+{
+    size_t                     n;
+    u_char                    *p;
+    ngx_buf_t                 *b;
+    ngx_http_client_stream_t  *stream;
+
+    stream = client->stream;
+
+    if (stream->headers || client->request == NULL) {
+        return NGX_DONE;
+    }
+
+    if (size && buf == NULL) {
+        return NGX_ERROR;
+    }
+
+    if (!stream->request_body_streaming || stream->eof
+        || (stream->rest >= 0 && (uint64_t) stream->rest < size)
+        || (size == 0 && stream->rest > 0))
+    {
+        return NGX_DECLINED;
+    }
+
+    if (size == 0 && stream->rest == 0) {
+        stream->eof = 1;
+        return 0;
+    }
+
+    b = stream->input;
+    if (b == NULL || b->pos != b->last) {
+        return NGX_AGAIN;
+    }
+
+    if (size == 0) {
+        stream->eof = 1;
+    }
+
+    n = b->end - b->start;
+    if (stream->rest < 0) {
+        n -= NGX_HTTP_CLIENT_CHUNK_OVERHEAD;
+    }
+
+    n = ngx_min(size, n);
+    p = b->start;
+
+    if (stream->rest < 0) {
+        p = ngx_sprintf(p, "%xz" CRLF, n);
+    } else {
+        stream->rest -= n;
+    }
+
+    if (n) {
+        p = ngx_cpymem(p, buf, n);
+    }
+
+    if (stream->rest < 0) {
+        *p++ = CR;
+        *p++ = LF;
+    }
+
+    b->pos = b->start;
+    b->last = p;
+
+    if (!client->read.ready) {
+        client->read.ready = 1;
+        ngx_post_event(&client->read, &ngx_posted_events);
+    }
+
+    return n;
+}
+
+
+static ssize_t
+ngx_http_client_recv(ngx_connection_t *c, u_char *buf, size_t size)
+{
+    size_t                     n;
+    ngx_buf_t                 *b;
+    ngx_client_http_t         *client;
+    ngx_http_request_body_t   *rb;
+    ngx_http_client_stream_t  *stream;
+
+    client = ngx_http_client_from_connection(c);
+    stream = client->stream;
+    b = stream->input;
+
+    if (b == NULL && stream->request_body_streaming && !stream->eof) {
+        n = size;
+        rb = client->request->request_body;
+
+        if (rb && rb->buf && buf == rb->buf->last) {
+            n = rb->buf->end - rb->buf->start;
+        }
+
+        if (stream->rest < 0) {
+            n += NGX_HTTP_CLIENT_CHUNK_OVERHEAD;
+        }
+
+        b = ngx_create_temp_buf(client->pool, n);
+        if (b == NULL) {
+            return NGX_ERROR;
+        }
+
+        stream->input = b;
+        ngx_post_event(stream->notify, &ngx_posted_events);
+    }
+
+    if (b == NULL || b->pos == b->last) {
+        c->read->ready = 0;
+        return stream->eof ? 0 : NGX_AGAIN;
+    }
+
+    n = ngx_min(size, (size_t) (b->last - b->pos));
+    ngx_memcpy(buf, b->pos, n);
+    b->pos += n;
+
+    if (b->pos == b->last) {
+        c->read->ready = 0;
+        ngx_post_event(stream->notify, &ngx_posted_events);
+    }
+
+    return n;
+}
+
+
+static ngx_chain_t *
+ngx_http_client_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
+{
+    size_t                     n;
+    ngx_buf_t                 *b;
+    ngx_str_t                 *dst;
+    ngx_client_http_t         *client;
+    ngx_http_client_stream_t  *stream;
+
+    client = ngx_http_client_from_connection(c);
+    stream = client->stream;
+    dst = stream->read_buffer;
+
+    if (limit == 0) {
+        limit = NGX_MAX_OFF_T_VALUE;
+    }
+
+    for ( /* void */; in && limit; in = in->next) {
+        b = in->buf;
+
+        if (ngx_buf_special(b)) {
+            continue;
+        }
+
+        if (!ngx_buf_in_memory(b)) {
+            return NGX_CHAIN_ERROR;
+        }
+
+        if (dst == NULL || dst->len == 0) {
+            c->write->ready = 0;
+
+            if (dst == NULL && stream->notify) {
+                ngx_post_event(stream->notify, &ngx_posted_events);
+            }
+
+            break;
+        }
+
+        n = ngx_min((size_t) (b->last - b->pos), dst->len);
+        n = ngx_min((off_t) n, limit);
+
+        if ((off_t) n > NGX_MAX_OFF_T_VALUE - c->sent
+            || ngx_http_client_check_size(client, (uint64_t) c->sent + n)
+               != NGX_OK)
+        {
+            return NGX_CHAIN_ERROR;
+        }
+
+        dst->data = ngx_cpymem(dst->data, b->pos, n);
+        dst->len -= n;
+        b->pos += n;
+
+        if (b->in_file) {
+            b->file_pos += n;
+        }
+
+        c->sent += n;
+        limit -= n;
+
+        if (b->pos != b->last) {
+            if (dst->len == 0 && limit) {
+                c->write->ready = 0;
+            }
+
+            break;
+        }
+    }
+
+    return in;
+}
+
+
+ssize_t
+ngx_http_client_read_response_body(ngx_client_http_t *client, u_char *buf,
+    size_t size)
+{
+    ngx_int_t                  rc;
+    ngx_str_t                  dst;
+    ngx_event_t               *wev;
+    ngx_http_request_t        *r;
+    ngx_http_client_stream_t  *stream;
+
+    if (size == 0 || buf == NULL) {
+        return NGX_ERROR;
+    }
+
+    stream = client->stream;
+
+    if (stream->done) {
+        return client->rc;
+    }
+
+    if (stream->read_buffer) {
+        return NGX_BUSY;
+    }
+
+    r = client->request;
+    wev = &client->write;
+
+    if (r == NULL || r->terminated || r->out == NULL || wev->ready) {
+        return NGX_AGAIN;
+    }
+
+    wev->ready = 1;
+
+    if (wev->delayed) {
+        return NGX_AGAIN;
+    }
+
+    /* the write filter retains unsent buffers in r->out between reads */
+
+    dst.data = buf;
+    dst.len = size;
+
+    stream->read_buffer = &dst;
+    rc = ngx_http_write_filter(r, NULL);
+    stream->read_buffer = NULL;
+
+    if (rc == NGX_ERROR) {
+        rc = client->error ? client->error : NGX_ERROR;
+
+        if (!client->closing) {
+            ngx_http_finalize_request(r, NGX_ERROR);
+            ngx_http_run_posted_requests(&client->connection);
+        }
+
+        return rc;
+    }
+
+    if (!wev->delayed) {
+        ngx_post_event(wev, &ngx_posted_events);
+    }
+
+    return (dst.len == size) ? NGX_AGAIN : (ssize_t) (size - dst.len);
+}
+
+
 static ngx_buf_t *
 ngx_http_client_get_body_buf(ngx_client_http_t *client, size_t size)
 {
@@ -1442,7 +1806,7 @@ ngx_http_client_get_body_buf(ngx_client_http_t *client, size_t size)
 
 
 void
-ngx_http_client_finalize(ngx_http_request_t *r, ngx_int_t rc)
+ngx_http_client_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 {
     ngx_connection_t    *c;
     ngx_client_http_t   *client;
@@ -1485,6 +1849,12 @@ ngx_http_client_complete(ngx_event_t *ev)
     ngx_client_http_t  *client;
 
     client = ev->data;
+
+    if (client->stream && client->stream->notify) {
+        client->stream->done = 1;
+        ngx_post_event(client->stream->notify, &ngx_posted_events);
+        return;
+    }
 
     cl = client->out;
 
@@ -1531,7 +1901,7 @@ ngx_http_client_reset_upstream_error(ngx_http_request_t *r)
 
 
 void
-ngx_http_client_upstream_error(ngx_http_request_t *r, ngx_int_t rc)
+ngx_http_client_set_upstream_error(ngx_http_request_t *r, ngx_int_t rc)
 {
     ngx_client_http_t  *client;
 

@@ -334,7 +334,11 @@ ngx_http_do_read_client_request_body(ngx_http_request_t *r)
                             ngx_del_timer(c->read);
                         }
 
+#if (NGX_EXT && NGX_CLIENT)
+                        if (ngx_http_handle_read_event(r) != NGX_OK) {
+#else
                         if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+#endif
                             return NGX_HTTP_INTERNAL_SERVER_ERROR;
                         }
 
@@ -346,7 +350,11 @@ ngx_http_do_read_client_request_body(ngx_http_request_t *r)
                                                          ngx_http_core_module);
                         ngx_add_timer(c->read, clcf->client_body_timeout);
 
+#if (NGX_EXT && NGX_CLIENT)
+                        if (ngx_http_handle_read_event(r) != NGX_OK) {
+#else
                         if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+#endif
                             return NGX_HTTP_INTERNAL_SERVER_ERROR;
                         }
 
@@ -438,7 +446,11 @@ ngx_http_do_read_client_request_body(ngx_http_request_t *r)
             clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
             ngx_add_timer(c->read, clcf->client_body_timeout);
 
+#if (NGX_EXT && NGX_CLIENT)
+            if (ngx_http_handle_read_event(r) != NGX_OK) {
+#else
             if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+#endif
                 return NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
 
@@ -639,6 +651,12 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
     if (r != r->main || r->discard_body || r->request_body) {
         return NGX_OK;
     }
+
+#if (NGX_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        return NGX_OK;
+    }
+#endif
 
 #if (NGX_HTTP_V2)
     if (r->stream) {
