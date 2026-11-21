@@ -2251,9 +2251,6 @@ ngx_resolver_send_query(ngx_resolver_t *r, ngx_resolver_node_t *rn)
 #if (NGX_EXT)
     uintptr_t                   mask;
     ngx_uint_t                  i;
-#endif
-
-#if (NGX_EXT)
 
     if (rn->state && rn->state->retry && !rn->state->started) {
         return NGX_OK;

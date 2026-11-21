@@ -1445,16 +1445,14 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     ngx_chain_t   out[6];
     ngx_buf_t    *ib;
     ngx_uint_t    i;
-#else
-    ngx_chain_t   out[3];
-#endif
 
-#if (NGX_EXT)
     if (clcf->error_page_format != NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT
         && ngx_http_error_pages[err].len)
     {
         return ngx_http_send_formatted_response(r, clcf, err);
     }
+#else
+    ngx_chain_t   out[3];
 #endif
 
     if (clcf->server_tokens == NGX_HTTP_SERVER_TOKENS_ON) {

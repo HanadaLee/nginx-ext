@@ -227,12 +227,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_TAKE1,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,
@@ -244,12 +241,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_TAKE1,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,
@@ -310,12 +304,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_FLAG,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,
@@ -327,12 +318,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_TAKE1,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_num_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,
@@ -344,12 +332,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_TAKE1,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,
@@ -405,12 +390,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_TAKE1,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_stream_set_expr_complex_value_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_stream_set_complex_value_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,
@@ -422,12 +404,9 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                          |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                          |NGX_CONF_FLAG,
-#else
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
-#endif
-#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
 #endif
       NGX_STREAM_SRV_CONF_OFFSET,

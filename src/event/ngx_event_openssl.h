@@ -437,10 +437,8 @@ ngx_int_t ngx_ssl_get_handshake_start_msec(ngx_connection_t *c,
     ngx_pool_t *pool, ngx_str_t *s);
 ngx_int_t ngx_ssl_get_handshake_end_msec(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
-#endif
 
 
-#if (NGX_EXT)
 ngx_int_t ngx_ssl_delay_handshake(ngx_connection_t *c, ngx_msec_t delay);
 #endif
 
