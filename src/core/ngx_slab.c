@@ -70,7 +70,7 @@
 
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #define NGX_SLAB_SIGN                                                        \
     ngx_value(NGX_PTR_SIZE) ":"                                               \
@@ -848,7 +848,7 @@ ngx_slab_error(ngx_slab_pool_t *pool, ngx_uint_t level, char *text)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_slab_write_header(ngx_slab_state_header_t *hdr, ngx_file_t *file)

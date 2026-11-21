@@ -53,7 +53,7 @@ typedef u_char *(*ngx_http_log_handler_pt)(ngx_http_request_t *r,
 #if (NGX_HTTP_SSL)
 #include <ngx_http_ssl_module.h>
 #endif
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 #include <ngx_http_client.h>
 #endif
 

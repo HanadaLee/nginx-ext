@@ -60,7 +60,7 @@ typedef struct {
 } ngx_slab_pool_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 typedef struct {
     void             *addr;
@@ -83,7 +83,7 @@ void ngx_slab_free(ngx_slab_pool_t *pool, void *p);
 void ngx_slab_free_locked(ngx_slab_pool_t *pool, void *p);
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 ngx_int_t ngx_slab_save_pool(ngx_slab_state_header_t *hdr, ngx_file_t *file);
 ngx_int_t ngx_slab_read_header(ngx_slab_state_header_t *hdr, ngx_file_t *file);
 ngx_int_t ngx_slab_restore_pool(ngx_slab_state_header_t *hdr, ngx_file_t *file);

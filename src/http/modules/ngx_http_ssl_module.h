@@ -21,13 +21,13 @@ typedef struct {
     ngx_flag_t                      certificate_compression;
     ngx_flag_t                      early_data;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_array_t                    *reject_handshake;
 #else
     ngx_flag_t                      reject_handshake;
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     ngx_array_t                    *delay_handshake;
 #else
@@ -46,7 +46,7 @@ typedef struct {
 
     time_t                          session_timeout;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t                      certificate_load;
 #endif
 
@@ -84,7 +84,7 @@ typedef struct {
     ngx_str_t                       stapling_file;
     ngx_str_t                       stapling_responder;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_flag_t                      dynamic_record_enable;
     ngx_msec_t                      dynamic_record_timeout;
     size_t                          dynamic_record_low_size;

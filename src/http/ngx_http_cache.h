@@ -30,7 +30,7 @@
 
 #define NGX_HTTP_CACHE_VERSION       5
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #define NGX_HTTP_CACHE_SH_SIGNATURE                                           \
     "http-proxy-cache:1:"                                                    \
     ngx_value(NGX_PTR_SIZE) ":"                                               \
@@ -39,7 +39,7 @@
     ngx_value(NGX_HTTP_CACHE_KEY_LEN)
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 /*
  * Cache header version 5 has no dedicated flags field for response
  * Cache-Control metadata.  valid_msec is stored as u_short on disk, but the
@@ -54,7 +54,7 @@
 
 typedef struct {
     ngx_uint_t                       status;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_complex_value_t        *valid;
 #else
     time_t                           valid;
@@ -148,7 +148,7 @@ struct ngx_http_cache_s {
 
     unsigned                         stale_updating:1;
     unsigned                         stale_error:1;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     unsigned                         must_revalidate:1;
 #endif
 };
@@ -225,7 +225,7 @@ void ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf);
 void ngx_http_file_cache_update_header(ngx_http_request_t *r);
 ngx_int_t ngx_http_cache_send(ngx_http_request_t *);
 void ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 time_t ngx_http_file_cache_valid(ngx_http_request_t *r,
     ngx_array_t *cache_valid, ngx_uint_t status);
 #else

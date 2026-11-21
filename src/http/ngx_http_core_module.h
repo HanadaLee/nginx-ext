@@ -60,7 +60,7 @@ typedef struct ngx_thread_pool_s  ngx_thread_pool_t;
 #define NGX_HTTP_SERVER_TOKENS_BUILD    2
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #define NGX_HTTP_REQUEST_ID_HEXID       1
 #define NGX_HTTP_REQUEST_ID_TRACEID     2
@@ -102,7 +102,7 @@ typedef struct {
     unsigned                   reuseport:1;
     unsigned                   so_keepalive:2;
     unsigned                   proxy_protocol:1;
-#if (NGX_RESTY_EXT && NGX_HTTP_SSL)
+#if (NGX_EXT && NGX_HTTP_SSL)
     unsigned                   https_allow_http:1;
 #endif
 
@@ -199,7 +199,7 @@ typedef struct {
 
     ngx_http_phase_t           phases[NGX_HTTP_LOG_PHASE + 1];
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_array_t               *nameservers;
 #endif
 } ngx_http_core_main_conf_t;
@@ -235,7 +235,7 @@ typedef struct {
 
     unsigned                    listen:1;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     unsigned                    client:1;
 #endif
 #if (NGX_PCRE)
@@ -277,7 +277,7 @@ struct ngx_http_addr_conf_s {
     unsigned                   http2:1;
     unsigned                   quic:1;
     unsigned                   proxy_protocol:1;
-#if (NGX_RESTY_EXT && NGX_HTTP_SSL)
+#if (NGX_EXT && NGX_HTTP_SSL)
     unsigned                   https_allow_http:1;
 #endif
 };
@@ -342,19 +342,19 @@ typedef struct {
     ngx_http_complex_value_t   value;
     ngx_str_t                  args;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                 expr_id;
 #endif
 
 } ngx_http_err_page_t;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 ngx_http_err_page_t *ngx_http_find_error_page(ngx_http_request_t *r,
     ngx_int_t status);
 #endif
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 typedef struct {
     ngx_str_t                  name;
@@ -440,7 +440,7 @@ struct ngx_http_core_loc_conf_s {
 
     ngx_resolver_t  *resolver;             /* resolver */
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t       resolver_next_nameserver;
     ngx_int_t        resolver_next_nameserver_tries;
     ngx_msec_t       resolver_next_nameserver_timeout;
@@ -454,7 +454,7 @@ struct ngx_http_core_loc_conf_s {
     ngx_uint_t    lingering_close;         /* lingering_close */
     ngx_uint_t    if_modified_since;       /* if_modified_since */
     ngx_uint_t    max_ranges;              /* max_ranges */
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_flag_t    ignore_invalid_range;    /* ignore_invalid_range */
 #endif
     ngx_uint_t    client_body_in_file_only; /* client_body_in_file_only */
@@ -479,7 +479,7 @@ struct ngx_http_core_loc_conf_s {
     ngx_uint_t    server_tokens;           /* server_tokens */
     ngx_flag_t    chunked_transfer_encoding; /* chunked_transfer_encoding */
     ngx_flag_t    etag;                    /* etag */
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t    set_auto_redirect;        /* auto_redirect */
 #endif
 
@@ -507,7 +507,7 @@ struct ngx_http_core_loc_conf_s {
     ngx_array_t  *early_hints;             /* early_hints */
 
     ngx_array_t  *error_pages;             /* error_page */
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_http_core_loc_conf_t  *error_pages_parent;
 #endif
 
@@ -526,7 +526,7 @@ struct ngx_http_core_loc_conf_s {
 
     ngx_queue_t  *locations;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t    request_id_algorithm;    /* request_id_algorithm */
     ngx_str_t     request_id_header;       /* request_id_header */
 
@@ -599,7 +599,7 @@ ngx_int_t ngx_http_auth_basic_user(ngx_http_request_t *r);
 #if (NGX_HTTP_GZIP)
 ngx_int_t ngx_http_gzip_ok(ngx_http_request_t *r);
 #endif
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 ngx_int_t ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id);
 #endif
 

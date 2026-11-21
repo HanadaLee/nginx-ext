@@ -10,12 +10,12 @@
 #include <ngx_http.h>
 #include <nginx.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #define ngx_http_error_301_reason   "Moved Permanently"
 #define ngx_http_error_302_reason   "Found"
@@ -148,7 +148,7 @@ static ngx_int_t ngx_http_send_special_response(ngx_http_request_t *r,
     ngx_http_core_loc_conf_t *clcf, ngx_uint_t err);
 static ngx_int_t ngx_http_send_refresh(ngx_http_request_t *r);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_str_t *ngx_http_get_error_page_field_values(ngx_http_request_t *r,
     ngx_http_core_loc_conf_t *clcf);
@@ -167,7 +167,7 @@ static u_char ngx_http_error_head[] =
 
 
 static u_char ngx_http_error_full_tail[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 "<p>" NGINX_VER "</p></div>" CRLF
 #else
 "<hr><center>" NGINX_VER "</center>" CRLF
@@ -178,7 +178,7 @@ static u_char ngx_http_error_full_tail[] =
 
 
 static u_char ngx_http_error_build_tail[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 "<p>" NGINX_VER_BUILD "</p></div>" CRLF
 #else
 "<hr><center>" NGINX_VER_BUILD "</center>" CRLF
@@ -189,7 +189,7 @@ static u_char ngx_http_error_build_tail[] =
 
 
 static u_char ngx_http_error_tail[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 "</div>" CRLF
 #else
 "<hr><center>openresty</center>" CRLF
@@ -199,7 +199,7 @@ static u_char ngx_http_error_tail[] =
 ;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static u_char ngx_http_error_style[] =
 "<style>" CRLF
@@ -271,7 +271,7 @@ static u_char ngx_http_msie_refresh_tail[] =
 
 
 static char ngx_http_error_301_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_redirect("301", ngx_http_error_301_reason)
 #else
 "<html>" CRLF
@@ -283,7 +283,7 @@ static char ngx_http_error_301_page[] =
 
 
 static char ngx_http_error_302_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_redirect("302", ngx_http_error_302_reason)
 #else
 "<html>" CRLF
@@ -295,7 +295,7 @@ static char ngx_http_error_302_page[] =
 
 
 static char ngx_http_error_303_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_redirect("303", ngx_http_error_303_reason)
 #else
 "<html>" CRLF
@@ -307,7 +307,7 @@ static char ngx_http_error_303_page[] =
 
 
 static char ngx_http_error_307_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_redirect("307", ngx_http_error_307_reason)
 #else
 "<html>" CRLF
@@ -319,7 +319,7 @@ static char ngx_http_error_307_page[] =
 
 
 static char ngx_http_error_308_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_redirect("308", ngx_http_error_308_reason)
 #else
 "<html>" CRLF
@@ -331,7 +331,7 @@ static char ngx_http_error_308_page[] =
 
 
 static char ngx_http_error_400_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "400", ngx_http_error_400_reason, ngx_http_error_400_message
     )
@@ -345,7 +345,7 @@ static char ngx_http_error_400_page[] =
 
 
 static char ngx_http_error_401_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "401", ngx_http_error_401_reason, ngx_http_error_401_message
     )
@@ -359,7 +359,7 @@ static char ngx_http_error_401_page[] =
 
 
 static char ngx_http_error_402_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page("402", ngx_http_error_402_reason)
 #else
 "<html>" CRLF
@@ -371,7 +371,7 @@ static char ngx_http_error_402_page[] =
 
 
 static char ngx_http_error_403_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "403", ngx_http_error_403_reason, ngx_http_error_403_message
     )
@@ -385,7 +385,7 @@ static char ngx_http_error_403_page[] =
 
 
 static char ngx_http_error_404_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "404", ngx_http_error_404_reason, ngx_http_error_404_message
     )
@@ -399,7 +399,7 @@ static char ngx_http_error_404_page[] =
 
 
 static char ngx_http_error_405_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "405", ngx_http_error_405_reason, ngx_http_error_405_message
     )
@@ -413,7 +413,7 @@ static char ngx_http_error_405_page[] =
 
 
 static char ngx_http_error_406_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "406", ngx_http_error_406_reason, ngx_http_error_406_message
     )
@@ -427,7 +427,7 @@ static char ngx_http_error_406_page[] =
 
 
 static char ngx_http_error_407_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "407", ngx_http_error_407_reason, ngx_http_error_407_message
     )
@@ -441,7 +441,7 @@ static char ngx_http_error_407_page[] =
 
 
 static char ngx_http_error_408_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "408", ngx_http_error_408_reason, ngx_http_error_408_message
     )
@@ -455,7 +455,7 @@ static char ngx_http_error_408_page[] =
 
 
 static char ngx_http_error_409_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "409", ngx_http_error_409_reason, ngx_http_error_409_message
     )
@@ -469,7 +469,7 @@ static char ngx_http_error_409_page[] =
 
 
 static char ngx_http_error_410_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "410", ngx_http_error_410_reason, ngx_http_error_410_message
     )
@@ -483,7 +483,7 @@ static char ngx_http_error_410_page[] =
 
 
 static char ngx_http_error_411_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "411", ngx_http_error_411_reason, ngx_http_error_411_message
     )
@@ -497,7 +497,7 @@ static char ngx_http_error_411_page[] =
 
 
 static char ngx_http_error_412_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "412", ngx_http_error_412_reason, ngx_http_error_412_message
     )
@@ -511,7 +511,7 @@ static char ngx_http_error_412_page[] =
 
 
 static char ngx_http_error_413_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "413", ngx_http_error_413_reason, ngx_http_error_413_message
     )
@@ -525,7 +525,7 @@ static char ngx_http_error_413_page[] =
 
 
 static char ngx_http_error_414_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "414", ngx_http_error_414_reason, ngx_http_error_414_message
     )
@@ -539,7 +539,7 @@ static char ngx_http_error_414_page[] =
 
 
 static char ngx_http_error_415_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "415", ngx_http_error_415_reason, ngx_http_error_415_message
     )
@@ -553,7 +553,7 @@ static char ngx_http_error_415_page[] =
 
 
 static char ngx_http_error_416_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "416", ngx_http_error_416_reason, ngx_http_error_416_message
     )
@@ -567,7 +567,7 @@ static char ngx_http_error_416_page[] =
 
 
 static char ngx_http_error_421_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "421", ngx_http_error_421_reason, ngx_http_error_421_message
     )
@@ -581,7 +581,7 @@ static char ngx_http_error_421_page[] =
 
 
 static char ngx_http_error_429_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "429", ngx_http_error_429_reason, ngx_http_error_429_message
     )
@@ -595,7 +595,7 @@ static char ngx_http_error_429_page[] =
 
 
 static char ngx_http_error_494_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "400", ngx_http_error_400_reason, ngx_http_error_494_message
     )
@@ -611,7 +611,7 @@ CRLF
 
 
 static char ngx_http_error_495_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "400", ngx_http_error_400_reason, ngx_http_error_495_message
     )
@@ -627,7 +627,7 @@ CRLF
 
 
 static char ngx_http_error_496_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "400", ngx_http_error_400_reason, ngx_http_error_496_message
     )
@@ -643,7 +643,7 @@ CRLF
 
 
 static char ngx_http_error_497_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "400", ngx_http_error_400_reason, ngx_http_error_497_message
     )
@@ -659,7 +659,7 @@ CRLF
 
 
 static char ngx_http_error_500_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "500", ngx_http_error_500_reason, ngx_http_error_500_message
     )
@@ -673,7 +673,7 @@ static char ngx_http_error_500_page[] =
 
 
 static char ngx_http_error_501_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "501", ngx_http_error_501_reason, ngx_http_error_501_message
     )
@@ -687,7 +687,7 @@ static char ngx_http_error_501_page[] =
 
 
 static char ngx_http_error_502_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "502", ngx_http_error_502_reason, ngx_http_error_502_message
     )
@@ -701,7 +701,7 @@ static char ngx_http_error_502_page[] =
 
 
 static char ngx_http_error_503_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "503", ngx_http_error_503_reason, ngx_http_error_503_message
     )
@@ -715,7 +715,7 @@ static char ngx_http_error_503_page[] =
 
 
 static char ngx_http_error_504_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "504", ngx_http_error_504_reason, ngx_http_error_504_message
     )
@@ -729,7 +729,7 @@ static char ngx_http_error_504_page[] =
 
 
 static char ngx_http_error_505_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "505", ngx_http_error_505_reason, ngx_http_error_505_message
     )
@@ -743,7 +743,7 @@ static char ngx_http_error_505_page[] =
 
 
 static char ngx_http_error_507_page[] =
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_error_page_ext(
         "507", ngx_http_error_507_reason, ngx_http_error_507_message
     )
@@ -831,7 +831,7 @@ static ngx_str_t ngx_http_error_pages[] = {
 };
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_http_error_page_info_t ngx_http_error_page_infos[] = {
 
@@ -1099,7 +1099,7 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
 #endif
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 
 ngx_http_err_page_t *
 ngx_http_find_error_page(ngx_http_request_t *r, ngx_int_t status)
@@ -1148,7 +1148,7 @@ ngx_http_find_error_page(ngx_http_request_t *r, ngx_int_t status)
 ngx_int_t
 ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
 {
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t                 err;
 #if !(NGX_EXPR)
     ngx_uint_t                 i;
@@ -1193,7 +1193,7 @@ ngx_http_special_response_handler(ngx_http_request_t *r, ngx_int_t error)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (!r->error_page && r->uri_changes != 0) {
         err_page = ngx_http_find_error_page(r, error);
 
@@ -1361,7 +1361,7 @@ ngx_http_send_error_page(ngx_http_request_t *r, ngx_http_err_page_t *err_page)
         return NGX_ERROR;
     }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         ngx_http_client_reset_upstream_error(r);
     }
@@ -1440,7 +1440,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     ngx_buf_t    *b;
     ngx_uint_t    msie_padding;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t    style;
     ngx_chain_t   out[6];
     ngx_buf_t    *ib;
@@ -1449,7 +1449,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     ngx_chain_t   out[3];
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (clcf->error_page_format != NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT
         && ngx_http_error_pages[err].len)
     {
@@ -1470,7 +1470,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
         tail = ngx_http_error_tail;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (err >= NGX_HTTP_OFF_4XX && clcf->error_page_fields) {
         ib = ngx_http_set_error_page_fields(r, clcf);
         if (ib == NULL) {
@@ -1488,7 +1488,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
 
     if (ngx_http_error_pages[err].len) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         r->headers_out.content_length_n = sizeof(ngx_http_error_head) - 1
                                           + ngx_http_error_pages[err].len
                                           + (ib ? (ib->last - ib->pos) : 0)
@@ -1539,7 +1539,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
         return ngx_http_send_special(r, NGX_HTTP_LAST);
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     b = ngx_calloc_buf(r->pool);
     if (b == NULL) {
         return NGX_ERROR;
@@ -1579,7 +1579,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     b->pos = ngx_http_error_pages[err].data;
     b->last = ngx_http_error_pages[err].data + ngx_http_error_pages[err].len;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     out[i].buf = b;
     out[i].next = &out[i + 1];
     i++;
@@ -1604,7 +1604,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     b->pos = tail;
     b->last = tail + len;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     out[i].buf = b;
     out[i].next = NULL;
 #else
@@ -1622,7 +1622,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
         b->pos = ngx_http_msie_padding;
         b->last = ngx_http_msie_padding + sizeof(ngx_http_msie_padding) - 1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         out[i].next = &out[i + 1];
         i++;
         out[i].buf = b;
@@ -1717,7 +1717,7 @@ ngx_http_send_refresh(ngx_http_request_t *r)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_str_t *
 ngx_http_get_error_page_field_values(ngx_http_request_t *r,

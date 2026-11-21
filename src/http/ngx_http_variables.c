@@ -1143,7 +1143,7 @@ ngx_http_variable_tcpinfo(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     socklen_t        len;
     uint32_t         value;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         v->not_found = 1;
         return NGX_OK;
@@ -1509,7 +1509,7 @@ static ngx_int_t
 ngx_http_variable_scheme(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub && r->schema.len) {
         v->len = r->schema.len;
         v->valid = 1;
@@ -1549,7 +1549,7 @@ static ngx_int_t
 ngx_http_variable_https(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         *v = ngx_http_variable_null_value;
 
@@ -2326,7 +2326,7 @@ ngx_http_variable_request_time(ngx_http_request_t *r,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_variable_request_id(ngx_http_request_t *r,

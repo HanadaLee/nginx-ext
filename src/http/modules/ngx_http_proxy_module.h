@@ -58,12 +58,12 @@ typedef struct {
     ngx_array_t                   *cookie_domains;
     ngx_array_t                   *cookie_paths;
     ngx_array_t                   *cookie_flags;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_array_t                   *cookie_values;
     ngx_array_t                   *cookie_max_age;
 #endif
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_array_t                   *method;
 #else
     ngx_http_complex_value_t      *method;
@@ -79,7 +79,7 @@ typedef struct {
 
     ngx_flag_t                     redirect;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_array_t                   *http_version;
 #else
     ngx_uint_t                     http_version;
@@ -88,7 +88,7 @@ typedef struct {
     ngx_uint_t                     headers_hash_max_size;
     ngx_uint_t                     headers_hash_bucket_size;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_flag_t                     headers_inherit;
 #endif
 
@@ -110,7 +110,7 @@ typedef struct {
     ngx_http_proxy_vars_t          vars;
     off_t                          internal_body_length;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                     http_version;
 #endif
 
@@ -119,7 +119,7 @@ typedef struct {
 
     ngx_buf_t                     *trailers;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_list_t                     headers_in;
 #endif
 

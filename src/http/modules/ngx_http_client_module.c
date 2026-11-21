@@ -10,7 +10,7 @@
 #include <ngx_http.h>
 
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 
 
 #define ngx_http_client_from_connection(c)                                   \

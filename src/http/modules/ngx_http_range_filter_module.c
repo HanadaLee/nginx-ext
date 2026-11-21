@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #include "ngx_http_range_filter_module.h"
 #endif
 
@@ -49,7 +49,7 @@
  */
 
 
-#if !(NGX_RESTY_EXT)
+#if !(NGX_EXT)
 
 typedef struct {
     off_t        start;
@@ -151,7 +151,7 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 void
 ngx_http_range_set_filter(ngx_http_request_t *r,
@@ -169,12 +169,12 @@ ngx_http_range_header_filter(ngx_http_request_t *r)
     time_t                        if_range_time;
     ngx_str_t                    *if_range, *etag;
     ngx_uint_t                    ranges;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_range_filter_t      *filter, *mfilter;
 #endif
     ngx_http_core_loc_conf_t     *clcf;
     ngx_http_range_filter_ctx_t  *ctx;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_range_filter_ctx_t  *mctx;
 #endif
 
@@ -264,7 +264,7 @@ parse:
             return ngx_http_range_singlepart_header(r, ctx);
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         filter = ngx_http_get_module_ctx(r,
                                          ngx_http_range_header_filter_module);
 
@@ -311,7 +311,7 @@ parse:
 
     case NGX_HTTP_RANGE_NOT_SATISFIABLE:
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (clcf->ignore_invalid_range == 1) {
             goto next_filter;
         }
@@ -731,12 +731,12 @@ ngx_http_range_not_satisfiable(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_range_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_range_filter_t      *filter;
 #endif
     ngx_http_range_filter_ctx_t  *ctx;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     filter = ngx_http_get_module_ctx(r, ngx_http_range_header_filter_module);
 
     if (filter != NULL && filter->ranges != NULL) {

@@ -431,7 +431,7 @@ struct ngx_http_request_s {
     ngx_str_t                         http_protocol;
     ngx_str_t                         schema;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                         request_id;
 #endif
 

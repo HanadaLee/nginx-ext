@@ -132,7 +132,7 @@ ngx_http_file_cache_init(ngx_shm_zone_t *shm_zone, void *data)
         cache->bsize = ngx_fs_bsize(cache->path->name.data);
         cache->max_size /= cache->bsize;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         cache->sh->rbtree.insert = ngx_http_file_cache_rbtree_insert_value;
         cache->shpool->log_nomem = 0;
 #endif
@@ -634,7 +634,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
     c->last_modified = h->last_modified;
     c->date = h->date;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     /*
      * Restore the origin policy.
      * Keep the in-memory millisecond value free of policy bits.
@@ -1351,7 +1351,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
     h->crc32 = c->crc32;
     h->valid_msec = (u_short) c->valid_msec;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     /*
      * Keep the cache header layout and version unchanged: only the on-disk
      * valid_msec copy carries this flag. c->valid_msec remains a plain
@@ -1627,7 +1627,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
     h.crc32 = c->crc32;
     h.valid_msec = (u_short) c->valid_msec;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     /*
      * Preserve the same high-bit encoding when a 304 response refreshes only
      * the cache file header.  The flag continues to live solely in the
@@ -2399,7 +2399,7 @@ ngx_http_file_cache_set_watermark(ngx_http_file_cache_t *cache)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 time_t
 ngx_http_file_cache_valid(ngx_http_request_t *r, ngx_array_t *cache_valid,
@@ -2467,7 +2467,7 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_uint_t              i, n, use_temp_path;
     ngx_array_t            *caches;
     ngx_http_file_cache_t  *cache, **ce;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_shm_zone_params_t   zp;
 #endif
 
@@ -2493,7 +2493,7 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     manager_sleep = 50;
     manager_threshold = 200;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_memzero(&zp, sizeof(ngx_shm_zone_params_t));
     zp.tag = cmd->post;
     zp.restorable = 1;
@@ -2608,7 +2608,7 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             continue;
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ngx_strncmp(value[i].data, "keys_state=", 11) == 0) {
             if (zp.file.data != NULL) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -2798,7 +2798,7 @@ ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     zp.name = name;
     zp.size = size;
     zp.signature.len = sizeof(NGX_HTTP_CACHE_SH_SIGNATURE)
@@ -2857,7 +2857,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 {
     char  *p = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                         *value;
     ngx_int_t                          status;
     ngx_uint_t                         i, n;
@@ -2888,7 +2888,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     value = cf->args->elts;
     n = cf->args->nelts - 1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     valid_cv = ngx_palloc(cf->pool, sizeof(ngx_http_complex_value_t));
     if (valid_cv == NULL) {
         return NGX_CONF_ERROR;
@@ -2930,7 +2930,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 
             v->status = statuses[i];
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             v->valid = valid_cv;
 #else
             v->valid = valid;
@@ -2963,7 +2963,7 @@ ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 
         v->status = status;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         v->valid = valid_cv;
 #else
         v->valid = valid;

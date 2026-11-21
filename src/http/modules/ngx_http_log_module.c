@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -72,18 +72,18 @@ typedef struct {
     time_t                      error_log_time;
     ngx_syslog_peer_t          *syslog_peer;
     ngx_http_log_fmt_t         *format;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_flag_t                  off;
     ngx_expr_when_id_t          expr_id;
 #endif
     ngx_http_complex_value_t   *filter;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_complex_value_t   *sample;
 #endif
 } ngx_http_log_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct ngx_http_log_loc_conf_s {
 #else
 typedef struct {
@@ -96,7 +96,7 @@ typedef struct {
 
     ngx_flag_t                  escape_non_ascii;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     struct ngx_http_log_loc_conf_s  *parent;
 #else
     ngx_uint_t                  off;        /* unsigned  off:1 */
@@ -116,7 +116,7 @@ typedef struct {
 #define NGX_HTTP_LOG_ESCAPE_NONE     2
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_log_sample(ngx_http_request_t *r,
     ngx_http_complex_value_t *cv);
 
@@ -203,7 +203,7 @@ static ngx_command_t  ngx_http_log_commands[] = {
 
     { ngx_string("access_log"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -303,7 +303,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
     ngx_http_log_op_t        *op;
     ngx_http_log_buf_t       *buffer;
     ngx_http_log_loc_conf_t  *lcf;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                matched;
 #endif
 
@@ -312,7 +312,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_log_module);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 next_level:
 
     while (lcf && lcf->logs == NULL) {
@@ -333,7 +333,7 @@ next_level:
     log = lcf->logs->elts;
     for (l = 0; l < lcf->logs->nelts; l++) {
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (ngx_http_expr_get_result(r, log[l].expr_id) != NGX_EXPR_WHEN_HIT)
         {
             continue;
@@ -357,7 +357,7 @@ next_level:
             }
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (log[l].sample && !ngx_http_log_sample(r, log[l].sample)) {
             continue;
         }
@@ -487,7 +487,7 @@ next_level:
         ngx_http_log_write(r, &log[l], line, p - line);
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (!matched) {
         lcf = lcf->parent;
         goto next_level;
@@ -498,7 +498,7 @@ next_level:
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_log_sample(ngx_http_request_t *r, ngx_http_complex_value_t *cv)
@@ -1440,7 +1440,7 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_log_t            *log;
     ngx_http_log_fmt_t        *fmt;
     ngx_http_log_main_conf_t  *lmcf;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                i;
     ngx_http_log_loc_conf_t  *fallback;
 #endif
@@ -1458,7 +1458,7 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     conf->parent = prev;
 
     /* Only a chain without an unconditional entry needs the default log. */
@@ -1513,7 +1513,7 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_memzero(log, sizeof(ngx_http_log_t));
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     log->expr_id = NGX_EXPR_NO_WHEN_ID;
 #endif
 
@@ -1555,7 +1555,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (cf->args->nelts != 2) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                "invalid parameter \"%V\"", &value[2]);
@@ -1608,7 +1608,7 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     ngx_memzero(log, sizeof(ngx_http_log_t));
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     log->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif
 
@@ -1761,7 +1761,7 @@ process_formats:
 #endif
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ngx_strncmp(value[i].data, "sample=", 7) == 0) {
             if (log->sample) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

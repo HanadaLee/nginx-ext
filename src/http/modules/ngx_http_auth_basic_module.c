@@ -18,7 +18,7 @@ typedef struct {
     ngx_http_complex_value_t  *realm;
     ngx_http_complex_value_t  *user_file;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_array_t               *users;
 #endif
 
@@ -36,7 +36,7 @@ static char *ngx_http_auth_basic_merge_loc_conf(ngx_conf_t *cf,
 static ngx_int_t ngx_http_auth_basic_init(ngx_conf_t *cf);
 static char *ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static char *ngx_http_auth_basic_add_user(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 #endif
@@ -60,7 +60,7 @@ static ngx_command_t  ngx_http_auth_basic_commands[] = {
       offsetof(ngx_http_auth_basic_loc_conf_t, user_file),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("auth_basic_user"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF
                         |NGX_CONF_TAKE1,
@@ -117,7 +117,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
     ngx_uint_t                       i, level, login, left, passwd;
     ngx_file_t                       file;
     ngx_http_auth_basic_loc_conf_t  *alcf;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                       *u;
     u_char                          *colon;
     size_t                           login_len;
@@ -131,7 +131,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
 
     alcf = ngx_http_get_module_loc_conf(r, ngx_http_auth_basic_module);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (alcf->realm == NULL) {
         return NGX_DECLINED;
     }
@@ -169,7 +169,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (alcf->users && alcf->users->nelts > 0) {
         u = alcf->users->elts;
 
@@ -447,7 +447,7 @@ ngx_http_auth_basic_create_loc_conf(ngx_conf_t *cf)
     conf->realm = NGX_CONF_UNSET_PTR;
     conf->user_file = NGX_CONF_UNSET_PTR;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     conf->users = NGX_CONF_UNSET_PTR;
 #endif
 
@@ -463,7 +463,7 @@ ngx_http_auth_basic_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_ptr_value(conf->realm, prev->realm, NULL);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (conf->users == NGX_CONF_UNSET_PTR
         && conf->user_file == NGX_CONF_UNSET_PTR)
     {
@@ -515,7 +515,7 @@ ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "is duplicate";
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (alcf->users != NGX_CONF_UNSET_PTR) {
         return "is incompatible with \"auth_basic_user\"";
     }
@@ -544,7 +544,7 @@ ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_http_auth_basic_add_user(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)

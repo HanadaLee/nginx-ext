@@ -19,7 +19,7 @@ static void ngx_clean_old_cycles(ngx_event_t *ev);
 static void ngx_shutdown_timer_handler(ngx_event_t *ev);
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_inline ngx_int_t ngx_fn_extend(ngx_pool_t *pool, ngx_str_t *fn,
     ngx_str_t *base, const char *ext);
 static ngx_int_t ngx_shm_zone_restore(ngx_shm_zone_t *zone);
@@ -453,7 +453,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
         shm_zone[i].shm.log = cycle->log;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (shm_zone[i].state) {
             shm_zone[i].state->file.log = cycle->log;
             shm_zone[i].state->lock.log = cycle->log;
@@ -521,7 +521,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
             goto failed;
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (shm_zone[i].restore
             && ngx_shm_zone_restore(&shm_zone[i]) != NGX_OK)
         {
@@ -682,7 +682,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         exit(1);
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (!ngx_test_config && ngx_consume_zones(cycle) != NGX_OK) {
         exit(1);
     }
@@ -1403,7 +1403,7 @@ ngx_shared_memory_add(ngx_conf_t *cf, ngx_str_t *name, size_t size, void *tag)
         return NULL;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_memzero(shm_zone, sizeof(ngx_shm_zone_t));
 #endif
 
@@ -1529,7 +1529,7 @@ ngx_shutdown_timer_handler(ngx_event_t *ev)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 ngx_shm_zone_t *
 ngx_shared_memory_add_ext(ngx_conf_t *cf, ngx_shm_zone_params_t *zp)

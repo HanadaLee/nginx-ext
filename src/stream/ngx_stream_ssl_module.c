@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_stream_expr_module.h>
 #endif
 
@@ -27,7 +27,7 @@ static ngx_int_t ngx_stream_ssl_init_connection(ngx_ssl_t *ssl,
     ngx_connection_t *c);
 static void ngx_stream_ssl_handshake_handler(ngx_connection_t *c);
 
-#if (NGX_RESTY_EXT && defined SSL_CTRL_SET_TLSEXT_HOSTNAME)
+#if (NGX_EXT && defined SSL_CTRL_SET_TLSEXT_HOSTNAME)
 static int ngx_stream_ssl_check_handshake(ngx_connection_t *c, int *ad);
 #endif
 
@@ -48,7 +48,7 @@ static ngx_int_t ngx_stream_ssl_static_variable(ngx_stream_session_t *s,
 static ngx_int_t ngx_stream_ssl_variable(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 static ngx_flag_t ngx_stream_ssl_is_reject_only(
     ngx_stream_ssl_srv_conf_t *conf);
 #endif
@@ -56,7 +56,7 @@ static ngx_flag_t ngx_stream_ssl_is_reject_only(
 static ngx_int_t ngx_stream_ssl_add_variables(ngx_conf_t *cf);
 static void *ngx_stream_ssl_create_srv_conf(ngx_conf_t *cf);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_stream_ssl_merge_handshake_conf(ngx_conf_t *cf,
     ngx_stream_ssl_srv_conf_t *conf, ngx_stream_ssl_srv_conf_t *prev);
 static char *ngx_stream_ssl_delay_handshake(ngx_conf_t *cf,
@@ -118,7 +118,7 @@ static ngx_conf_post_t  ngx_stream_ssl_conf_command_post =
     { ngx_stream_ssl_conf_command_check };
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_conf_enum_t  ngx_stream_ssl_certificate_load_modes[] = {
     { ngx_string("default"), NGX_SSL_CERTIFICATE_DEFAULT },
     { ngx_string("runtime"), NGX_SSL_CERTIFICATE_RUNTIME },
@@ -150,7 +150,7 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       offsetof(ngx_stream_ssl_srv_conf_t, certificate_keys),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_certificate_load"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
@@ -299,7 +299,7 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       offsetof(ngx_stream_ssl_srv_conf_t, ocsp_responder),
       NULL },
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     { ngx_string("ssl_ocsp_http_client"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_client_slot,
@@ -336,7 +336,7 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       offsetof(ngx_stream_ssl_srv_conf_t, stapling_responder),
       NULL },
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     { ngx_string("ssl_stapling_http_client"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_client_slot,
@@ -359,7 +359,7 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       offsetof(ngx_stream_ssl_srv_conf_t, conf_commands),
       &ngx_stream_ssl_conf_command_post },
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     { ngx_string("ssl_reject_handshake"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
       |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF|NGX_CONF_FLAG,
@@ -376,7 +376,7 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       NULL },
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_delay_handshake"),
 #if (NGX_EXPR)
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
@@ -509,7 +509,7 @@ static ngx_stream_variable_t  ngx_stream_ssl_vars[] = {
     { ngx_string("ssl_client_sigalg"), NULL, ngx_stream_ssl_variable,
       (uintptr_t) ngx_ssl_get_client_sigalg, NGX_STREAM_VAR_CHANGEABLE, 0 },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_handshake_time"), NULL, ngx_stream_ssl_variable,
       (uintptr_t) ngx_ssl_get_handshake_time, NGX_STREAM_VAR_CHANGEABLE, 0 },
 
@@ -611,7 +611,7 @@ ngx_stream_ssl_init_connection(ngx_ssl_t *ssl, ngx_connection_t *c)
     ngx_stream_ssl_srv_conf_t   *sscf;
     ngx_stream_core_srv_conf_t  *cscf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_time_t                  *tp;
 #endif
 
@@ -627,7 +627,7 @@ ngx_stream_ssl_init_connection(ngx_ssl_t *ssl, ngx_connection_t *c)
         return NGX_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     tp = ngx_timeofday();
     c->ssl->handshake_start_msec = tp->sec * 1000 + tp->msec;
 #endif
@@ -695,7 +695,7 @@ ngx_stream_ssl_servername(ngx_ssl_conn_t *ssl_conn, int *ad, void *arg)
     }
 
     if (c->ssl->sni_accepted) {
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         return ngx_stream_ssl_check_handshake(c, ad);
 #else
         return SSL_TLSEXT_ERR_OK;
@@ -796,7 +796,7 @@ done:
 
     sscf = ngx_stream_get_module_srv_conf(s, ngx_stream_ssl_module);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     c->ssl->sni_accepted = 1;
     return ngx_stream_ssl_check_handshake(c, ad);
 #else
@@ -817,7 +817,7 @@ error:
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static int
 ngx_stream_ssl_check_handshake(ngx_connection_t *c, int *ad)
@@ -1169,7 +1169,7 @@ ngx_stream_ssl_add_variables(ngx_conf_t *cf)
 }
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 
 static ngx_flag_t
 ngx_stream_ssl_is_reject_only(ngx_stream_ssl_srv_conf_t *conf)
@@ -1230,7 +1230,7 @@ ngx_stream_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->certificate_keys = NGX_CONF_UNSET_PTR;
     sscf->certificate_cache = NGX_CONF_UNSET_PTR;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     sscf->certificate_load = NGX_CONF_UNSET_UINT;
 #endif
 
@@ -1240,13 +1240,13 @@ ngx_stream_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->prefer_server_ciphers = NGX_CONF_UNSET;
     sscf->certificate_compression = NGX_CONF_UNSET;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     sscf->reject_handshake = NGX_CONF_UNSET_PTR;
 #else
     sscf->reject_handshake = NGX_CONF_UNSET;
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     sscf->delay_handshake = NGX_CONF_UNSET_PTR;
 #endif
 
@@ -1265,7 +1265,7 @@ ngx_stream_ssl_create_srv_conf(ngx_conf_t *cf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_stream_ssl_delay_handshake(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -1363,7 +1363,7 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->certificate_compression,
                          prev->certificate_compression, 0);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (ngx_stream_ssl_merge_handshake_conf(cf, conf, prev) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
@@ -1381,7 +1381,7 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_ptr_value(conf->certificate_keys, prev->certificate_keys,
                          NULL);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_conf_merge_uint_value(conf->certificate_load, prev->certificate_load,
                               NGX_SSL_CERTIFICATE_DEFAULT);
 #endif
@@ -1435,7 +1435,7 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
             return NGX_CONF_ERROR;
         }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     } else if (!ngx_stream_ssl_is_reject_only(conf)) {
 #else
     } else if (!conf->reject_handshake) {
@@ -1497,7 +1497,7 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #else
         ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                       "runtime loading or variables in "
 #else
                       "variables in "
@@ -1559,7 +1559,7 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (conf->ssl.ocsp_server == NULL) {
         conf->ssl.ocsp_server = prev->ssl.ocsp_server;
     }
@@ -1673,7 +1673,7 @@ ngx_stream_ssl_compile_certificates(ngx_conf_t *cf,
     key = conf->certificate_keys->elts;
     nelts = conf->certificates->nelts;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (conf->certificate_load == NGX_SSL_CERTIFICATE_RUNTIME) {
         goto found;
     }
@@ -2134,7 +2134,7 @@ ngx_stream_ssl_init(ngx_conf_t *cf)
     ngx_stream_core_main_conf_t   *cmcf;
 
     cmcf = ngx_stream_conf_get_module_main_conf(cf, ngx_stream_core_module);
-#if !(NGX_RESTY_EXT && NGX_CLIENT)
+#if !(NGX_EXT && NGX_CLIENT)
     cscfp = cmcf->servers.elts;
 
     for (s = 0; s < cmcf->servers.nelts; s++) {
@@ -2195,7 +2195,7 @@ ngx_stream_ssl_init(ngx_conf_t *cf)
                 continue;
             }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
             if (!ngx_stream_ssl_is_reject_only(sscf)) {
 #else
             if (!sscf->reject_handshake) {
@@ -2218,7 +2218,7 @@ ngx_stream_ssl_init(ngx_conf_t *cf)
                 cscf = cscfp[s];
                 sscf = cscf->ctx->srv_conf[ngx_stream_ssl_module.ctx_index];
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
                 if (sscf->certificates
                     || ngx_stream_ssl_is_reject_only(sscf))
                 {

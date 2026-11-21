@@ -57,7 +57,7 @@
 #define NGX_HTTP_UPSTREAM_IGN_VARY           0x00000200
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #define NGX_HTTP_UPSTREAM_IGN_PRAGMA         0x00000400
 
@@ -107,7 +107,7 @@ typedef enum {
 #define NGX_HTTP_UPSTREAM_NOTIFY_HEADER      0x1
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 typedef struct ngx_http_upstream_hide_cookies_s
     ngx_http_upstream_hide_cookies_t;
 
@@ -125,7 +125,7 @@ typedef struct {
     ngx_msec_t                       header_time;
     ngx_msec_t                       queue_time;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_upstream_error_e        error;
 #endif
 
@@ -213,7 +213,7 @@ struct ngx_http_upstream_srv_conf_s {
     ngx_resolver_t                  *resolver;
     ngx_msec_t                       resolver_timeout;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t                       resolver_next_nameserver;
     ngx_int_t                        resolver_next_nameserver_tries;
     ngx_msec_t                       resolver_next_nameserver_timeout;
@@ -255,7 +255,7 @@ typedef struct {
     ngx_bufs_t                       bufs;
 
     ngx_uint_t                       ignore_headers;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     ngx_array_t                     *ignore_cache_control;
 #else
@@ -282,7 +282,7 @@ typedef struct {
     ngx_hash_t                       hide_headers_hash;
     ngx_array_t                     *hide_headers;
     ngx_array_t                     *pass_headers;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     ngx_http_upstream_hide_cookies_t *hide_cookies;
 #else
@@ -299,12 +299,12 @@ typedef struct {
     ngx_shm_zone_t                  *cache_zone;
     ngx_http_complex_value_t        *cache_value;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_complex_value_t        *cache_min_age;
 #endif
     ngx_uint_t                       cache_min_uses;
     ngx_uint_t                       cache_use_stale;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_complex_value_t        *cache_stale_if_error;
     ngx_http_complex_value_t        *cache_stale_while_revalidate;
 #if (NGX_EXPR)
@@ -317,7 +317,7 @@ typedef struct {
 #endif
     ngx_uint_t                       cache_methods;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     ngx_array_t                     *cache_min_length;
     ngx_array_t                     *cache_max_length;
@@ -340,7 +340,7 @@ typedef struct {
     ngx_array_t                     *cache_bypass;
     ngx_array_t                     *cache_purge;
     ngx_array_t                     *no_cache;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_array_t                     *cache_types_keys;
 
     ngx_hash_t                       cache_types;
@@ -370,7 +370,7 @@ typedef struct {
     ngx_http_complex_value_t        *ssl_certificate;
     ngx_http_complex_value_t        *ssl_certificate_key;
     ngx_ssl_cache_t                 *ssl_certificate_cache;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t                      ssl_certificate_load;
 #endif
     ngx_array_t                     *ssl_passwords;
@@ -378,7 +378,7 @@ typedef struct {
 
     ngx_str_t                        module;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_array_t                     *connect_timeout_conf;
     ngx_array_t                     *send_timeout_conf;
     ngx_array_t                     *read_timeout_conf;
@@ -456,7 +456,7 @@ typedef struct {
     ngx_table_elt_t                 *vary;
 
     ngx_table_elt_t                 *cache_control;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_table_elt_t                 *pragma;
 #endif
     ngx_table_elt_t                 *set_cookie;
@@ -551,7 +551,7 @@ struct ngx_http_upstream_s {
 
     ngx_http_upstream_state_t       *state;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_upstream_error_e        pending_error;
 #endif
 
@@ -578,7 +578,7 @@ struct ngx_http_upstream_s {
     unsigned                         keepalive:1;
     unsigned                         upgrade:1;
     unsigned                         error:1;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     unsigned                         error_page:1;
 #endif
 
@@ -616,7 +616,7 @@ char *ngx_http_upstream_param_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 ngx_int_t ngx_http_upstream_hide_headers_hash(ngx_conf_t *cf,
     ngx_http_upstream_conf_t *conf, ngx_http_upstream_conf_t *prev,
     ngx_str_t *default_hide_headers, ngx_hash_init_t *hash);
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 char *ngx_http_upstream_hide_cookie(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 void ngx_http_upstream_merge_hide_cookies(ngx_http_upstream_conf_t *conf,
@@ -628,7 +628,7 @@ void ngx_http_upstream_init_conditional_conf(
 ngx_int_t ngx_http_upstream_merge_ssl_passwords(ngx_conf_t *cf,
     ngx_http_upstream_conf_t *conf, ngx_http_upstream_conf_t *prev);
 #endif
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 void ngx_http_upstream_set_error(ngx_http_request_t *r,
     ngx_http_upstream_error_e code);
 #endif
@@ -641,7 +641,7 @@ void ngx_http_upstream_set_error(ngx_http_request_t *r,
 extern ngx_module_t        ngx_http_upstream_module;
 extern ngx_conf_bitmask_t  ngx_http_upstream_cache_method_mask[];
 extern ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[];
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 extern ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[];
 #endif
 

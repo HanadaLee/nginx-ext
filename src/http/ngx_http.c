@@ -11,7 +11,7 @@
 
 
 static char *ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 static char *ngx_http_init_conf(ngx_cycle_t *cycle, void *conf_ctx);
 #endif
 static ngx_int_t ngx_http_init_phases(ngx_conf_t *cf,
@@ -102,7 +102,7 @@ static ngx_command_t  ngx_http_commands[] = {
 static ngx_core_module_t  ngx_http_module_ctx = {
     ngx_string("http"),
     NULL,
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     ngx_http_init_conf
 #else
     NULL
@@ -257,7 +257,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (ngx_http_client_prepare(cf, cmcf) != NGX_OK) {
         rv = NGX_CONF_ERROR;
         goto failed;
@@ -362,7 +362,7 @@ failed:
 }
 
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 
 static char *
 ngx_http_init_conf(ngx_cycle_t *cycle, void *conf_ctx)
@@ -1355,7 +1355,7 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
     ngx_http_conf_addr_t  *addr;
 #if (NGX_HTTP_SSL)
     ngx_uint_t             ssl;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t             https_allow_http;
 #endif
 #endif
@@ -1401,7 +1401,7 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         protocols |= lsopt->ssl << 1;
         protocols_prev |= addr[i].opt.ssl << 1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         https_allow_http = lsopt->https_allow_http
                            || addr[i].opt.https_allow_http;
 #endif
@@ -1498,7 +1498,7 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 #if (NGX_HTTP_SSL)
         addr[i].opt.ssl = ssl;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         addr[i].opt.https_allow_http = https_allow_http;
 #endif
 #endif
@@ -2033,7 +2033,7 @@ ngx_http_add_addrs(ngx_conf_t *cf, ngx_http_port_t *hport,
 #if (NGX_HTTP_SSL)
         addrs[i].conf.ssl = addr[i].opt.ssl;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         addrs[i].conf.https_allow_http = addr[i].opt.https_allow_http;
 #endif
 #endif
@@ -2105,7 +2105,7 @@ ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
 #if (NGX_HTTP_SSL)
         addrs6[i].conf.ssl = addr[i].opt.ssl;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         addrs6[i].conf.https_allow_http = addr[i].opt.https_allow_http;
 #endif
 #endif
@@ -2261,7 +2261,7 @@ ngx_http_merge_types(ngx_conf_t *cf, ngx_array_t **keys, ngx_hash_t *types_hash,
 
         if (*prev_keys == NULL) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             /* A NULL default list allows any content type. */
             if (default_types == NULL) {
                 *prev_keys = (void *) -1;

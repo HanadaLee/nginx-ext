@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -64,7 +64,7 @@ static u_char *ngx_http_log_error_handler(ngx_http_request_t *r,
 static void ngx_http_ssl_handshake(ngx_event_t *rev);
 static void ngx_http_ssl_handshake_handler(ngx_connection_t *c);
 
-#if (NGX_RESTY_EXT && defined SSL_CTRL_SET_TLSEXT_HOSTNAME)
+#if (NGX_EXT && defined SSL_CTRL_SET_TLSEXT_HOSTNAME)
 static int ngx_http_ssl_check_handshake(ngx_connection_t *c, int *ad);
 #endif
 
@@ -567,7 +567,7 @@ ngx_http_create_request(ngx_connection_t *c)
     ctx->current_request = r;
 
 #if (NGX_STAT_STUB)
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (c->stub) {
         return r;
     }
@@ -694,7 +694,7 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
     ssize_t                    n;
     ngx_err_t                  err;
     ngx_int_t                  rc;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_time_t                *tp;
 #endif
     ngx_connection_t          *c;
@@ -803,7 +803,7 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
                 return;
             }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             tp = ngx_timeofday();
             c->ssl->handshake_start_msec = tp->sec * 1000 + tp->msec;
 #endif
@@ -833,7 +833,7 @@ ngx_http_ssl_handshake(ngx_event_t *rev)
 
         c->log->action = "waiting for request";
 
-#if (NGX_RESTY_EXT && NGX_HTTP_SSL)
+#if (NGX_EXT && NGX_HTTP_SSL)
         if (hc->addr_conf->https_allow_http) {
             hc->ssl = 0;
         }
@@ -931,7 +931,7 @@ ngx_http_ssl_servername(ngx_ssl_conn_t *ssl_conn, int *ad, void *arg)
     }
 
     if (c->ssl->sni_accepted) {
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         return ngx_http_ssl_check_handshake(c, ad);
 #else
         return SSL_TLSEXT_ERR_OK;
@@ -1052,7 +1052,7 @@ done:
 
     sscf = ngx_http_get_module_srv_conf(hc->conf_ctx, ngx_http_ssl_module);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     c->ssl->sni_accepted = 1;
     return ngx_http_ssl_check_handshake(c, ad);
 #else
@@ -1073,7 +1073,7 @@ error:
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static int
 ngx_http_ssl_check_handshake(ngx_connection_t *c, int *ad)
@@ -3181,7 +3181,7 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
 {
     ngx_http_core_loc_conf_t  *clcf;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         ngx_http_close_request(r, 0);
         return;
@@ -3287,7 +3287,7 @@ ngx_http_set_write_handler(ngx_http_request_t *r)
         ngx_add_timer(wev, clcf->send_timeout);
     }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
 #else
     if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
@@ -3333,7 +3333,7 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_add_timer(wev, clcf->send_timeout);
         }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
         if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
 #else
         if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
@@ -3361,7 +3361,7 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_add_timer(wev, clcf->send_timeout);
         }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
         if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
 #else
         if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
@@ -3423,7 +3423,7 @@ ngx_http_test_reading(ngx_http_request_t *r)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0, "http test reading");
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         return;
     }
@@ -4178,7 +4178,7 @@ ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
     }
 #endif
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (c->stub) {
         ngx_http_client_finalize(r, rc);
         return;
@@ -4245,7 +4245,7 @@ ngx_http_free_request(ngx_http_request_t *r, ngx_int_t rc)
     log->action = "closing request";
 
     if (r->connection->timedout
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
         && !r->connection->stub
 #endif
 #if (NGX_HTTP_V3)
@@ -4352,7 +4352,7 @@ ngx_http_log_error(ngx_log_t *log, u_char *buf, size_t len)
     ngx_http_request_t  *r;
     ngx_http_log_ctx_t  *ctx;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t            request_id;
 #endif
 
@@ -4371,7 +4371,7 @@ ngx_http_log_error(ngx_log_t *log, u_char *buf, size_t len)
 
     if (r) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ngx_http_get_request_id(r, &request_id) != NGX_OK
             || request_id.len == 0)
         {

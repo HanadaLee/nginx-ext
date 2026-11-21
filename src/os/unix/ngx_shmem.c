@@ -10,7 +10,7 @@
 #include <ngx_core.h>
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #if (NGX_HAVE_MAP_ANON)
 

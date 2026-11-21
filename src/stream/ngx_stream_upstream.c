@@ -13,7 +13,7 @@
 static ngx_int_t ngx_stream_upstream_add_variables(ngx_conf_t *cf);
 static ngx_int_t ngx_stream_upstream_addr_variable(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_stream_upstream_status_variable(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data);
 #endif
@@ -67,7 +67,7 @@ static ngx_command_t  ngx_stream_upstream_commands[] = {
       offsetof(ngx_stream_upstream_srv_conf_t, resolver_timeout),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("resolver_next_nameserver"),
       NGX_STREAM_UPS_CONF|NGX_CONF_1MORE,
@@ -133,7 +133,7 @@ static ngx_stream_variable_t  ngx_stream_upstream_vars[] = {
       ngx_stream_upstream_addr_variable, 0,
       NGX_STREAM_VAR_NOCACHEABLE, 0 },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
      { ngx_string("upstream_status"), NULL,
        ngx_stream_upstream_status_variable, 0,
        NGX_STREAM_VAR_NOCACHEABLE, 0 },
@@ -239,7 +239,7 @@ ngx_stream_upstream_addr_variable(ngx_stream_session_t *s,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_stream_upstream_status_variable(ngx_stream_session_t *s,
@@ -783,7 +783,7 @@ ngx_stream_upstream_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_stream_upstream_srv_conf_t  *uscf = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                    *value;
     ngx_stream_core_main_conf_t  *cmcf;
 #else
@@ -796,7 +796,7 @@ ngx_stream_upstream_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     cmcf = ngx_stream_conf_get_module_main_conf(cf, ngx_stream_core_module);
     uscf->resolver = ngx_resolver_create_conf(cf, &value[1],
@@ -897,7 +897,7 @@ ngx_stream_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
     uscf->no_port = u->no_port;
 #if (NGX_STREAM_UPSTREAM_ZONE)
     uscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     uscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
     uscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
 #endif

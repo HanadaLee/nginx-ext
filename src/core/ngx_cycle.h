@@ -29,7 +29,7 @@
 #define HAVE_INTERCEPT_ERROR_LOG_PATCH
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #define NGX_RESTY_SHM_PERSISTENCE  1
 
@@ -72,7 +72,7 @@ struct ngx_shm_zone_s {
     void                     *sync;
     ngx_uint_t                noreuse;  /* unsigned  noreuse:1; */
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_shm_zone_state_t     *state;
     ngx_str_t                *signature;
     unsigned                  restore:1;
@@ -187,7 +187,7 @@ ngx_shm_zone_t *ngx_shared_memory_add(ngx_conf_t *cf, ngx_str_t *name,
     size_t size, void *tag);
 void ngx_set_shutdown_timer(ngx_cycle_t *cycle);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 ngx_shm_zone_t *ngx_shared_memory_add_ext(ngx_conf_t *cf,
     ngx_shm_zone_params_t *zp);
 void ngx_save_zones(ngx_cycle_t *cycle);

@@ -1,5 +1,5 @@
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 /*
  * Copyright (C) 2026 Web Server LLC
  * Copyright (C) Igor Sysoev
@@ -28,7 +28,7 @@ typedef struct {
 } ngx_http_rewrite_loc_conf_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct {
     ngx_http_script_if_op_e  type;
     ngx_uint_t               index;
@@ -43,7 +43,7 @@ static ngx_int_t ngx_http_rewrite_init(ngx_conf_t *cf);
 static char *ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static char *ngx_http_rewrite_goto(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 #endif
@@ -60,7 +60,7 @@ static char *ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd,
 static char * ngx_http_rewrite_value(ngx_conf_t *cf,
     ngx_http_rewrite_loc_conf_t *lcf, ngx_str_t *value);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static char *ngx_http_rewrite_parse_if_condition(ngx_conf_t *cf,
     ngx_http_rewrite_loc_conf_t *lcf, ngx_str_t *value,
     ngx_uint_t begin, ngx_uint_t last, ngx_uint_t depth);
@@ -91,7 +91,7 @@ static ngx_command_t  ngx_http_rewrite_commands[] = {
       0,
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("goto"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_SIF_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
                        |NGX_CONF_TAKE1,
@@ -116,7 +116,7 @@ static ngx_command_t  ngx_http_rewrite_commands[] = {
       0,
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("elif"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_BLOCK|NGX_CONF_1MORE,
       ngx_http_rewrite_if,
@@ -233,7 +233,7 @@ ngx_http_rewrite_handler(ngx_http_request_t *r)
     e->log = rlcf->log;
     e->status = NGX_DECLINED;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     e->if_matched = 1;
 #endif
 
@@ -242,7 +242,7 @@ ngx_http_rewrite_handler(ngx_http_request_t *r)
         code(e);
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (e->finalize) {
         ngx_http_finalize_request(r, e->status);
         return NGX_DONE;
@@ -579,7 +579,7 @@ ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_http_rewrite_goto(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -646,7 +646,7 @@ ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_script_if_code_t    *if_code;
     ngx_http_rewrite_loc_conf_t  *nlcf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                    *value;
 
     value = cf->args->elts;
@@ -695,7 +695,7 @@ ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     /* else does not require conditions */
     if (value[0].len != 4 || ngx_strcmp(value[0].data, "else") != 0) {
         if (ngx_http_rewrite_if_condition(cf, lcf) != NGX_CONF_OK) {
@@ -713,7 +713,7 @@ ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (value[0].len == 2 && ngx_strcmp(value[0].data, "if") == 0) {
         if_code->code = ngx_http_script_if_code;
 
@@ -778,7 +778,7 @@ ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_http_rewrite_if_logic_item(ngx_conf_t *cf,
