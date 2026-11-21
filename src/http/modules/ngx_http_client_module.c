@@ -54,6 +54,7 @@ struct ngx_client_http_s {
     ngx_chain_t                    *out;
     ngx_chain_t                   **last;
     size_t                          header_size;
+    size_t                          body_buffer_size;
     size_t                          length;
     ngx_int_t                       rc;
     ngx_int_t                       error;
@@ -75,6 +76,8 @@ static ngx_int_t ngx_http_client_body_filter(ngx_http_request_t *r,
     ngx_chain_t *in);
 static ngx_int_t ngx_http_client_header(ngx_http_request_t *r);
 static ngx_int_t ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in);
+static ngx_buf_t *ngx_http_client_get_body_buf(ngx_client_http_t *client,
+    size_t size);
 static ngx_int_t ngx_http_client_init_request(ngx_client_http_t *client,
     ngx_client_http_request_t *request);
 static ngx_int_t ngx_http_client_parse_url(ngx_http_request_t *r,
@@ -1013,7 +1016,7 @@ ngx_http_client_check_size(ngx_client_http_t *client, uint64_t body_size)
 {
     ngx_int_t  rc;
 
-    if (client->closing) {
+    if (client->closing || client->error) {
         return NGX_ERROR;
     }
 
@@ -1139,6 +1142,7 @@ static ngx_int_t
 ngx_http_client_header(ngx_http_request_t *r)
 {
     u_char                    *p;
+    off_t                      content_length;
     size_t                     len;
     ngx_int_t                  rc;
     ngx_str_t                  key, value;
@@ -1312,11 +1316,18 @@ ngx_http_client_header(ngx_http_request_t *r)
         }
     }
 
-    if (!r->header_only && r->headers_out.content_length_n >= 0
-        && ngx_http_client_check_size(client, r->headers_out.content_length_n)
-           != NGX_OK)
-    {
-        return NGX_ERROR;
+    content_length = r->headers_out.content_length_n;
+
+    if (!r->header_only && content_length >= 0) {
+        if (ngx_http_client_check_size(client, content_length) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (client->post.check_size && !client->post.body_handler
+            && (uint64_t) content_length <= NGX_MAX_SIZE_T_VALUE)
+        {
+            client->body_buffer_size = (size_t) content_length;
+        }
     }
 
     return NGX_OK;
@@ -1329,7 +1340,6 @@ ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in)
     off_t               size;
     ngx_buf_t          *b;
     ngx_int_t           rc;
-    ngx_chain_t        *cl;
     ngx_client_http_t  *client;
 
     client = ngx_http_client_from_connection(r->connection);
@@ -1374,22 +1384,12 @@ ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in)
             }
 
         } else {
-            cl = ngx_alloc_chain_link(client->pool);
-            if (cl == NULL) {
-                return NGX_ERROR;
-            }
-
-            b = ngx_create_temp_buf(client->pool, (size_t) size);
+            b = ngx_http_client_get_body_buf(client, (size_t) size);
             if (b == NULL) {
                 return NGX_ERROR;
             }
 
-            b->last = ngx_cpymem(b->pos, in->buf->pos, (size_t) size);
-
-            cl->buf = b;
-            cl->next = NULL;
-            *client->last = cl;
-            client->last = &cl->next;
+            b->last = ngx_cpymem(b->last, in->buf->pos, (size_t) size);
         }
 
         client->length += size;
@@ -1400,6 +1400,44 @@ ngx_http_client_body(ngx_http_request_t *r, ngx_chain_t *in)
     }
 
     return NGX_OK;
+}
+
+
+static ngx_buf_t *
+ngx_http_client_get_body_buf(ngx_client_http_t *client, size_t size)
+{
+    ngx_buf_t    *b;
+    ngx_chain_t  *cl;
+
+    cl = client->out;
+
+    if (cl == NULL) {
+        size = ngx_max(size, client->body_buffer_size);
+
+    } else if (cl->next == NULL) {
+        b = cl->buf;
+
+        if (size <= (size_t) (b->end - b->last)) {
+            return b;
+        }
+    }
+
+    cl = ngx_alloc_chain_link(client->pool);
+    if (cl == NULL) {
+        return NULL;
+    }
+
+    b = ngx_create_temp_buf(client->pool, size);
+    if (b == NULL) {
+        return NULL;
+    }
+
+    cl->buf = b;
+    cl->next = NULL;
+    *client->last = cl;
+    client->last = &cl->next;
+
+    return b;
 }
 
 
@@ -1448,8 +1486,13 @@ ngx_http_client_complete(ngx_event_t *ev)
 
     client = ev->data;
 
-    if (client->post.handler && client->rc == NGX_OK && client->out) {
+    cl = client->out;
 
+    if (cl && cl->next == NULL) {
+        client->response.body.data = cl->buf->pos;
+        client->response.body.len = client->length;
+
+    } else if (client->post.handler && client->rc == NGX_OK && cl) {
         p = ngx_pnalloc(client->pool, client->length);
         if (p == NULL) {
             client->rc = NGX_ERROR;
@@ -1458,7 +1501,7 @@ ngx_http_client_complete(ngx_event_t *ev)
             client->response.body.data = p;
             client->response.body.len = client->length;
 
-            for (cl = client->out; cl; cl = cl->next) {
+            for ( /* void */; cl; cl = cl->next) {
                 p = ngx_cpymem(p, cl->buf->pos, cl->buf->last - cl->buf->pos);
             }
         }
