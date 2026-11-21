@@ -271,6 +271,9 @@ extern ngx_conf_post_t  ngx_conf_size_nonzero_post;
 
 char *ngx_conf_param(ngx_conf_t *cf);
 char *ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename);
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+char *ngx_conf_parse_chunk(ngx_conf_t *cf, ngx_str_t *name, ngx_str_t *chunk);
+#endif
 char *ngx_conf_include(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 
@@ -294,6 +297,11 @@ char *ngx_conf_set_sec_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 char *ngx_conf_set_bufs_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 char *ngx_conf_set_enum_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 char *ngx_conf_set_bitmask_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+char *ngx_conf_set_client_slot(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+#endif
 
 
 #endif /* _NGX_CONF_FILE_H_INCLUDED_ */
