@@ -73,6 +73,11 @@ END
 fi
 
 
+if [ $NGX_RESTY_EXT = NO -o $HTTP = NO -o $HTTP_PROXY = NO ]; then
+    NGX_CLIENT=NO
+fi
+
+
 if [ $HTTP = YES ]; then
     HTTP_MODULES=
     HTTP_DEPS=
@@ -255,7 +260,7 @@ if [ $HTTP = YES ]; then
         . auto/module
     fi
 
-    if [ $HTTP_PROXY = YES ]; then
+    if [ $NGX_CLIENT = YES ]; then
         ngx_module_name=ngx_http_client_filter_module
         ngx_module_incs=
         ngx_module_deps=
@@ -782,7 +787,9 @@ if [ $HTTP = YES ]; then
         ngx_module_link=$HTTP_PROXY
 
         . auto/module
+    fi
 
+    if [ $NGX_CLIENT = YES ]; then
         have=NGX_CLIENT . auto/have
         CORE_DEPS="$CORE_DEPS src/core/ngx_client.h"
         CORE_SRCS="$CORE_SRCS src/core/ngx_client.c"
@@ -1651,4 +1658,6 @@ cat << END                                    >> $NGX_MODULES_C
 
 END
 
-have=NGX_RESTY_EXT . auto/have
+if [ $NGX_RESTY_EXT = YES ]; then
+    have=NGX_RESTY_EXT . auto/have
+fi
