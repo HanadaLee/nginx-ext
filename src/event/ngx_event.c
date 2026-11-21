@@ -389,6 +389,12 @@ ngx_handle_write_event(ngx_event_t *wev, size_t lowat)
 
     c = wev->data;
 
+#if (NGX_EXT && NGX_CLIENT)
+    if (c->stub) {
+        return NGX_OK;
+    }
+#endif
+
 #if (NGX_QUIC)
     if (c->quic) {
         return NGX_OK;

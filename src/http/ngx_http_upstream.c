@@ -5051,13 +5051,9 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
     if (downstream->data == r) {
-#if (NGX_EXT && NGX_CLIENT)
-        if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
-#else
         if (ngx_handle_write_event(downstream->write, clcf->send_lowat)
             != NGX_OK)
         {
-#endif
             ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
             return;
         }
@@ -5350,11 +5346,7 @@ ngx_http_upstream_process_downstream(ngx_http_request_t *r)
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
                            "http downstream delayed");
 
-#if (NGX_EXT && NGX_CLIENT)
-            if (ngx_http_handle_write_event(r, p->send_lowat) != NGX_OK) {
-#else
             if (ngx_handle_write_event(wev, p->send_lowat) != NGX_OK) {
-#endif
                 ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
             }
 
@@ -5895,7 +5887,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
                 && (u->header_sent
                     || u->headers_in.status_n != (ngx_uint_t) rc))))
     {
-        ngx_http_client_upstream_error(r, rc);
+        ngx_http_client_set_upstream_error(r, rc);
     }
 #endif
 

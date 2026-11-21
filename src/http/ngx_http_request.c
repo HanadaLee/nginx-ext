@@ -3287,11 +3287,7 @@ ngx_http_set_write_handler(ngx_http_request_t *r)
         ngx_add_timer(wev, clcf->send_timeout);
     }
 
-#if (NGX_EXT && NGX_CLIENT)
-    if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
-#else
     if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
-#endif
         ngx_http_close_request(r, 0);
         return NGX_ERROR;
     }
@@ -3333,11 +3329,7 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_add_timer(wev, clcf->send_timeout);
         }
 
-#if (NGX_EXT && NGX_CLIENT)
-        if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
-#else
         if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
-#endif
             ngx_http_close_request(r, 0);
         }
 
@@ -3361,11 +3353,7 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_add_timer(wev, clcf->send_timeout);
         }
 
-#if (NGX_EXT && NGX_CLIENT)
-        if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
-#else
         if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
-#endif
             ngx_http_close_request(r, 0);
         }
 
@@ -4180,7 +4168,7 @@ ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
 
 #if (NGX_EXT && NGX_CLIENT)
     if (c->stub) {
-        ngx_http_client_finalize(r, rc);
+        ngx_http_client_finalize_request(r, rc);
         return;
     }
 #endif
