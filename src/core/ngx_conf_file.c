@@ -358,6 +358,50 @@ done:
 }
 
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+
+char *
+ngx_conf_parse_chunk(ngx_conf_t *cf, ngx_str_t *name, ngx_str_t *chunk)
+{
+    char             *rv;
+    ngx_buf_t         buf;
+    ngx_conf_t        pcf;
+    ngx_array_t      *args;
+    ngx_conf_file_t   file;
+
+    args = ngx_array_create(cf->pool, 8, sizeof(ngx_str_t));
+    if (args == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_memzero(&buf, sizeof(ngx_buf_t));
+    ngx_memzero(&file, sizeof(ngx_conf_file_t));
+
+    buf.start = chunk->data;
+    buf.pos = buf.start;
+    buf.last = buf.start + chunk->len;
+    buf.end = buf.last;
+
+    /* A valid descriptor selects block parsing for the buffered text. */
+    file.file.fd = ngx_stderr;
+    file.file.name = *name;
+    file.buffer = &buf;
+    file.line = 1;
+
+    pcf = *cf;
+    cf->args = args;
+    cf->conf_file = &file;
+
+    rv = ngx_conf_parse(cf, NULL);
+
+    *cf = pcf;
+
+    return rv;
+}
+
+#endif
+
+
 static ngx_int_t
 ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 {
@@ -1093,6 +1137,30 @@ ngx_conf_set_str_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     return NGX_CONF_OK;
 }
+
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+
+char *
+ngx_conf_set_client_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    char  *p = conf;
+
+    ngx_str_t        *value;
+    ngx_conf_post_t  *post;
+
+    value = cf->args->elts;
+
+    if (value[1].len < 2 || value[1].data[0] != '@') {
+        return "requires a client server name starting with \"@\"";
+    }
+
+    post = cmd->post;
+
+    return post->post_handler(cf, post, p + cmd->offset);
+}
+
+#endif
 
 
 char *

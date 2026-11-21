@@ -1143,6 +1143,13 @@ ngx_http_variable_tcpinfo(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     socklen_t        len;
     uint32_t         value;
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        v->not_found = 1;
+        return NGX_OK;
+    }
+#endif
+
     len = sizeof(struct tcp_info);
     if (getsockopt(r->connection->fd, IPPROTO_TCP, TCP_INFO, &ti, &len) == -1) {
         v->not_found = 1;
@@ -1502,6 +1509,18 @@ static ngx_int_t
 ngx_http_variable_scheme(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub && r->schema.len) {
+        v->len = r->schema.len;
+        v->valid = 1;
+        v->no_cacheable = 0;
+        v->not_found = 0;
+        v->data = r->schema.data;
+
+        return NGX_OK;
+    }
+#endif
+
 #if (NGX_HTTP_SSL)
 
     if (r->connection->ssl) {
@@ -1530,6 +1549,19 @@ static ngx_int_t
 ngx_http_variable_https(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        *v = ngx_http_variable_null_value;
+
+        if (r->schema.len == sizeof("https") - 1) {
+            v->len = sizeof("on") - 1;
+            v->data = (u_char *) "on";
+        }
+
+        return NGX_OK;
+    }
+#endif
+
 #if (NGX_HTTP_SSL)
 
     if (r->connection->ssl) {

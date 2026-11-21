@@ -11,6 +11,9 @@
 
 
 static char *ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+static char *ngx_http_init_conf(ngx_cycle_t *cycle, void *conf_ctx);
+#endif
 static ngx_int_t ngx_http_init_phases(ngx_conf_t *cf,
     ngx_http_core_main_conf_t *cmcf);
 static ngx_int_t ngx_http_init_headers_in_hash(ngx_conf_t *cf,
@@ -99,7 +102,11 @@ static ngx_command_t  ngx_http_commands[] = {
 static ngx_core_module_t  ngx_http_module_ctx = {
     ngx_string("http"),
     NULL,
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    ngx_http_init_conf
+#else
     NULL
+#endif
 };
 
 
@@ -249,6 +256,14 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      */
 
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (ngx_http_client_prepare(cf, cmcf) != NGX_OK) {
+        rv = NGX_CONF_ERROR;
+        goto failed;
+    }
+#endif
+
     cscfp = cmcf->servers.elts;
 
     for (m = 0; cf->cycle->modules[m]; m++) {
@@ -345,6 +360,50 @@ failed:
 
     return rv;
 }
+
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+
+static char *
+ngx_http_init_conf(ngx_cycle_t *cycle, void *conf_ctx)
+{
+    char        *rv;
+    ngx_conf_t   cf;
+
+    static ngx_str_t  http_block = ngx_string("http {}}");
+
+    if (conf_ctx == NULL && ngx_http_client_required(cycle)) {
+        ngx_memzero(&cf, sizeof(ngx_conf_t));
+
+        cf.temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, cycle->log);
+        if (cf.temp_pool == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        cf.cycle = cycle;
+        cf.pool = cycle->pool;
+        cf.log = cycle->log;
+        cf.ctx = cycle->conf_ctx;
+        cf.module_type = NGX_CORE_MODULE;
+        cf.cmd_type = NGX_MAIN_CONF;
+
+        rv = ngx_conf_parse_chunk(&cf, &cycle->conf_file, &http_block);
+
+        ngx_destroy_pool(cf.temp_pool);
+
+        if (rv != NGX_CONF_OK) {
+            return rv;
+        }
+    }
+
+    if (ngx_http_client_bind_servers(cycle) != NGX_OK) {
+        return NGX_CONF_ERROR;
+    }
+
+    return NGX_CONF_OK;
+}
+
+#endif
 
 
 static ngx_int_t

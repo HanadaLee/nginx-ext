@@ -883,6 +883,13 @@ ngx_http_upstream_init(ngx_http_request_t *r)
     u->read_timeout = u->conf->read_timeout;
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        ngx_http_upstream_init_request(r);
+        return;
+    }
+#endif
+
 #if (NGX_HTTP_V2)
     if (r->stream) {
         ngx_http_upstream_init_request(r);
@@ -984,11 +991,17 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
 
     u->store = u->conf->store;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_RESTY_EXT)
     if (!u->store && !r->post_action
-        && !ngx_http_upstream_get_flag(r,
-                                       u->conf->ignore_client_abort_conf,
+#if (NGX_CLIENT)
+        && !r->connection->stub
+#endif
+#if (NGX_EXPR)
+        && !ngx_http_upstream_get_flag(r, u->conf->ignore_client_abort_conf,
                                        u->conf->ignore_client_abort))
+#else
+        && !u->conf->ignore_client_abort)
+#endif
     {
 #else
     if (!u->store && !r->post_action && !u->conf->ignore_client_abort) {
@@ -1905,6 +1918,12 @@ ngx_http_upstream_check_broken_connection(ngx_http_request_t *r,
 
     c = r->connection;
     u = r->upstream;
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        return;
+    }
+#endif
 
     if (c->error) {
         if ((ngx_event_flags & NGX_USE_LEVEL_EVENT) && ev->active) {
@@ -4162,6 +4181,13 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ngx_connection_t          *c;
     ngx_http_core_loc_conf_t  *clcf;
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub && u->upgrade) {
+        ngx_http_upstream_finalize_request(r, u, NGX_HTTP_BAD_GATEWAY);
+        return;
+    }
+#endif
+
     rc = ngx_http_send_header(r);
 
     if (rc == NGX_ERROR || rc > NGX_OK || r->post_action) {
@@ -5025,9 +5051,13 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
     if (downstream->data == r) {
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+        if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
+#else
         if (ngx_handle_write_event(downstream->write, clcf->send_lowat)
             != NGX_OK)
         {
+#endif
             ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
             return;
         }
@@ -5320,7 +5350,11 @@ ngx_http_upstream_process_downstream(ngx_http_request_t *r)
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
                            "http downstream delayed");
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+            if (ngx_http_handle_write_event(r, p->send_lowat) != NGX_OK) {
+#else
             if (ngx_handle_write_event(wev, p->send_lowat) != NGX_OK) {
+#endif
                 ngx_http_upstream_finalize_request(r, u, NGX_ERROR);
             }
 
@@ -5855,6 +5889,17 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
 
     *u->cleanup = NULL;
     u->cleanup = NULL;
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub
+        && (rc == NGX_ERROR || rc == NGX_HTTP_REQUEST_TIME_OUT
+            || ((rc == NGX_HTTP_BAD_GATEWAY || rc == NGX_HTTP_GATEWAY_TIME_OUT)
+                && (u->header_sent
+                    || u->headers_in.status_n != (ngx_uint_t) rc))))
+    {
+        ngx_http_client_upstream_error(r, rc);
+    }
+#endif
 
     if (u->resolved && u->resolved->ctx) {
         ngx_resolve_name_done(u->resolved->ctx);

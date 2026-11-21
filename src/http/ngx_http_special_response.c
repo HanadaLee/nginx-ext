@@ -1361,6 +1361,12 @@ ngx_http_send_error_page(ngx_http_request_t *r, ngx_http_err_page_t *err_page)
         return NGX_ERROR;
     }
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        ngx_http_client_reset_upstream_error(r);
+    }
+#endif
+
     if (uri.len && uri.data[0] == '/') {
 
         if (err_page->value.lengths) {

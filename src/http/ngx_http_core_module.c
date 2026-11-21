@@ -2755,6 +2755,12 @@ ngx_http_subrequest(ngx_http_request_t *r,
     ngx_http_posted_request_t     *posted;
     ngx_http_postponed_request_t  *pr, *p;
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        return NGX_ERROR;
+    }
+#endif
+
     if (r->subrequests == 0) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "subrequests cycle while processing \"%V\"", uri);
@@ -3421,6 +3427,12 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     rv = ngx_conf_parse(cf, NULL);
 
     *cf = pcf;
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (rv == NGX_CONF_OK && cscf->client) {
+        return ngx_http_client_register_server(cf, cscf);
+    }
+#endif
 
     if (rv == NGX_CONF_OK && !cscf->listen) {
         ngx_memzero(&lsopt, sizeof(ngx_http_listen_opt_t));

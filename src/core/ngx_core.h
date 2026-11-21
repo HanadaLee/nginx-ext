@@ -32,6 +32,11 @@ typedef struct ngx_quic_stream_s     ngx_quic_stream_t;
 typedef struct ngx_ssl_connection_s  ngx_ssl_connection_t;
 typedef struct ngx_udp_connection_s  ngx_udp_connection_t;
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+typedef struct ngx_client_http_s         ngx_client_http_t;
+typedef struct ngx_client_http_server_s  ngx_client_http_server_t;
+#endif
+
 typedef void (*ngx_event_handler_pt)(ngx_event_t *ev);
 typedef void (*ngx_connection_handler_pt)(ngx_connection_t *c);
 
@@ -96,6 +101,9 @@ typedef void (*ngx_connection_handler_pt)(ngx_connection_t *c);
 #include <ngx_control.h>
 #endif
 #include <ngx_conf_file.h>
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+#include <ngx_client.h>
+#endif
 #include <ngx_module.h>
 #include <ngx_open_file_cache.h>
 #include <ngx_os.h>

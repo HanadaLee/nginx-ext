@@ -234,6 +234,10 @@ typedef struct {
     ngx_array_t                *client_body_early_read;
 
     unsigned                    listen:1;
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    unsigned                    client:1;
+#endif
 #if (NGX_PCRE)
     unsigned                    captures:1;
 #endif

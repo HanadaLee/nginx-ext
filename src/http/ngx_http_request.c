@@ -567,6 +567,12 @@ ngx_http_create_request(ngx_connection_t *c)
     ctx->current_request = r;
 
 #if (NGX_STAT_STUB)
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (c->stub) {
+        return r;
+    }
+#endif
+
     (void) ngx_atomic_fetch_add(ngx_stat_reading, 1);
     r->stat_reading = 1;
     (void) ngx_atomic_fetch_add(ngx_stat_requests, 1);
@@ -3175,6 +3181,13 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
 {
     ngx_http_core_loc_conf_t  *clcf;
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        ngx_http_close_request(r, 0);
+        return;
+    }
+#endif
+
 #if (NGX_HTTP_V2)
     if (r->stream) {
         ngx_http_close_request(r, 0);
@@ -3274,7 +3287,11 @@ ngx_http_set_write_handler(ngx_http_request_t *r)
         ngx_add_timer(wev, clcf->send_timeout);
     }
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
+#else
     if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+#endif
         ngx_http_close_request(r, 0);
         return NGX_ERROR;
     }
@@ -3316,7 +3333,11 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_add_timer(wev, clcf->send_timeout);
         }
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+        if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
+#else
         if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+#endif
             ngx_http_close_request(r, 0);
         }
 
@@ -3340,7 +3361,11 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_add_timer(wev, clcf->send_timeout);
         }
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+        if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
+#else
         if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+#endif
             ngx_http_close_request(r, 0);
         }
 
@@ -3397,6 +3422,12 @@ ngx_http_test_reading(ngx_http_request_t *r)
     rev = c->read;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0, "http test reading");
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (r->connection->stub) {
+        return;
+    }
+#endif
 
 #if (NGX_HTTP_V2)
 
@@ -4147,6 +4178,13 @@ ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
     }
 #endif
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (c->stub) {
+        ngx_http_client_finalize(r, rc);
+        return;
+    }
+#endif
+
     ngx_http_free_request(r, rc);
     ngx_http_close_connection(c);
 }
@@ -4207,6 +4245,9 @@ ngx_http_free_request(ngx_http_request_t *r, ngx_int_t rc)
     log->action = "closing request";
 
     if (r->connection->timedout
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+        && !r->connection->stub
+#endif
 #if (NGX_HTTP_V3)
         && r->connection->quic == NULL
 #endif
