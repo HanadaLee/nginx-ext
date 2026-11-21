@@ -201,33 +201,33 @@
 #if (NGX_EXT)
 
 /* Bump when an extension changes the public ABI without a version change. */
-#define NGX_RESTY_ABI_VERSION  3
+#define NGX_EXT_ABI_VERSION  3
 
 #if (NGX_EXPR)
-#define NGX_MODULE_SIGNATURE_RESTY_1  "1"
+#define NGX_MODULE_SIGNATURE_EXT_1  "1"
 #else
-#define NGX_MODULE_SIGNATURE_RESTY_1  "0"
+#define NGX_MODULE_SIGNATURE_EXT_1  "0"
 #endif
 
 /* NGX_COMPAT does not reserve the extension's SSL-dependent fields. */
 #if (NGX_HTTP_SSL)
-#define NGX_MODULE_SIGNATURE_RESTY_2  "1"
+#define NGX_MODULE_SIGNATURE_EXT_2  "1"
 #else
-#define NGX_MODULE_SIGNATURE_RESTY_2  "0"
+#define NGX_MODULE_SIGNATURE_EXT_2  "0"
 #endif
 
-#define NGX_MODULE_SIGNATURE_RESTY_3  "1"
+#define NGX_MODULE_SIGNATURE_EXT_3  "1"
 
-#if (NGX_EXT && NGX_CLIENT)
-#define NGX_MODULE_SIGNATURE_RESTY_4  "1"
+#if (NGX_CLIENT)
+#define NGX_MODULE_SIGNATURE_EXT_4  "1"
 #else
-#define NGX_MODULE_SIGNATURE_RESTY_4  "0"
+#define NGX_MODULE_SIGNATURE_EXT_4  "0"
 #endif
 
-#define NGX_MODULE_SIGNATURE_RESTY                                            \
-    ",resty," ngx_value(NGX_RESTY_ABI_VERSION) ","                            \
-    NGX_MODULE_SIGNATURE_RESTY_1 NGX_MODULE_SIGNATURE_RESTY_2                 \
-    NGX_MODULE_SIGNATURE_RESTY_3 NGX_MODULE_SIGNATURE_RESTY_4
+#define NGX_MODULE_SIGNATURE_EXT                                              \
+    ",ext," ngx_value(NGX_EXT_ABI_VERSION) ","                                \
+    NGX_MODULE_SIGNATURE_EXT_1 NGX_MODULE_SIGNATURE_EXT_2                     \
+    NGX_MODULE_SIGNATURE_EXT_3 NGX_MODULE_SIGNATURE_EXT_4
 
 #endif
 
@@ -244,7 +244,7 @@
     NGX_MODULE_SIGNATURE_24 NGX_MODULE_SIGNATURE_25 NGX_MODULE_SIGNATURE_26   \
     NGX_MODULE_SIGNATURE_27 NGX_MODULE_SIGNATURE_28 NGX_MODULE_SIGNATURE_29   \
     NGX_MODULE_SIGNATURE_30 NGX_MODULE_SIGNATURE_31 NGX_MODULE_SIGNATURE_32   \
-    NGX_MODULE_SIGNATURE_33 NGX_MODULE_SIGNATURE_34 NGX_MODULE_SIGNATURE_RESTY
+    NGX_MODULE_SIGNATURE_33 NGX_MODULE_SIGNATURE_34 NGX_MODULE_SIGNATURE_EXT
 #else
 #define NGX_MODULE_SIGNATURE                                                  \
     NGX_MODULE_SIGNATURE_0 NGX_MODULE_SIGNATURE_1 NGX_MODULE_SIGNATURE_2      \
