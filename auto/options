@@ -43,6 +43,9 @@ EVENT_POLL=NO
 
 CONTROL_API=NO
 
+NGX_RESTY_EXT=YES
+NGX_CLIENT=YES
+
 USE_THREADS=NO
 
 NGX_FILE_AIO=NO
@@ -226,6 +229,9 @@ do
         --without-quic_bpf_module)       QUIC_BPF=NONE              ;;
 
         --with-control-api)              CONTROL_API=YES            ;;
+
+        --without-ext)                   NGX_RESTY_EXT=NO           ;;
+        --without-client)                NGX_CLIENT=NO              ;;
 
         --with-ipv6)
             NGX_POST_CONF_MSG="$NGX_POST_CONF_MSG
@@ -472,6 +478,10 @@ cat << END
   --without-poll_module              disable poll module
 
   --with-control-api                 enable control API
+
+  --without-ext                      disable nginx-ext features, including
+                                     the internal HTTP client
+  --without-client                   disable the internal HTTP client
 
   --with-threads                     enable thread pool support
 
