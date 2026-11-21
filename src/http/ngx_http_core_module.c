@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -25,7 +25,7 @@ typedef struct {
 #define NGX_HTTP_REQUEST_BODY_FILE_CLEAN  2
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 #define NGX_HTTP_AUTO_REDIRECT_OFF        0
 #define NGX_HTTP_AUTO_REDIRECT_ON         1
@@ -89,7 +89,7 @@ static char *ngx_http_core_internal(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static char *ngx_http_core_error_page_field(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
 #endif
@@ -164,7 +164,7 @@ static ngx_conf_bitmask_t  ngx_http_core_keepalive_disable[] = {
 };
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_conf_enum_t  ngx_http_core_not_modified_check[] = {
     { ngx_string("off"), NGX_HTTP_NMC_OFF },
@@ -733,7 +733,7 @@ static ngx_command_t  ngx_http_core_commands[] = {
       offsetof(ngx_http_core_loc_conf_t, max_ranges),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ignore_invalid_range"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -756,7 +756,7 @@ static ngx_command_t  ngx_http_core_commands[] = {
       offsetof(ngx_http_core_loc_conf_t, etag),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("auto_redirect"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
@@ -774,7 +774,7 @@ static ngx_command_t  ngx_http_core_commands[] = {
 
     { ngx_string("error_page"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -856,7 +856,7 @@ static ngx_command_t  ngx_http_core_commands[] = {
       offsetof(ngx_http_core_loc_conf_t, resolver_timeout),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("resolver_next_nameserver"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
@@ -888,7 +888,7 @@ static ngx_command_t  ngx_http_core_commands[] = {
 
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("request_id_algorithm"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -2602,7 +2602,7 @@ ngx_http_gzip_quantity(u_char *p, u_char *last)
 #endif
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 ngx_int_t
 ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
@@ -2755,7 +2755,7 @@ ngx_http_subrequest(ngx_http_request_t *r,
     ngx_http_posted_request_t     *posted;
     ngx_http_postponed_request_t  *pr, *p;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         return NGX_ERROR;
     }
@@ -3428,7 +3428,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 
     *cf = pcf;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (rv == NGX_CONF_OK && cscf->client) {
         return ngx_http_client_register_server(cf, cscf);
     }
@@ -3885,7 +3885,7 @@ ngx_http_core_init_main_conf(ngx_conf_t *cf, void *conf)
             ngx_align(cmcf->server_names_hash_bucket_size, ngx_cacheline_size);
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 2048);
     ngx_conf_init_uint_value(cmcf->variables_hash_bucket_size, 128);
 #else
@@ -3900,7 +3900,7 @@ ngx_http_core_init_main_conf(ngx_conf_t *cf, void *conf)
         cmcf->ncaptures = (cmcf->ncaptures + 1) * 3;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     return ngx_resolver_init_nameservers(cf, &cmcf->nameservers);
 #else
     return NGX_CONF_OK;
@@ -4065,7 +4065,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->if_modified_since = NGX_CONF_UNSET_UINT;
     clcf->max_ranges = NGX_CONF_UNSET_UINT;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     clcf->ignore_invalid_range = NGX_CONF_UNSET;
 #endif
 
@@ -4100,7 +4100,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->lingering_time = NGX_CONF_UNSET_MSEC;
     clcf->lingering_timeout = NGX_CONF_UNSET_MSEC;
     clcf->resolver_timeout = NGX_CONF_UNSET_MSEC;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     clcf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
     clcf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
 #endif
@@ -4116,7 +4116,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->chunked_transfer_encoding = NGX_CONF_UNSET;
     clcf->etag = NGX_CONF_UNSET;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     clcf->set_auto_redirect = NGX_CONF_UNSET_UINT;
 #endif
 
@@ -4131,7 +4131,7 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
     clcf->open_file_cache_errors = NGX_CONF_UNSET;
     clcf->open_file_cache_events = NGX_CONF_UNSET;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     clcf->request_id_algorithm = NGX_CONF_UNSET_UINT;
 
     clcf->error_page_fields = NGX_CONF_UNSET_PTR;
@@ -4286,7 +4286,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (conf->error_pages != NULL) {
         conf->error_pages_parent = prev;
 
@@ -4321,7 +4321,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->max_ranges, prev->max_ranges,
                               NGX_MAX_INT32_VALUE);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_conf_merge_value(conf->ignore_invalid_range,
                          prev->ignore_invalid_range, 0);
 #endif
@@ -4399,7 +4399,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->resolver = prev->resolver;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     ngx_conf_merge_bitmask_value(conf->resolver_next_nameserver,
                                  prev->resolver_next_nameserver,
@@ -4445,7 +4445,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->chunked_transfer_encoding, 1);
     ngx_conf_merge_value(conf->etag, prev->etag, 1);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_conf_merge_uint_value(conf->set_auto_redirect,
                               prev->set_auto_redirect,
                               NGX_HTTP_AUTO_REDIRECT_DEFAULT);
@@ -4476,7 +4476,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_sec_value(conf->open_file_cache_events,
                               prev->open_file_cache_events, 0);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     ngx_conf_merge_uint_value(conf->request_id_algorithm,
                               prev->request_id_algorithm,
@@ -4905,7 +4905,7 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             continue;
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ngx_strcmp(value[n].data, "https_allow_http") == 0) {
 
 #if (NGX_HTTP_SSL)
@@ -5571,7 +5571,7 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         err->value = cv;
         err->args = args;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         err->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif
     }
@@ -5739,7 +5739,7 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_core_loc_conf_t  *clcf = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                  *value;
     ngx_http_core_main_conf_t  *cmcf;
 #else
@@ -5752,7 +5752,7 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
     clcf->resolver = ngx_resolver_create_conf(cf, &value[1],
@@ -5771,7 +5771,7 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_http_core_error_page_field(ngx_conf_t *cf, ngx_command_t *cmd,

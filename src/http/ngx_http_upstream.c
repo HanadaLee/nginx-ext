@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -26,7 +26,7 @@ static ngx_int_t ngx_http_upstream_cache_background_update(
 static ngx_int_t ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
     ngx_http_upstream_t *u);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_upstream_cache_test_content_type(
     ngx_http_request_t *r, ngx_http_upstream_t *u);
 #endif
@@ -134,7 +134,7 @@ static ngx_int_t ngx_http_upstream_ignore_header_line(ngx_http_request_t *r,
     ngx_table_elt_t *h, ngx_uint_t offset);
 static ngx_int_t ngx_http_upstream_process_expires(ngx_http_request_t *r,
     ngx_table_elt_t *h, ngx_uint_t offset);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_upstream_process_pragma(ngx_http_request_t *r,
     ngx_table_elt_t *h, ngx_uint_t offset);
 #endif
@@ -180,7 +180,7 @@ static ngx_int_t ngx_http_upstream_addr_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_http_upstream_status_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_upstream_error_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_http_upstream_last_error_variable(
@@ -191,7 +191,7 @@ static ngx_int_t ngx_http_upstream_response_time_variable(ngx_http_request_t *r,
 static ngx_int_t ngx_http_upstream_response_length_variable(
     ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_upstream_method_variable(
     ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
 #endif
@@ -303,7 +303,7 @@ static ngx_http_upstream_header_t  ngx_http_upstream_headers_in[] = {
                  ngx_http_upstream_copy_header_line,
                  offsetof(ngx_http_headers_out_t, expires), 1 },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("Pragma"),
                  ngx_http_upstream_process_pragma, 0,
                  ngx_http_upstream_copy_header_line, 0, 0 },
@@ -410,7 +410,7 @@ static ngx_command_t  ngx_http_upstream_commands[] = {
       offsetof(ngx_http_upstream_srv_conf_t, resolver_timeout),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("resolver_next_nameserver"),
       NGX_HTTP_UPS_CONF|NGX_CONF_1MORE,
@@ -482,7 +482,7 @@ static ngx_http_variable_t  ngx_http_upstream_vars[] = {
       ngx_http_upstream_status_variable, 0,
       NGX_HTTP_VAR_NOCACHEABLE, 0 },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("upstream_error"), NULL,
       ngx_http_upstream_error_variable, 0,
@@ -534,7 +534,7 @@ static ngx_http_variable_t  ngx_http_upstream_vars[] = {
 
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("upstream_method"), NULL,
       ngx_http_upstream_method_variable, 0,
       NGX_HTTP_VAR_NOCACHEABLE, 0 },
@@ -565,7 +565,7 @@ static ngx_http_upstream_next_t  ngx_http_upstream_next_errors[] = {
 };
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_str_t  ngx_http_upstream_errors[] = {
     ngx_string("ERR_NONE"),
@@ -602,7 +602,7 @@ ngx_conf_bitmask_t  ngx_http_upstream_cache_method_mask[] = {
     { ngx_string("GET"), NGX_HTTP_GET },
     { ngx_string("HEAD"), NGX_HTTP_HEAD },
     { ngx_string("POST"), NGX_HTTP_POST },
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("OPTIONS"), NGX_HTTP_OPTIONS },
 #endif
     { ngx_null_string, 0 }
@@ -617,7 +617,7 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[] = {
     { ngx_string("X-Accel-Charset"), NGX_HTTP_UPSTREAM_IGN_XA_CHARSET },
     { ngx_string("Expires"), NGX_HTTP_UPSTREAM_IGN_EXPIRES },
     { ngx_string("Cache-Control"), NGX_HTTP_UPSTREAM_IGN_CACHE_CONTROL },
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("Pragma"), NGX_HTTP_UPSTREAM_IGN_PRAGMA },
 #endif
     { ngx_string("Set-Cookie"), NGX_HTTP_UPSTREAM_IGN_SET_COOKIE },
@@ -626,7 +626,7 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[] = {
 };
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[] = {
     { ngx_string("no-cache"), NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE },
@@ -644,7 +644,7 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[] = {
 #endif
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 
 static ngx_flag_t
 ngx_http_upstream_get_flag(ngx_http_request_t *r, ngx_array_t *values,
@@ -867,7 +867,7 @@ ngx_http_upstream_init(ngx_http_request_t *r)
 
     u = r->upstream;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     u->connect_timeout = ngx_http_upstream_get_msec(r,
                               u->conf->connect_timeout_conf,
                               u->conf->connect_timeout);
@@ -883,7 +883,7 @@ ngx_http_upstream_init(ngx_http_request_t *r)
     u->read_timeout = u->conf->read_timeout;
 #endif
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         ngx_http_upstream_init_request(r);
         return;
@@ -942,7 +942,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
 
     u = r->upstream;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     u->method = r->method_name;
 #endif
 
@@ -991,7 +991,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
 
     u->store = u->conf->store;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (!u->store && !r->post_action
 #if (NGX_CLIENT)
         && !r->connection->stub
@@ -1027,7 +1027,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
 
     if (u->create_request(r) != NGX_OK) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (u->pending_error == NGX_HTTP_UPSTREAM_ERR_NONE
             && (u->state == NULL
                 || u->state->error == NGX_HTTP_UPSTREAM_ERR_NONE))
@@ -1092,7 +1092,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
 
         ngx_memzero(u->state, sizeof(ngx_http_upstream_state_t));
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         u->state->error = u->pending_error;
         u->pending_error = NGX_HTTP_UPSTREAM_ERR_NONE;
 #endif
@@ -1145,7 +1145,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "no port in upstream \"%V\"", host);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
                                             NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
 #endif
@@ -1172,7 +1172,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "no port in upstream \"%V\"", host);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_URL);
 #endif
 
@@ -1194,7 +1194,7 @@ ngx_http_upstream_init_request(ngx_http_request_t *r)
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "no resolver defined to resolve %V", host);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_NO_RESOLVER);
 #endif
 
@@ -1225,7 +1225,7 @@ found:
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
                       "no upstream configuration");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_UNDEFINED);
 #endif
 
@@ -1248,7 +1248,7 @@ found:
 
     u->peer.start_time = ngx_current_msec;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     {
         ngx_uint_t  tries;
 
@@ -1279,7 +1279,7 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ngx_int_t               rc;
     ngx_http_cache_t       *c;
     ngx_http_file_cache_t  *cache;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_flag_t              background;
     ngx_uint_t              methods, stale;
 #endif
@@ -1288,7 +1288,7 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     if (c == NULL) {
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         methods = ngx_http_upstream_get_bitmask(r,
                                                 u->conf->cache_methods_conf,
                                                 u->conf->cache_methods);
@@ -1338,7 +1338,7 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         c->body_start = u->conf->buffer_size;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         c->min_uses = ngx_http_upstream_get_num(r,
                                                 u->conf->cache_min_uses_conf,
                                                 u->conf->cache_min_uses);
@@ -1361,7 +1361,7 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
             break;
         }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         c->lock = ngx_http_upstream_get_flag(r, u->conf->cache_lock_conf,
                                              u->conf->cache_lock);
         c->lock_timeout = ngx_http_upstream_get_msec(r,
@@ -1388,7 +1388,7 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     case NGX_HTTP_CACHE_STALE:
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
         stale = ngx_http_upstream_get_bitmask(r,
                                               u->conf->cache_use_stale_conf,
@@ -1426,7 +1426,7 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     case NGX_HTTP_CACHE_UPDATING:
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
         stale = ngx_http_upstream_get_bitmask(r,
                                               u->conf->cache_use_stale_conf,
@@ -1627,7 +1627,7 @@ ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
                   "cache file \"%s\" contains invalid header",
                   c->file.name.data);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
 #endif
 
@@ -1666,13 +1666,13 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
     ngx_http_upstream_t *u)
 {
     off_t             offset;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     off_t             max_offset;
 #endif
     u_char           *p, *start;
     ngx_table_elt_t  *h;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     max_offset = ngx_http_upstream_get_off(r,
                                     u->conf->cache_max_range_offset_conf,
                                     u->conf->cache_max_range_offset);
@@ -1682,7 +1682,7 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
 
     if (h == NULL
         || !u->cacheable
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         || max_offset == NGX_MAX_OFF_T_VALUE)
 #else
         || u->conf->cache_max_range_offset == NGX_MAX_OFF_T_VALUE)
@@ -1691,7 +1691,7 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
         return NGX_OK;
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (max_offset == 0) {
 #else
     if (u->conf->cache_max_range_offset == 0) {
@@ -1719,7 +1719,7 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
 
     offset = ngx_atoof(start, p - start);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (offset >= max_offset) {
 #else
     if (offset >= u->conf->cache_max_range_offset) {
@@ -1731,7 +1731,7 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_upstream_cache_test_content_type(
     ngx_http_request_t *r, ngx_http_upstream_t *u)
 {
@@ -1777,7 +1777,7 @@ ngx_http_upstream_resolve_handler(ngx_resolver_ctx_t *ctx)
                       &ctx->name, ctx->state,
                       ngx_resolver_strerror(ctx->state));
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ctx->state == NGX_RESOLVE_TIMEDOUT) {
             ngx_http_upstream_set_error(r,
                                         NGX_HTTP_UPSTREAM_ERR_RESOLVE_TIMEOUT);
@@ -1824,7 +1824,7 @@ ngx_http_upstream_resolve_handler(ngx_resolver_ctx_t *ctx)
 
     u->peer.start_time = ngx_current_msec;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     {
         ngx_uint_t  tries;
 
@@ -1919,7 +1919,7 @@ ngx_http_upstream_check_broken_connection(ngx_http_request_t *r,
     c = r->connection;
     u = r->upstream;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
         return;
     }
@@ -2183,7 +2183,7 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
     if (rc == NGX_BUSY) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "no live upstreams");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_NO_LIVE_PEER);
 #endif
 
@@ -2193,7 +2193,7 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     if (rc == NGX_DECLINED) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_CONNECT_FAILED);
 #endif
 
@@ -2316,7 +2316,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
 
     if (ngx_http_upstream_test_connect(c) != NGX_OK) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_CONNECT_FAILED);
 #endif
 
@@ -2329,7 +2329,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
         != NGX_OK)
     {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r,
                                    NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED);
 #endif
@@ -2339,7 +2339,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
         return;
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_flag(r, u->conf->ssl_server_name_conf,
                                    u->conf->ssl_server_name)
         || u->conf->ssl_verify)
@@ -2349,7 +2349,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
 #endif
         if (ngx_http_upstream_ssl_name(r, u, c) != NGX_OK) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r,
                              NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
 #endif
@@ -2363,14 +2363,14 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
     if (u->conf->ssl_certificate
         && u->conf->ssl_certificate->value.len
         && (u->conf->ssl_certificate->lengths
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             || u->conf->ssl_certificate_load == NGX_SSL_CERTIFICATE_RUNTIME
 #endif
             || u->conf->ssl_certificate_key->lengths))
     {
         if (ngx_http_upstream_ssl_certificate(r, u, c) != NGX_OK) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r,
                                    NGX_HTTP_UPSTREAM_ERR_SSL_CERT_LOAD_FAILED);
 #endif
@@ -2391,7 +2391,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
             ngx_ssl_error(NGX_LOG_ERR, c->log, 0,
                           "SSL_set_alpn_protos() failed");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r,
                              NGX_HTTP_UPSTREAM_ERR_INVALID_PROTOCOL_PARAMETER);
 #endif
@@ -2481,7 +2481,7 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
                               "upstream SSL certificate verify error: (%l:%s)",
                               rc, X509_verify_cert_error_string(rc));
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
                                        NGX_HTTP_UPSTREAM_ERR_SSL_INVALID_CERT);
 #endif
@@ -2494,7 +2494,7 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
                               "upstream SSL certificate does not match \"%V\"",
                               &u->ssl_name);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
                                        NGX_HTTP_UPSTREAM_ERR_SSL_INVALID_CERT);
 #endif
@@ -2518,7 +2518,7 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
     if (c->write->timedout) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r,
                                   NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_TIMEOUT);
 #endif
@@ -2529,7 +2529,7 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
 failed:
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (u->state->error == NGX_HTTP_UPSTREAM_ERR_NONE) {
         ngx_http_upstream_set_error(r,
                                    NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED);
@@ -2566,12 +2566,12 @@ ngx_http_upstream_ssl_name(ngx_http_request_t *r, ngx_http_upstream_t *u,
     ngx_connection_t *c)
 {
     u_char     *p, *last;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_int_t   rc;
 #endif
     ngx_str_t   name;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     rc = ngx_http_upstream_get_complex(r, u->conf->ssl_name_conf,
                                        u->conf->ssl_name, &name);
 
@@ -2619,7 +2619,7 @@ ngx_http_upstream_ssl_name(ngx_http_request_t *r, ngx_http_upstream_t *u,
         name.len = p - name.data;
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (!ngx_http_upstream_get_flag(r, u->conf->ssl_server_name_conf,
                                     u->conf->ssl_server_name))
     {
@@ -2824,7 +2824,7 @@ ngx_http_upstream_send_request(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
     if (!u->request_sent && ngx_http_upstream_test_connect(c) != NGX_OK) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_CONNECT_FAILED);
 #endif
 
@@ -2838,7 +2838,7 @@ ngx_http_upstream_send_request(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
     if (rc == NGX_ERROR) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_WRITE_FAILED);
 #endif
 
@@ -3044,7 +3044,7 @@ ngx_http_upstream_send_request_body(ngx_http_request_t *r,
     }
 
     if (!r->reading_body) {
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (!u->store && !r->post_action
             && !ngx_http_upstream_get_flag(r,
                                            u->conf->ignore_client_abort_conf,
@@ -3075,7 +3075,7 @@ ngx_http_upstream_send_request_handler(ngx_http_request_t *r,
 
     if (c->write->timedout) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (u->request_sent) {
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_WRITE_TIMEOUT);
 
@@ -3147,7 +3147,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     if (c->read->timedout) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_READ_TIMEOUT);
 #endif
 
@@ -3157,7 +3157,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     if (!u->request_sent && ngx_http_upstream_test_connect(c) != NGX_OK) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_CONNECT_FAILED);
 #endif
 
@@ -3234,7 +3234,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
             ngx_log_error(NGX_LOG_ERR, c->log, 0,
                           "upstream prematurely closed connection");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r,
                                      NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
             ngx_http_upstream_next(r, u, NGX_HTTP_UPSTREAM_FT_ERROR);
@@ -3242,7 +3242,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
 #endif
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (n == NGX_ERROR) {
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
 #else
@@ -3257,7 +3257,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
             ngx_log_error(NGX_LOG_ERR, c->log, 0,
                           "upstream prematurely sent response");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r,
                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
 #endif
@@ -3289,7 +3289,7 @@ again:
                 ngx_log_error(NGX_LOG_ERR, c->log, 0,
                               "upstream sent too big header");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
                                         NGX_HTTP_UPSTREAM_ERR_HEADER_TOO_LARGE);
 #endif
@@ -3317,7 +3317,7 @@ done:
 
     if (rc == NGX_HTTP_UPSTREAM_INVALID_HEADER) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (u->state->error == NGX_HTTP_UPSTREAM_ERR_NONE) {
             ngx_http_upstream_set_error(r,
                                         NGX_HTTP_UPSTREAM_ERR_INVALID_HEADER);
@@ -3494,7 +3494,7 @@ ngx_http_upstream_early_hints_writer(ngx_http_request_t *r)
     }
 
     if (!c->buffered) {
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (!u->store && !r->post_action
             && !ngx_http_upstream_get_flag(r,
                                            u->conf->ignore_client_abort_conf,
@@ -3523,7 +3523,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 {
     ngx_msec_t                 timeout;
     ngx_uint_t                 status, mask;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                 next;
 #if (NGX_HTTP_CACHE)
     ngx_uint_t                 stale;
@@ -3531,7 +3531,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 #endif
     ngx_http_upstream_next_t  *un;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     timeout = ngx_http_upstream_get_msec(r,
                                          u->conf->next_upstream_timeout_conf,
                                          u->conf->next_upstream_timeout);
@@ -3552,7 +3552,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
             continue;
         }
 
-#if !(NGX_RESTY_EXT && NGX_EXPR)
+#if !(NGX_EXT && NGX_EXPR)
         timeout = u->conf->next_upstream_timeout;
 #endif
 
@@ -3566,7 +3566,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
         }
 
         if (u->peer.tries > 1
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
             && ((next & mask) == mask)
 #else
             && ((u->conf->next_upstream & mask) == mask)
@@ -3581,10 +3581,10 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 #if (NGX_HTTP_CACHE)
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             && !r->cache->must_revalidate
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
             && (stale & un->mask))
 #else
             && (u->conf->cache_use_stale & un->mask))
@@ -3663,7 +3663,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         if (valid == 0) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             valid = ngx_http_file_cache_valid(r, u->conf->cache_valid,
                                               u->headers_in.status_n);
 #else
@@ -3696,7 +3696,7 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
@@ -3979,7 +3979,7 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
     }
 
     if (u->headers_in.x_accel_redirect
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         && !(ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                            u->conf->ignore_headers)
              & NGX_HTTP_UPSTREAM_IGN_XA_REDIRECT))
@@ -4104,7 +4104,7 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     r->disable_not_modified = !u->cacheable;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_flag(r, u->conf->force_ranges_conf,
                                    u->conf->force_ranges))
     {
@@ -4181,7 +4181,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ngx_connection_t          *c;
     ngx_http_core_loc_conf_t  *clcf;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub && u->upgrade) {
         ngx_http_upstream_finalize_request(r, u, NGX_HTTP_BAD_GATEWAY);
         return;
@@ -4321,7 +4321,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     default: /* NGX_OK */
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ngx_http_upstream_cache_test_content_type(r, u) != NGX_OK) {
             u->cacheable = 0;
             break;
@@ -4344,7 +4344,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     if (u->cacheable) {
         time_t  now, valid;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_str_t  vary;
 #endif
 
@@ -4354,7 +4354,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         if (valid == 0) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             valid = ngx_http_file_cache_valid(r, u->conf->cache_valid,
                                               u->headers_in.status_n);
 #else
@@ -4388,7 +4388,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
                 ngx_str_null(&r->cache->etag);
             }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
             rc = ngx_http_get_expr_complex_value(r, u->conf->cache_vary, &vary);
 
@@ -4464,7 +4464,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     p->pool = r->pool;
     p->log = c->log;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     p->limit_rate = ngx_http_upstream_get_complex_size(r,
                                                        u->conf->limit_rate_conf,
                                                        u->conf->limit_rate, 0);
@@ -4700,7 +4700,7 @@ ngx_http_upstream_process_upgraded(ngx_http_request_t *r,
     if (upstream->read->timedout || upstream->write->timedout) {
         ngx_connection_error(c, NGX_ETIMEDOUT, "upstream timed out");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (upstream->read->timedout) {
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_READ_TIMEOUT);
 
@@ -4756,7 +4756,7 @@ ngx_http_upstream_process_upgraded(ngx_http_request_t *r,
 
                 if (n == NGX_ERROR) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                     if (dst == upstream) {
                         ngx_http_upstream_set_error(r,
                                            NGX_HTTP_UPSTREAM_ERR_WRITE_FAILED);
@@ -4801,7 +4801,7 @@ ngx_http_upstream_process_upgraded(ngx_http_request_t *r,
 
             if (n == NGX_ERROR) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 if (src == upstream) {
                     ngx_http_upstream_set_error(r,
                                             NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
@@ -4931,7 +4931,7 @@ ngx_http_upstream_process_non_buffered_upstream(ngx_http_request_t *r,
     if (c->read->timedout) {
         ngx_connection_error(c, NGX_ETIMEDOUT, "upstream timed out");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_READ_TIMEOUT);
 #endif
 
@@ -4993,7 +4993,7 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
                     ngx_log_error(NGX_LOG_ERR, upstream->log, 0,
                                   "upstream prematurely closed connection");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                     ngx_http_upstream_set_error(r,
                                      NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
 #endif
@@ -5005,7 +5005,7 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
 
                 if (upstream->read->error || u->error) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                     ngx_http_upstream_set_error(r,
                                             NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
 #endif
@@ -5051,7 +5051,7 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
     if (downstream->data == r) {
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
         if (ngx_http_handle_write_event(r, clcf->send_lowat) != NGX_OK) {
 #else
         if (ngx_handle_write_event(downstream->write, clcf->send_lowat)
@@ -5350,7 +5350,7 @@ ngx_http_upstream_process_downstream(ngx_http_request_t *r)
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
                            "http downstream delayed");
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
             if (ngx_http_handle_write_event(r, p->send_lowat) != NGX_OK) {
 #else
             if (ngx_handle_write_event(wev, p->send_lowat) != NGX_OK) {
@@ -5363,7 +5363,7 @@ ngx_http_upstream_process_downstream(ngx_http_request_t *r)
 
         if (ngx_event_pipe(p, 1) == NGX_ABORT) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             if (p->upstream_error) {
                 ngx_http_upstream_set_error(r,
                                             NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
@@ -5401,7 +5401,7 @@ ngx_http_upstream_process_upstream(ngx_http_request_t *r,
         p->upstream_error = 1;
         ngx_connection_error(c, NGX_ETIMEDOUT, "upstream timed out");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_READ_TIMEOUT);
 #endif
 
@@ -5421,7 +5421,7 @@ ngx_http_upstream_process_upstream(ngx_http_request_t *r,
 
         if (ngx_event_pipe(p, 0) == NGX_ABORT) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
 #endif
 
@@ -5526,7 +5526,7 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                               "upstream prematurely closed connection");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
                              NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
 
@@ -5653,7 +5653,7 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 {
     ngx_msec_t  timeout;
     ngx_uint_t  status, state;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t  next;
 #if (NGX_HTTP_CACHE)
     ngx_uint_t  stale;
@@ -5748,7 +5748,7 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
 
     u->state->status = status;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     timeout = ngx_http_upstream_get_msec(r,
                                          u->conf->next_upstream_timeout_conf,
                                          u->conf->next_upstream_timeout);
@@ -5765,7 +5765,7 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
     }
 
     if (u->peer.tries == 0
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         || ((next & ft_type) != ft_type)
 #else
         || ((u->conf->next_upstream & ft_type) != ft_type)
@@ -5775,17 +5775,17 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
     {
 #if (NGX_HTTP_CACHE)
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         stale = ngx_http_upstream_get_bitmask(r,
                                               u->conf->cache_use_stale_conf,
                                               u->conf->cache_use_stale);
 #endif
 
         if (u->cache_status == NGX_HTTP_CACHE_EXPIRED
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             && !r->cache->must_revalidate
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
             && ((stale & ft_type) || r->cache->stale_error))
 #else
             && ((u->conf->cache_use_stale & ft_type) || r->cache->stale_error))
@@ -5867,7 +5867,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "finalize http upstream request: %i", rc);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (((rc == NGX_HTTP_INTERNAL_SERVER_ERROR && !u->error_page)
          || (rc == NGX_ERROR
              && !r->filter_finalize
@@ -5890,7 +5890,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
     *u->cleanup = NULL;
     u->cleanup = NULL;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub
         && (rc == NGX_ERROR || rc == NGX_HTTP_REQUEST_TIME_OUT
             || ((rc == NGX_HTTP_BAD_GATEWAY || rc == NGX_HTTP_GATEWAY_TIME_OUT)
@@ -5995,7 +5995,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
             if (rc == NGX_HTTP_BAD_GATEWAY || rc == NGX_HTTP_GATEWAY_TIME_OUT) {
                 time_t  valid;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                 valid = ngx_http_file_cache_valid(r, u->conf->cache_valid, rc);
 #else
                 valid = ngx_http_file_cache_valid(u->conf->cache_valid, rc);
@@ -6147,7 +6147,7 @@ ngx_http_upstream_process_content_length(ngx_http_request_t *r,
         return NGX_HTTP_UPSTREAM_INVALID_HEADER;
     }
 
-#if (NGX_RESTY_EXT) && (NGX_HTTP_CACHE)
+#if (NGX_EXT) && (NGX_HTTP_CACHE)
 #if (NGX_EXPR)
     {
         off_t  max, min;
@@ -6219,7 +6219,7 @@ ngx_http_upstream_process_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     h->next = NULL;
 
 #if (NGX_HTTP_CACHE)
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (!(ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                         u->conf->ignore_headers)
           & NGX_HTTP_UPSTREAM_IGN_SET_COOKIE))
@@ -6254,13 +6254,13 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     {
     u_char     *p, *start, *last;
     ngx_int_t   n;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     time_t      val;
     ngx_int_t   must_revalidate;
     ngx_uint_t  ignore;
 #endif
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_CACHE_CONTROL)
@@ -6278,7 +6278,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     start = h->value.data;
     last = start + h->value.len;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     ignore = ngx_http_get_expr_bitmask_value(r, u->conf->ignore_cache_control);
 #else
@@ -6304,7 +6304,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
         goto extensions;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if ((ngx_strlcasestrn(start, last, (u_char *) "no-store", 8 - 1) != NULL
          && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE))
         || (ngx_strlcasestrn(start, last, (u_char *) "private", 7 - 1) != NULL
@@ -6334,7 +6334,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
     p = ngx_strlcasestrn(start, last, (u_char *) "s-maxage=", 9 - 1);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE))
     {
         offset = 9;
@@ -6367,7 +6367,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
         if (n == 0) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             r->cache->valid_sec = ngx_time() - 1;
             u->headers_in.expired = 0;
             goto extensions;
@@ -6377,7 +6377,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 #endif
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         val = ngx_http_complex_value_sec(r, u->conf->cache_min_age, 0);
         if (val > n) {
             r->cache->valid_sec = ngx_min((ngx_uint_t) ngx_time() + val,
@@ -6397,7 +6397,7 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
 
 extensions:
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (must_revalidate) {
         /*
          * must-revalidate/proxy-revalidate forbid serving stale, so skip
@@ -6413,7 +6413,7 @@ extensions:
     p = ngx_strlcasestrn(start, last, (u_char *) "stale-while-revalidate=",
                          23 - 1);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR))
     {
         n = ngx_http_upstream_process_delta_seconds(p + 23, last);
@@ -6451,7 +6451,7 @@ extensions:
 
     p = ngx_strlcasestrn(start, last, (u_char *) "stale-if-error=", 15 - 1);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE))
     {
         n = ngx_http_upstream_process_delta_seconds(p + 15, last);
@@ -6551,7 +6551,7 @@ ngx_http_upstream_process_expires(ngx_http_request_t *r, ngx_table_elt_t *h,
     {
     time_t  expires;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_EXPIRES)
@@ -6585,7 +6585,7 @@ ngx_http_upstream_process_expires(ngx_http_request_t *r, ngx_table_elt_t *h,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_upstream_process_pragma(ngx_http_request_t *r,
@@ -6674,7 +6674,7 @@ ngx_http_upstream_process_accel_expires(ngx_http_request_t *r,
     size_t      len;
     ngx_int_t   n;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_EXPIRES)
@@ -6751,7 +6751,7 @@ ngx_http_upstream_process_limit_rate(ngx_http_request_t *r, ngx_table_elt_t *h,
     u->headers_in.x_accel_limit_rate = h;
     h->next = NULL;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_LIMIT_RATE)
@@ -6782,7 +6782,7 @@ ngx_http_upstream_process_buffering(ngx_http_request_t *r, ngx_table_elt_t *h,
 
     u = r->upstream;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_BUFFERING)
@@ -6826,7 +6826,7 @@ ngx_http_upstream_process_charset(ngx_http_request_t *r, ngx_table_elt_t *h,
 
     u = r->upstream;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_XA_CHARSET)
@@ -6934,7 +6934,7 @@ ngx_http_upstream_process_vary(ngx_http_request_t *r,
     size_t      len;
     ngx_str_t   vary;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_bitmask(r, u->conf->ignore_headers_conf,
                                       u->conf->ignore_headers)
         & NGX_HTTP_UPSTREAM_IGN_VARY)
@@ -7250,7 +7250,7 @@ ngx_http_upstream_rewrite_refresh(ngx_http_request_t *r, ngx_table_elt_t *h,
 }
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 
 static ngx_int_t
 ngx_http_upstream_hide_cookie_match(ngx_http_request_t *r,
@@ -7294,7 +7294,7 @@ static ngx_int_t
 ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     ngx_uint_t offset)
 {
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_upstream_t  *u;
 #if !(NGX_EXPR)
     ngx_array_t          *hide_cookies;
@@ -7310,7 +7310,7 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     ngx_int_t         rc;
     ngx_table_elt_t  *ho;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     u = r->upstream;
 
 #if (NGX_HTTP_CACHE)
@@ -7399,7 +7399,7 @@ ngx_http_upstream_copy_allow_ranges(ngx_http_request_t *r,
 {
     ngx_table_elt_t  *ho;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_http_upstream_get_flag(r,
                                    r->upstream->conf->force_ranges_conf,
                                    r->upstream->conf->force_ranges))
@@ -7615,7 +7615,7 @@ ngx_http_upstream_status_variable(ngx_http_request_t *r,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 void
 ngx_http_upstream_set_error(ngx_http_request_t *r,
@@ -8107,7 +8107,7 @@ ngx_http_upstream_cache_etag(ngx_http_request_t *r,
 #endif
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_upstream_method_variable(ngx_http_request_t *r,
@@ -8545,7 +8545,7 @@ ngx_http_upstream_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_upstream_srv_conf_t  *uscf = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                  *value;
     ngx_http_core_main_conf_t  *cmcf;
 #else
@@ -8558,7 +8558,7 @@ ngx_http_upstream_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
     uscf->resolver = ngx_resolver_create_conf(cf, &value[1],
@@ -8662,7 +8662,7 @@ ngx_http_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
     uscf->no_port = u->no_port;
 #if (NGX_HTTP_UPSTREAM_ZONE)
     uscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     uscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
     uscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
 #endif
@@ -8896,7 +8896,7 @@ ngx_http_upstream_param_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 }
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 
 char *
 ngx_http_upstream_hide_cookie(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -9094,7 +9094,7 @@ ngx_http_upstream_merge_ssl_passwords(ngx_conf_t *cf,
     }
 
     if (conf->ssl_certificate->lengths == NULL
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         && conf->ssl_certificate_load != NGX_SSL_CERTIFICATE_RUNTIME
 #endif
         && conf->ssl_certificate_key->lengths == NULL)

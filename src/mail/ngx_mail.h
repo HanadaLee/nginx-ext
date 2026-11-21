@@ -100,7 +100,7 @@ typedef struct {
     ngx_array_t             servers;     /* ngx_mail_core_srv_conf_t */
     ngx_array_t             listen;      /* ngx_mail_listen_t */
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_array_t            *nameservers;
 #endif
 } ngx_mail_core_main_conf_t;
@@ -129,7 +129,7 @@ typedef struct {
 
     ngx_resolver_t         *resolver;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t              resolver_next_nameserver;
     ngx_int_t               resolver_next_nameserver_tries;
     ngx_msec_t              resolver_next_nameserver_timeout;

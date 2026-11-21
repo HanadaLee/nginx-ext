@@ -54,7 +54,7 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_int_t
 ngx_http_not_modified_header_filter(ngx_http_request_t *r)
 {
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_core_loc_conf_t  *clcf;
 #endif
 
@@ -65,12 +65,12 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 #endif
 
     if (r->headers_in.if_unmodified_since
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         && !clcf->ignore_if_unmodified_since
 #endif
         && !ngx_http_test_if_unmodified(r))
@@ -80,7 +80,7 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
     }
 
     if (r->headers_in.if_match
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         && !clcf->ignore_if_match
 #endif
         && !ngx_http_test_if_match(r, r->headers_in.if_match, 0))
@@ -91,7 +91,7 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
 
     if (r->headers_in.if_modified_since || r->headers_in.if_none_match) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (clcf->not_modified_check == NGX_HTTP_NMC_STRICT) {
 #endif
 
@@ -107,7 +107,7 @@ ngx_http_not_modified_header_filter(ngx_http_request_t *r)
             return ngx_http_next_header_filter(r);
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
         } else if (clcf->not_modified_check == NGX_HTTP_NMC_PREFER_INM) {
 

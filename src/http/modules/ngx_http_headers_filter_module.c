@@ -41,7 +41,7 @@ typedef enum {
     NGX_HTTP_EXPIRES_OFF,
     NGX_HTTP_EXPIRES_EPOCH,
     NGX_HTTP_EXPIRES_MAX,
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     NGX_HTTP_EXPIRES_IMMUTABLE,
 #endif
     NGX_HTTP_EXPIRES_ACCESS,
@@ -443,7 +443,7 @@ ngx_http_set_expires(ngx_http_request_t *r, ngx_http_headers_conf_t *conf)
         return NGX_OK;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (expires == NGX_HTTP_EXPIRES_IMMUTABLE) {
         e->value.data = (u_char *) "Thu, 31 Dec 2037 23:55:55 GMT";
         /* 10 years */
@@ -524,7 +524,7 @@ ngx_http_parse_expires(ngx_str_t *value, ngx_http_expires_t *expires,
             return NGX_OK;
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (value->len == 9 && ngx_strncmp(value->data, "immutable", 9) == 0) {
             *expires = NGX_HTTP_EXPIRES_IMMUTABLE;
             return NGX_OK;

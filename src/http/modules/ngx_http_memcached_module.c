@@ -8,7 +8,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -78,7 +78,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
       NULL },
 
     { ngx_string("memcached_connect_timeout"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -86,7 +86,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_memcached_loc_conf_t, upstream.connect_timeout_conf),
@@ -98,7 +98,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
       NULL },
 
     { ngx_string("memcached_send_timeout"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -106,7 +106,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_memcached_loc_conf_t, upstream.send_timeout_conf),
@@ -125,7 +125,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
       &ngx_conf_size_nonzero_post },
 
     { ngx_string("memcached_read_timeout"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -133,7 +133,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_memcached_loc_conf_t, upstream.read_timeout_conf),
@@ -145,7 +145,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
       NULL },
 
     { ngx_string("memcached_next_upstream"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -153,7 +153,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_bitmask_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_memcached_loc_conf_t, upstream.next_upstream_conf),
@@ -165,7 +165,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
       &ngx_http_memcached_next_upstream_masks },
 
     { ngx_string("memcached_next_upstream_tries"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -173,7 +173,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_num_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_memcached_loc_conf_t,
@@ -186,7 +186,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
       NULL },
 
     { ngx_string("memcached_next_upstream_timeout"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -194,7 +194,7 @@ static ngx_command_t  ngx_http_memcached_commands[] = {
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
 #endif
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       ngx_conf_set_conditional_msec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_memcached_loc_conf_t,
@@ -695,7 +695,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.local = NGX_CONF_UNSET_PTR;
     conf->upstream.socket_keepalive = NGX_CONF_UNSET;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     conf->upstream.next_upstream_tries_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.connect_timeout_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.send_timeout_conf = NGX_CONF_UNSET_PTR;
@@ -714,7 +714,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     /* the hardcoded values */
     conf->upstream.cyclic_temp_file = 0;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     conf->upstream.buffering_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.ignore_client_abort_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.pass_request_headers_conf = NGX_CONF_UNSET_PTR;
@@ -723,7 +723,7 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.buffering = 0;
     conf->upstream.ignore_client_abort = 0;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     conf->upstream.pass_request_headers = 0;
     conf->upstream.pass_request_body = 0;
 #endif
@@ -737,10 +737,10 @@ ngx_http_memcached_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.intercept_errors = 1;
     conf->upstream.intercept_404 = 1;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     conf->upstream.force_ranges_conf = NGX_CONF_UNSET_PTR;
 #else
-#if !(NGX_RESTY_EXT)
+#if !(NGX_EXT)
     conf->upstream.pass_request_headers = 0;
     conf->upstream.pass_request_body = 0;
 #endif
@@ -761,7 +761,7 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_memcached_loc_conf_t *prev = parent;
     ngx_http_memcached_loc_conf_t *conf = child;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                    i;
     ngx_conf_expr_bitmask_ctx_t  *bm;
 
@@ -800,7 +800,7 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->upstream.socket_keepalive,
                               prev->upstream.socket_keepalive, 0);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
                                       &conf->upstream.next_upstream_tries_conf,
                                      prev->upstream.next_upstream_tries_conf, 0)
@@ -861,7 +861,7 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.buffer_size,
                               (size_t) ngx_pagesize);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
                                           &conf->upstream.next_upstream_conf,
                                           prev->upstream.next_upstream_conf,
@@ -902,7 +902,7 @@ ngx_http_memcached_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_uint_value(conf->gzip_flag, prev->gzip_flag, 0);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_http_upstream_init_conditional_conf(&conf->upstream);
 #endif
 

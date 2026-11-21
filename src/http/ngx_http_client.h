@@ -10,7 +10,7 @@
 
 #include <ngx_config.h>
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 
 #include <ngx_core.h>
 #include <ngx_http.h>

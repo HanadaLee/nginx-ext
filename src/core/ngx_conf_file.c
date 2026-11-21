@@ -358,7 +358,7 @@ done:
 }
 
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 
 char *
 ngx_conf_parse_chunk(ngx_conf_t *cf, ngx_str_t *name, ngx_str_t *chunk)
@@ -1139,7 +1139,7 @@ ngx_conf_set_str_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 
 char *
 ngx_conf_set_client_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)

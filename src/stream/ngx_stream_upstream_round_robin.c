@@ -111,7 +111,7 @@ ngx_stream_upstream_init_round_robin(ngx_conf_t *cf,
             ngx_conf_merge_msec_value(us->resolver_timeout,
                                       cscf->resolver_timeout, 30000);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
             ngx_conf_merge_bitmask_value(us->resolver_next_nameserver,
                                          cscf->resolver_next_nameserver,

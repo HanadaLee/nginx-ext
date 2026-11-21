@@ -142,7 +142,7 @@ ngx_int_t ngx_quic_get_packet_dcid(ngx_log_t *log, u_char *data, size_t len,
 ngx_int_t ngx_quic_derive_key(ngx_log_t *log, const char *label,
     ngx_str_t *secret, ngx_str_t *salt, u_char *out, size_t len);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 void ngx_quic_resume_handshake(ngx_connection_t *c);
 #endif
 

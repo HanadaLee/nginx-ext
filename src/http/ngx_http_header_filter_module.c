@@ -73,7 +73,7 @@ static ngx_str_t ngx_http_status_lines[] = {
     /* ngx_null_string, */  /* "300 Multiple Choices" */
 
     ngx_string("301 Moved Permanently"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_string("302 Found"),
 #else
     ngx_string("302 Moved Temporarily"),
@@ -93,14 +93,14 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("402 Payment Required"),
     ngx_string("403 Forbidden"),
     ngx_string("404 Not Found"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_string("405 Method Not Allowed"),
 #else
     ngx_string("405 Not Allowed"),
 #endif
     ngx_string("406 Not Acceptable"),
     ngx_string("407 Proxy Authentication Required"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_string("408 Request Timeout"),
 #else
     ngx_string("408 Request Time-out"),
@@ -109,7 +109,7 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("410 Gone"),
     ngx_string("411 Length Required"),
     ngx_string("412 Precondition Failed"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_string("413 Content Too Large"),
     ngx_string("414 URI Too Long"),
 #else
@@ -117,7 +117,7 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("414 Request-URI Too Large"),
 #endif
     ngx_string("415 Unsupported Media Type"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_string("416 Range Not Satisfiable"),
 #else
     ngx_string("416 Requested Range Not Satisfiable"),
@@ -142,7 +142,7 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("500 Internal Server Error"),
     ngx_string("501 Not Implemented"),
     ngx_string("502 Bad Gateway"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_string("503 Service Unavailable"),
     ngx_string("504 Gateway Timeout"),
 #else

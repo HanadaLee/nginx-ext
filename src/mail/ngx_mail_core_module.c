@@ -12,7 +12,7 @@
 
 
 static void *ngx_mail_core_create_main_conf(ngx_conf_t *cf);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static char *ngx_mail_core_init_main_conf(ngx_conf_t *cf, void *conf);
 #endif
 static void *ngx_mail_core_create_srv_conf(ngx_conf_t *cf);
@@ -88,7 +88,7 @@ static ngx_command_t  ngx_mail_core_commands[] = {
       offsetof(ngx_mail_core_srv_conf_t, resolver_timeout),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("resolver_next_nameserver"),
       NGX_MAIL_MAIN_CONF|NGX_MAIL_SRV_CONF|NGX_CONF_1MORE,
@@ -135,7 +135,7 @@ static ngx_mail_module_t  ngx_mail_core_module_ctx = {
     NULL,                                  /* protocol */
 
     ngx_mail_core_create_main_conf,        /* create main configuration */
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_mail_core_init_main_conf,          /* init main configuration */
 #else
     NULL,                                  /* init main configuration */
@@ -189,7 +189,7 @@ ngx_mail_core_create_main_conf(ngx_conf_t *cf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_mail_core_init_main_conf(ngx_conf_t *cf, void *conf)
@@ -221,7 +221,7 @@ ngx_mail_core_create_srv_conf(ngx_conf_t *cf)
 
     cscf->timeout = NGX_CONF_UNSET_MSEC;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     cscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
     cscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
 #endif
@@ -272,7 +272,7 @@ ngx_mail_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_ptr_value(conf->resolver, prev->resolver, NULL);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     ngx_conf_merge_bitmask_value(conf->resolver_next_nameserver,
                                  prev->resolver_next_nameserver,
@@ -757,7 +757,7 @@ ngx_mail_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_mail_core_srv_conf_t  *cscf = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                  *value;
     ngx_mail_core_main_conf_t  *cmcf;
 #else
@@ -775,7 +775,7 @@ ngx_mail_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_OK;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     cmcf = ngx_mail_conf_get_module_main_conf(cf, ngx_mail_core_module);
     cscf->resolver = ngx_resolver_create_conf(cf, &value[1],

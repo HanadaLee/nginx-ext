@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -39,14 +39,14 @@ static ngx_int_t ngx_http_ssl_static_variable(ngx_http_request_t *r,
 static ngx_int_t ngx_http_ssl_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 static ngx_flag_t ngx_http_ssl_is_reject_only(ngx_http_ssl_srv_conf_t *conf);
 #endif
 
 static ngx_int_t ngx_http_ssl_add_variables(ngx_conf_t *cf);
 static void *ngx_http_ssl_create_srv_conf(ngx_conf_t *cf);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_ssl_merge_handshake_conf(ngx_conf_t *cf,
     ngx_http_ssl_srv_conf_t *conf, ngx_http_ssl_srv_conf_t *prev);
 #endif
@@ -108,7 +108,7 @@ static ngx_conf_post_t  ngx_http_ssl_conf_command_post =
     { ngx_http_ssl_conf_command_check };
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_conf_enum_t  ngx_http_ssl_certificate_load_modes[] = {
     { ngx_string("default"), NGX_SSL_CERTIFICATE_DEFAULT },
     { ngx_string("runtime"), NGX_SSL_CERTIFICATE_RUNTIME },
@@ -133,7 +133,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       offsetof(ngx_http_ssl_srv_conf_t, certificate_keys),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_certificate_load"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
@@ -289,7 +289,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       offsetof(ngx_http_ssl_srv_conf_t, ocsp_responder),
       NULL },
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     { ngx_string("ssl_ocsp_http_client"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_client_slot,
@@ -326,7 +326,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       offsetof(ngx_http_ssl_srv_conf_t, stapling_responder),
       NULL },
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     { ngx_string("ssl_stapling_http_client"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_client_slot,
@@ -356,7 +356,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       offsetof(ngx_http_ssl_srv_conf_t, conf_commands),
       &ngx_http_ssl_conf_command_post },
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     { ngx_string("ssl_reject_handshake"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF
       |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF|NGX_CONF_FLAG,
@@ -373,7 +373,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NULL },
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_delay_handshake"),
 #if (NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF
@@ -388,7 +388,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NULL },
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_dynamic_record"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -550,7 +550,7 @@ static ngx_http_variable_t  ngx_http_ssl_vars[] = {
     { ngx_string("ssl_client_sigalg"), NULL, ngx_http_ssl_variable,
       (uintptr_t) ngx_ssl_get_client_sigalg, NGX_HTTP_VAR_CHANGEABLE, 0 },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("ssl_handshake_time"), NULL, ngx_http_ssl_variable,
       (uintptr_t) ngx_ssl_get_handshake_time, NGX_HTTP_VAR_CHANGEABLE, 0 },
 
@@ -747,7 +747,7 @@ ngx_http_ssl_add_variables(ngx_conf_t *cf)
 }
 
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 
 static ngx_flag_t
 ngx_http_ssl_is_reject_only(ngx_http_ssl_srv_conf_t *conf)
@@ -806,13 +806,13 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->certificate_compression = NGX_CONF_UNSET;
     sscf->early_data = NGX_CONF_UNSET;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     sscf->reject_handshake = NGX_CONF_UNSET_PTR;
 #else
     sscf->reject_handshake = NGX_CONF_UNSET;
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     sscf->delay_handshake = NGX_CONF_UNSET_PTR;
 #endif
 
@@ -823,7 +823,7 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->certificate_keys = NGX_CONF_UNSET_PTR;
     sscf->certificate_cache = NGX_CONF_UNSET_PTR;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     sscf->certificate_load = NGX_CONF_UNSET_UINT;
 #endif
 
@@ -839,7 +839,7 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
     sscf->stapling = NGX_CONF_UNSET;
     sscf->stapling_verify = NGX_CONF_UNSET;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     sscf->dynamic_record_enable = NGX_CONF_UNSET;
     sscf->dynamic_record_timeout = NGX_CONF_UNSET_MSEC;
     sscf->dynamic_record_low_size = NGX_CONF_UNSET_SIZE;
@@ -851,7 +851,7 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_ssl_merge_handshake_conf(ngx_conf_t *cf,
@@ -927,7 +927,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->early_data, prev->early_data, 0);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (ngx_http_ssl_merge_handshake_conf(cf, conf, prev) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
@@ -948,7 +948,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_ptr_value(conf->certificate_keys, prev->certificate_keys,
                          NULL);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_conf_merge_uint_value(conf->certificate_load, prev->certificate_load,
                               NGX_SSL_CERTIFICATE_DEFAULT);
 #endif
@@ -986,7 +986,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->stapling_responder,
                          prev->stapling_responder, "");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_conf_merge_value(conf->dynamic_record_enable,
                          prev->dynamic_record_enable, 0);
     ngx_conf_merge_msec_value(conf->dynamic_record_timeout,
@@ -1024,7 +1024,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
             return NGX_CONF_ERROR;
         }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     } else if (!ngx_http_ssl_is_reject_only(conf)) {
 #else
     } else if (!conf->reject_handshake) {
@@ -1090,7 +1090,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #else
         ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
                       "runtime loading or variables in "
 #else
                       "variables in "
@@ -1154,7 +1154,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (conf->ssl.ocsp_server == NULL) {
         conf->ssl.ocsp_server = prev->ssl.ocsp_server;
     }
@@ -1250,7 +1250,7 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (conf->dynamic_record_enable) {
         conf->ssl.dynamic_record.timeout = conf->dynamic_record_timeout;
         conf->ssl.dynamic_record.threshold = conf->dynamic_record_threshold;
@@ -1295,7 +1295,7 @@ ngx_http_ssl_compile_certificates(ngx_conf_t *cf,
     key = conf->certificate_keys->elts;
     nelts = conf->certificates->nelts;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (conf->certificate_load == NGX_SSL_CERTIFICATE_RUNTIME) {
         goto found;
     }
@@ -1701,14 +1701,14 @@ ngx_http_ssl_init(ngx_conf_t *cf)
     ngx_http_conf_addr_t        *addr;
     ngx_http_conf_port_t        *port;
     ngx_http_ssl_srv_conf_t     *sscf;
-#if !(NGX_RESTY_EXT && NGX_CLIENT)
+#if !(NGX_EXT && NGX_CLIENT)
     ngx_http_core_loc_conf_t    *clcf;
 #endif
     ngx_http_core_srv_conf_t   **cscfp, *cscf;
     ngx_http_core_main_conf_t   *cmcf;
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
-#if !(NGX_RESTY_EXT && NGX_CLIENT)
+#if !(NGX_EXT && NGX_CLIENT)
     cscfp = cmcf->servers.elts;
 
     for (s = 0; s < cmcf->servers.nelts; s++) {
@@ -1805,7 +1805,7 @@ ngx_http_ssl_init(ngx_conf_t *cf)
                 continue;
             }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
             if (!ngx_http_ssl_is_reject_only(sscf)) {
 #else
             if (!sscf->reject_handshake) {
@@ -1828,7 +1828,7 @@ ngx_http_ssl_init(ngx_conf_t *cf)
                 cscf = cscfp[s];
                 sscf = cscf->ctx->srv_conf[ngx_http_ssl_module.ctx_index];
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
                 if (sscf->certificates
                     || ngx_http_ssl_is_reject_only(sscf))
                 {
@@ -1866,7 +1866,7 @@ ngx_http_ssl_quic_compat_init(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
         cscf = cscfp[s];
         sscf = cscf->ctx->srv_conf[ngx_http_ssl_module.ctx_index];
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (sscf->certificates
             || ngx_http_ssl_is_reject_only(sscf))
         {

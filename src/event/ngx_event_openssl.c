@@ -24,7 +24,7 @@ typedef struct {
 
 static ngx_inline ngx_int_t ngx_ssl_cert_already_in_hash(void);
 
-#if (NGX_RESTY_EXT                                                            \
+#if (NGX_EXT                                                            \
      && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
 static enum ssl_select_cert_result_t ngx_ssl_select_certificate_callback(
     const SSL_CLIENT_HELLO *client_hello);
@@ -50,7 +50,7 @@ static ngx_int_t ngx_ssl_try_early_data(ngx_connection_t *c);
 #endif
 static void ngx_ssl_handshake_handler(ngx_event_t *ev);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static void ngx_ssl_handshake_delay_handler(ngx_event_t *ev);
 static void ngx_ssl_handshake_delay_cleanup(void *data);
 #endif
@@ -1994,7 +1994,7 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
 ngx_int_t
 ngx_ssl_set_client_hello_callback(ngx_ssl_t *ssl, ngx_ssl_client_hello_arg *cb)
 {
-#if (NGX_RESTY_EXT                                                            \
+#if (NGX_EXT                                                            \
      && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
 
     SSL_CTX_set_select_certificate_cb(ssl->ctx,
@@ -2039,7 +2039,7 @@ ngx_ssl_set_client_hello_callback(ngx_ssl_t *ssl, ngx_ssl_client_hello_arg *cb)
 }
 
 
-#if (NGX_RESTY_EXT                                                            \
+#if (NGX_EXT                                                            \
      && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
 
 static enum ssl_select_cert_result_t
@@ -2127,7 +2127,7 @@ done:
 
     rc = cb->servername(ssl_conn, ad, &host);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (rc == NGX_AGAIN) {
         return SSL_CLIENT_HELLO_RETRY;
     }
@@ -2187,7 +2187,7 @@ ngx_ssl_create_connection(ngx_ssl_t *ssl, ngx_connection_t *c, ngx_uint_t flags)
     sc->buffer = ((flags & NGX_SSL_BUFFER) != 0);
     sc->buffer_size = ssl->buffer_size;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     sc->dynamic_record = ssl->dynamic_record;
 #endif
 
@@ -2272,7 +2272,7 @@ ngx_ssl_set_session(ngx_connection_t *c, ngx_ssl_session_t *session)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 ngx_int_t
 ngx_ssl_delay_handshake(ngx_connection_t *c, ngx_msec_t delay)
@@ -2351,7 +2351,7 @@ ngx_ssl_handshake(ngx_connection_t *c)
     ngx_err_t  err;
     ngx_int_t  rc;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_time_t *tp;
 #endif
 
@@ -2429,7 +2429,7 @@ ngx_ssl_handshake(ngx_connection_t *c)
 
         c->ssl->handshaked = 1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         tp = ngx_timeofday();
         c->ssl->handshake_end_msec = tp->sec * 1000 + tp->msec;
 #endif
@@ -2482,7 +2482,7 @@ ngx_ssl_handshake(ngx_connection_t *c)
         || sslerr == SSL_ERROR_WANT_CLIENT_HELLO_CB
 #   endif
 
-#if (NGX_RESTY_EXT && defined SSL_ERROR_PENDING_CERTIFICATE)
+#if (NGX_EXT && defined SSL_ERROR_PENDING_CERTIFICATE)
         || sslerr == SSL_ERROR_PENDING_CERTIFICATE
 #endif
 
@@ -3374,7 +3374,7 @@ ngx_ssl_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 
     for ( ;; ) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         /* Dynamic record resizing:
            We want the initial records to fit into one TCP segment
            so we don't get TCP HoL blocking due to TCP Slow Start.
@@ -3556,7 +3556,7 @@ ngx_ssl_write(ngx_connection_t *c, u_char *data, size_t size)
 
     if (n > 0) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         c->ssl->dynamic_record_records_sent++;
         c->ssl->dynamic_record_last_write = ngx_current_msec;
 #endif
@@ -6309,13 +6309,13 @@ ngx_ssl_get_server_name(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
     size_t       len;
     const char  *name;
 
-#if (NGX_RESTY_EXT && defined SSL_CLIENT_HELLO_SUCCESS)
+#if (NGX_EXT && defined SSL_CLIENT_HELLO_SUCCESS)
     const u_char  *p;
 #endif
 
     name = SSL_get_servername(c->ssl->connection, TLSEXT_NAMETYPE_host_name);
 
-#if (NGX_RESTY_EXT && defined SSL_CLIENT_HELLO_SUCCESS)
+#if (NGX_EXT && defined SSL_CLIENT_HELLO_SUCCESS)
     if (name == NULL
         && SSL_client_hello_get0_ext(c->ssl->connection,
                                      TLSEXT_TYPE_server_name, &p, &len)
@@ -7052,7 +7052,7 @@ ngx_ssl_get_client_v_remain(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 ngx_int_t
 ngx_ssl_get_handshake_time(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)

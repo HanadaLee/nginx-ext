@@ -1,5 +1,5 @@
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 /*
  * Copyright (C) 2026 Web Server LLC
  * Copyright (C) Igor Sysoev
@@ -34,7 +34,7 @@ static ngx_int_t
 static size_t ngx_http_script_full_name_len_code(ngx_http_script_engine_t *e);
 static void ngx_http_script_full_name_code(ngx_http_script_engine_t *e);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_script_parse_number(u_char *data, size_t len,
     ngx_http_script_number_t *number);
 static ngx_int_t ngx_http_script_compare_abs_number(
@@ -156,7 +156,7 @@ ngx_http_complex_value_size(ngx_http_request_t *r,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 ngx_msec_t
 ngx_http_complex_value_msec(ngx_http_request_t *r,
@@ -432,7 +432,7 @@ ngx_http_set_complex_value_size_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 char *
 ngx_http_set_complex_value_msec_slot(ngx_conf_t *cf, ngx_command_t *cmd,
@@ -1733,7 +1733,7 @@ ngx_http_script_return_code(ngx_http_script_engine_t *e)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 void
 ngx_http_script_goto_code(ngx_http_script_engine_t *e)
@@ -1782,7 +1782,7 @@ ngx_http_script_if_code(ngx_http_script_engine_t *e)
 
     e->sp--;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     e->if_matched = 0;
 #endif
 
@@ -1794,7 +1794,7 @@ ngx_http_script_if_code(ngx_http_script_engine_t *e)
 
         e->ip += sizeof(ngx_http_script_if_code_t);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         e->if_matched = 1;
 #endif
 
@@ -1808,7 +1808,7 @@ ngx_http_script_if_code(ngx_http_script_engine_t *e)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 void
 ngx_http_script_elif_code(ngx_http_script_engine_t *e)
@@ -2241,7 +2241,7 @@ ngx_http_script_nop_code(ngx_http_script_engine_t *e)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 void
 ngx_http_script_if_op_code(ngx_http_script_engine_t *e)

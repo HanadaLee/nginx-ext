@@ -9,18 +9,18 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #include "ngx_http_range_filter_module.h"
 #endif
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
 
 typedef struct {
     size_t                       size;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     ngx_array_t                 *enable;
 #else
@@ -33,7 +33,7 @@ typedef struct {
 } ngx_http_slice_loc_conf_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 typedef enum {
     NGX_HTTP_SLICE_ERR_NONE = 0,
@@ -71,7 +71,7 @@ typedef struct {
     off_t                        end;
     ngx_str_t                    range;
     ngx_str_t                    etag;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                    last_modified;
     ngx_http_slice_error_e       error;
     unsigned                     done:1;
@@ -79,13 +79,13 @@ typedef struct {
     unsigned                     last:1;
     unsigned                     active:1;
     ngx_http_request_t          *sr;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_slice_multipart_t  *multipart;
 #endif
 } ngx_http_slice_ctx_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 typedef struct {
     ngx_http_range_filter_t      filter;
@@ -111,7 +111,7 @@ static ngx_int_t ngx_http_slice_parse_content_range(ngx_http_request_t *r,
     ngx_http_slice_content_range_t *cr);
 static ngx_int_t ngx_http_slice_range_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_http_slice_error_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 static void ngx_http_slice_set_error(ngx_http_slice_ctx_t *ctx,
@@ -135,7 +135,7 @@ static ngx_int_t ngx_http_slice_init(ngx_conf_t *cf);
 
 static ngx_command_t  ngx_http_slice_filter_commands[] = {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     { ngx_string("slice"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
 #if (NGX_EXPR)
@@ -225,7 +225,7 @@ ngx_module_t  ngx_http_slice_filter_module = {
 
 static ngx_str_t  ngx_http_slice_range_name = ngx_string("slice_range");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_str_t  ngx_http_slice_error_name = ngx_string("slice_error");
 
@@ -248,7 +248,7 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static void
 ngx_http_slice_set_error(ngx_http_slice_ctx_t *ctx,
@@ -279,12 +279,12 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     off_t                            end;
     ngx_int_t                        rc;
     ngx_table_elt_t                 *h;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_range_t                *range;
 #endif
     ngx_http_slice_ctx_t            *ctx;
     ngx_http_slice_loc_conf_t       *slcf;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_slice_multipart_t      *mp;
     ngx_http_slice_filter_ctx_t     *fctx;
 #endif
@@ -295,7 +295,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (ctx->done) {
         return ngx_http_next_header_filter(r);
     }
@@ -306,7 +306,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     if (r->headers_out.status != NGX_HTTP_PARTIAL_CONTENT) {
         if (r == r->main) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ctx->done = 1;
 #else
             ngx_http_set_ctx(r, NULL, ngx_http_slice_filter_module);
@@ -319,14 +319,14 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
                       "unexpected status code %ui in slice response",
                       r->headers_out.status);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_UNEXPECTED_STATUS);
 #endif
 
         return NGX_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (slcf->verify_etag) {
 #endif
 
@@ -341,7 +341,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                           "etag mismatch in slice response");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
             ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_ETAG_MISMATCH);
 #endif
 
@@ -353,7 +353,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
         ctx->etag = h->value;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     }
 
     if (slcf->verify_last_modified) {
@@ -384,7 +384,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "invalid range in slice response");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_INVALID_RANGE);
 #endif
 
@@ -395,7 +395,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "no complete length in slice response");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_NO_COMPLETE_LENGTH);
 #endif
 
@@ -406,7 +406,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
                    "http slice response range: %O-%O/%O",
                    cr.start, cr.end, cr.complete_length);
 
-#if !(NGX_RESTY_EXT)
+#if !(NGX_EXT)
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
 #endif
 
@@ -417,7 +417,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
                       "unexpected range in slice response: %O-%O, "
                       "expected: %O-%O", cr.start, cr.end, ctx->start, end);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_UNEXPECTED_RANGE);
 #endif
 
@@ -443,7 +443,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
     r->subrequest_ranges = 1;
     r->single_range = 1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     fctx = NULL;
 
     if (r == r->main
@@ -489,7 +489,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
 
     rc = ngx_http_next_header_filter(r);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (fctx != NULL) {
         if (fctx->filter.ranges == NULL) {
             if (r != r->main) {
@@ -523,7 +523,7 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
 
     r->preserve_body = 1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (ctx->multipart != NULL) {
         ctx->end = cr.complete_length;
         return rc;
@@ -555,7 +555,7 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_chain_t                 *cl;
     ngx_http_slice_ctx_t        *ctx;
     ngx_http_slice_loc_conf_t   *slcf;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_slice_multipart_t  *mp;
 #endif
 
@@ -565,7 +565,7 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         return ngx_http_next_body_filter(r, in);
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (ctx->done) {
         return ngx_http_next_body_filter(r, in);
     }
@@ -594,14 +594,14 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "missing slice response");
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_MISSING_RESPONSE);
 #endif
 
         return NGX_ERROR;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     mp = ctx->multipart;
 
     if (mp != NULL) {
@@ -631,7 +631,7 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     if (ctx->start >= ctx->end) {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ctx->done = 1;
 #else
         ngx_http_set_ctx(r, NULL, ngx_http_slice_filter_module);
@@ -650,7 +650,7 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         != NGX_OK)
     {
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "failed to create slice subrequest");
         ngx_http_slice_set_error(ctx, NGX_HTTP_SLICE_ERR_SUBREQUEST_FAILED);
@@ -676,7 +676,7 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_chain_t *
 ngx_http_slice_get_buf(ngx_http_request_t *r, ngx_http_slice_filter_ctx_t *ctx)
@@ -1032,13 +1032,13 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
     u_char                     *p;
     ngx_http_slice_ctx_t       *ctx;
     ngx_http_slice_loc_conf_t  *slcf;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_int_t                   rc;
 #endif
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (ctx && ctx->done) {
         v->not_found = 1;
         return NGX_OK;
@@ -1053,7 +1053,7 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
 
         slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
         if (!ngx_http_get_expr_flag_value(r, slcf->enable)) {
 #else
@@ -1069,7 +1069,7 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
             return NGX_OK;
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         rc = ngx_http_test_predicates(r, slcf->bypass);
 
         if (rc == NGX_ERROR) {
@@ -1116,7 +1116,7 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_slice_error_variable(ngx_http_request_t *r,
@@ -1207,7 +1207,7 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
 
     slcf->size = NGX_CONF_UNSET_SIZE;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     slcf->enable = NGX_CONF_UNSET_PTR;
 #else
@@ -1231,7 +1231,7 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_size_value(conf->size, prev->size, 0);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_flag_value(cf, &conf->enable,
                                        prev->enable, 0)
@@ -1266,7 +1266,7 @@ ngx_http_slice_add_variables(ngx_conf_t *cf)
 
     var->get_handler = ngx_http_slice_range_variable;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     var = ngx_http_add_variable(cf, &ngx_http_slice_error_name,
                                 NGX_HTTP_VAR_NOCACHEABLE);
     if (var == NULL) {

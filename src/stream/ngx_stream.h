@@ -141,7 +141,7 @@ typedef struct {
 
     ngx_stream_phase_t             phases[NGX_STREAM_LOG_PHASE + 1];
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_array_t                   *nameservers;
 #endif
 } ngx_stream_core_main_conf_t;
@@ -169,7 +169,7 @@ typedef struct {
     ngx_msec_t                     resolver_timeout;
     ngx_resolver_t                *resolver;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_uint_t                     resolver_next_nameserver;
     ngx_int_t                      resolver_next_nameserver_tries;
     ngx_msec_t                     resolver_next_nameserver_timeout;

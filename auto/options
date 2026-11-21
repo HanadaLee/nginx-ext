@@ -43,7 +43,7 @@ EVENT_POLL=NO
 
 CONTROL_API=NO
 
-NGX_RESTY_EXT=YES
+NGX_EXT=YES
 NGX_CLIENT=YES
 
 USE_THREADS=NO
@@ -230,7 +230,7 @@ do
 
         --with-control-api)              CONTROL_API=YES            ;;
 
-        --without-ext)                   NGX_RESTY_EXT=NO           ;;
+        --without-ext)                   NGX_EXT=NO                 ;;
         --without-client)                NGX_CLIENT=NO              ;;
 
         --with-ipv6)

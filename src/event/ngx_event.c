@@ -603,7 +603,7 @@ ngx_event_module_init(ngx_cycle_t *cycle)
 
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_memzero(&shm, sizeof(ngx_shm_t));
 #endif
 

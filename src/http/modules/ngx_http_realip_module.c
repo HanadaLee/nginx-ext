@@ -16,7 +16,7 @@
 #define NGX_HTTP_REALIP_PROXY    3
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct {
     ngx_uint_t         type;
     ngx_uint_t         hash;
@@ -80,7 +80,7 @@ static ngx_command_t  ngx_http_realip_commands[] = {
       NULL },
 
     { ngx_string("real_ip_header"),
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
 #else
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -152,7 +152,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
     size_t                       len;
     ngx_str_t                   *value;
     ngx_uint_t                   i, hash;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_int_t                    rc;
     ngx_uint_t                   j;
 #endif
@@ -162,7 +162,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
     ngx_connection_t            *c;
     ngx_http_realip_ctx_t       *ctx;
     ngx_http_realip_loc_conf_t  *rlcf;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_realip_header_t    *realip_header;
 #endif
 
@@ -178,7 +178,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     c = r->connection;
 
     for (j = 0; j < rlcf->headers->nelts; j++) {
@@ -551,7 +551,7 @@ ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_realip_loc_conf_t *rlcf = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                *value;
     ngx_http_realip_header_t *header;
     ngx_uint_t                i;
@@ -639,7 +639,7 @@ ngx_http_realip_create_loc_conf(ngx_conf_t *cf)
      *     conf->header = { 0, NULL };
      */
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     conf->headers = ngx_array_create(cf->pool, 4,
                                      sizeof(ngx_http_realip_header_t));
     if (conf->headers == NULL) {
@@ -660,7 +660,7 @@ ngx_http_realip_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_http_realip_loc_conf_t  *prev = parent;
     ngx_http_realip_loc_conf_t  *conf = child;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_http_realip_header_t    *header;
 #endif
 
@@ -668,13 +668,13 @@ ngx_http_realip_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->from = prev->from;
     }
 
-#if !(NGX_RESTY_EXT)
+#if !(NGX_EXT)
     ngx_conf_merge_uint_value(conf->type, prev->type, NGX_HTTP_REALIP_XREALIP);
 #endif
 
     ngx_conf_merge_value(conf->recursive, prev->recursive, 0);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     if (conf->headers == NULL || conf->headers->nelts == 0) {
         if (prev->headers == NULL || prev->headers->nelts == 0) {
             header = ngx_array_push(conf->headers);

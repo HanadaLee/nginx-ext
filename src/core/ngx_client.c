@@ -8,7 +8,7 @@
 #include <ngx_core.h>
 
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 
 
 ngx_int_t ngx_http_client_create_request(ngx_cycle_t *cycle, ngx_log_t *log,

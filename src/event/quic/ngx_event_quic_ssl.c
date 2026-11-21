@@ -690,7 +690,7 @@ ngx_quic_handle_crypto_frame(ngx_connection_t *c, ngx_quic_header_t *pkt,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 void
 ngx_quic_resume_handshake(ngx_connection_t *c)
@@ -756,7 +756,7 @@ ngx_quic_handshake(ngx_connection_t *c)
             && sslerr != SSL_ERROR_WANT_CLIENT_HELLO_CB
 #endif
 
-#if (NGX_RESTY_EXT && defined SSL_ERROR_PENDING_CERTIFICATE)
+#if (NGX_EXT && defined SSL_ERROR_PENDING_CERTIFICATE)
             && sslerr != SSL_ERROR_PENDING_CERTIFICATE
 #endif
 

@@ -1,5 +1,5 @@
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 /*
  * Copyright (C) 2026 Web Server LLC
  * Copyright (C) Igor Sysoev
@@ -39,14 +39,14 @@ typedef struct {
     unsigned                    quote:1;
     unsigned                    is_args:1;
     unsigned                    log:1;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     unsigned                    finalize:1;
 #endif
 
     ngx_int_t                   status;
     ngx_http_request_t         *request;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     unsigned                    if_matched:1;
 #endif
 } ngx_http_script_engine_t;
@@ -87,7 +87,7 @@ typedef struct {
 
     union {
         size_t                  size;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         ngx_msec_t              msec;
         time_t                  sec;
 #endif
@@ -188,7 +188,7 @@ typedef struct {
 } ngx_http_script_return_code_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct {
     ngx_http_script_code_pt     code;
     ngx_str_t                   name;
@@ -214,7 +214,7 @@ typedef struct {
 } ngx_http_script_file_code_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 typedef enum {
     ngx_http_script_if_invalid = -1,
@@ -257,7 +257,7 @@ typedef struct {
 } ngx_http_script_value_code_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct {
     u_char                     *integer;
     size_t                      integer_len;
@@ -275,7 +275,7 @@ ngx_int_t ngx_http_complex_value(ngx_http_request_t *r,
 size_t ngx_http_complex_value_size(ngx_http_request_t *r,
     ngx_http_complex_value_t *val, size_t default_value);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 ngx_msec_t ngx_http_complex_value_msec(ngx_http_request_t *r,
     ngx_http_complex_value_t *val, ngx_msec_t default_value);
 time_t ngx_http_complex_value_sec(ngx_http_request_t *r,
@@ -290,7 +290,7 @@ char *ngx_http_set_complex_value_zero_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 char *ngx_http_set_complex_value_size_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 char *ngx_http_set_complex_value_msec_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 char *ngx_http_set_complex_value_sec_slot(ngx_conf_t *cf, ngx_command_t *cmd,
@@ -331,12 +331,12 @@ void ngx_http_script_regex_start_code(ngx_http_script_engine_t *e);
 void ngx_http_script_regex_end_code(ngx_http_script_engine_t *e);
 #endif
 void ngx_http_script_return_code(ngx_http_script_engine_t *e);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 void ngx_http_script_goto_code(ngx_http_script_engine_t *e);
 #endif
 void ngx_http_script_break_code(ngx_http_script_engine_t *e);
 void ngx_http_script_if_code(ngx_http_script_engine_t *e);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 void ngx_http_script_elif_code(ngx_http_script_engine_t *e);
 void ngx_http_script_else_code(ngx_http_script_engine_t *e);
 #endif
@@ -350,7 +350,7 @@ void ngx_http_script_set_var_code(ngx_http_script_engine_t *e);
 void ngx_http_script_var_set_handler_code(ngx_http_script_engine_t *e);
 void ngx_http_script_var_code(ngx_http_script_engine_t *e);
 void ngx_http_script_nop_code(ngx_http_script_engine_t *e);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 void ngx_http_script_if_op_code(ngx_http_script_engine_t *e);
 ngx_int_t ngx_http_script_compare_number(u_char *data1, size_t len1,
     u_char *data2, size_t len2, ngx_int_t *cmp);

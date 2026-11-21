@@ -1295,7 +1295,7 @@ ngx_close_connection(ngx_connection_t *c)
     ngx_uint_t    log_error, level;
     ngx_socket_t  fd;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (c->fd == (ngx_socket_t) -1 && !c->stub) {
 #else
     if (c->fd == (ngx_socket_t) -1) {
@@ -1312,7 +1312,7 @@ ngx_close_connection(ngx_connection_t *c)
         ngx_del_timer(c->write);
     }
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (!c->shared && !c->stub) {
 #else
     if (!c->shared) {
@@ -1342,7 +1342,7 @@ ngx_close_connection(ngx_connection_t *c)
     c->read->closed = 1;
     c->write->closed = 1;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     if (c->stub) {
         return;
     }

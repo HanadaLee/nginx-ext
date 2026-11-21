@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_stream_expr_module.h>
 #endif
 
@@ -71,18 +71,18 @@ typedef struct {
     time_t                       error_log_time;
     ngx_syslog_peer_t           *syslog_peer;
     ngx_stream_log_fmt_t        *format;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_flag_t                   off;
     ngx_expr_when_id_t           expr_id;
 #endif
     ngx_stream_complex_value_t  *filter;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_stream_complex_value_t  *sample;
 #endif
 } ngx_stream_log_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct ngx_stream_log_srv_conf_s {
 #else
 typedef struct {
@@ -93,7 +93,7 @@ typedef struct {
     time_t                       open_file_cache_valid;
     ngx_uint_t                   open_file_cache_min_uses;
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     struct ngx_stream_log_srv_conf_s  *parent;
 #else
     ngx_uint_t                   off;        /* unsigned  off:1 */
@@ -113,7 +113,7 @@ typedef struct {
 #define NGX_STREAM_LOG_ESCAPE_NONE     2
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_stream_log_sample(ngx_stream_session_t *s,
     ngx_stream_complex_value_t *cv);
 
@@ -179,7 +179,7 @@ static ngx_command_t  ngx_stream_log_commands[] = {
       NULL },
 
     { ngx_string("access_log"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF
                           |NGX_STREAM_MAIN_WHEN_CONF|NGX_STREAM_SRV_WHEN_CONF
                           |NGX_CONF_1MORE,
@@ -242,7 +242,7 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
     ngx_stream_log_op_t        *op;
     ngx_stream_log_buf_t       *buffer;
     ngx_stream_log_srv_conf_t  *lscf;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_uint_t                  matched;
 #endif
 
@@ -251,7 +251,7 @@ ngx_stream_log_handler(ngx_stream_session_t *s)
 
     lscf = ngx_stream_get_module_srv_conf(s, ngx_stream_log_module);
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 next_level:
 
     while (lscf && lscf->logs == NULL) {
@@ -272,7 +272,7 @@ next_level:
     log = lscf->logs->elts;
     for (l = 0; l < lscf->logs->nelts; l++) {
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (ngx_stream_expr_get_result(s, log[l].expr_id) != NGX_EXPR_WHEN_HIT)
         {
             continue;
@@ -296,7 +296,7 @@ next_level:
             }
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (log[l].sample && !ngx_stream_log_sample(s, log[l].sample)) {
             continue;
         }
@@ -427,7 +427,7 @@ next_level:
         ngx_stream_log_write(s, &log[l], line, p - line);
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     if (!matched) {
         lscf = lscf->parent;
         goto next_level;
@@ -438,7 +438,7 @@ next_level:
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_stream_log_sample(ngx_stream_session_t *s, ngx_stream_complex_value_t *cv)
@@ -1144,7 +1144,7 @@ ngx_stream_log_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     conf->parent = prev;
 #else
     if (conf->logs || conf->off) {
@@ -1181,7 +1181,7 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (ngx_strcmp(value[1].data, "off") == 0) {
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
         if (cf->args->nelts != 2) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                "invalid parameter \"%V\"", &value[2]);
@@ -1234,7 +1234,7 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     ngx_memzero(log, sizeof(ngx_stream_log_t));
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     log->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif
 
@@ -1384,7 +1384,7 @@ process_formats:
 #endif
         }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
         if (ngx_strncmp(value[i].data, "sample=", 7) == 0) {
             if (log->sample) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

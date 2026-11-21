@@ -73,7 +73,7 @@ END
 fi
 
 
-if [ $NGX_RESTY_EXT = NO -o $HTTP = NO -o $HTTP_PROXY = NO ]; then
+if [ $NGX_EXT = NO -o $HTTP = NO -o $HTTP_PROXY = NO ]; then
     NGX_CLIENT=NO
 fi
 
@@ -1658,6 +1658,6 @@ cat << END                                    >> $NGX_MODULES_C
 
 END
 
-if [ $NGX_RESTY_EXT = YES ]; then
-    have=NGX_RESTY_EXT . auto/have
+if [ $NGX_EXT = YES ]; then
+    have=NGX_EXT . auto/have
 fi

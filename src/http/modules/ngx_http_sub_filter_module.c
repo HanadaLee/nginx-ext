@@ -9,7 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
@@ -17,7 +17,7 @@
 typedef struct {
     ngx_http_complex_value_t   match;
     ngx_http_complex_value_t   value;
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_expr_when_id_t         expr_id;
 #endif
 } ngx_http_sub_pair_t;
@@ -38,7 +38,7 @@ typedef struct {
 } ngx_http_sub_tables_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct ngx_http_sub_loc_conf_s  ngx_http_sub_loc_conf_t;
 
 struct ngx_http_sub_loc_conf_s {
@@ -46,7 +46,7 @@ struct ngx_http_sub_loc_conf_s {
 typedef struct {
 #endif
     ngx_uint_t                 dynamic; /* unsigned dynamic:1; */
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     ngx_http_sub_loc_conf_t    *parent;
 #endif
 
@@ -61,7 +61,7 @@ typedef struct {
 
     ngx_array_t               *types_keys;
     ngx_array_t               *matches;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 };
 #else
 } ngx_http_sub_loc_conf_t;
@@ -112,7 +112,7 @@ static char * ngx_http_sub_filter(ngx_conf_t *cf, ngx_command_t *cmd,
 static void *ngx_http_sub_create_conf(ngx_conf_t *cf);
 static char *ngx_http_sub_merge_conf(ngx_conf_t *cf,
     void *parent, void *child);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static char *ngx_http_sub_init_static(ngx_conf_t *cf,
     ngx_http_sub_loc_conf_t *conf);
 #endif
@@ -125,7 +125,7 @@ static ngx_int_t ngx_http_sub_filter_init(ngx_conf_t *cf);
 static ngx_command_t  ngx_http_sub_filter_commands[] = {
 
     { ngx_string("sub_filter"),
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
@@ -198,7 +198,7 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_http_sub_header_filter(ngx_http_request_t *r)
@@ -1028,7 +1028,7 @@ ngx_http_sub_filter(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-#if (NGX_RESTY_EXT && NGX_EXPR)
+#if (NGX_EXT && NGX_EXPR)
     pair->expr_id = ngx_expr_get_associated_when_id(cf);
     if (pair->expr_id != NGX_EXPR_NO_WHEN_ID) {
         slcf->dynamic = 1;
@@ -1095,7 +1095,7 @@ ngx_http_sub_create_conf(ngx_conf_t *cf)
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static char *
 ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)

@@ -105,7 +105,7 @@ static ngx_command_t  ngx_stream_core_commands[] = {
       offsetof(ngx_stream_core_srv_conf_t, resolver_timeout),
       NULL },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("resolver_next_nameserver"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_1MORE,
@@ -804,7 +804,7 @@ ngx_stream_core_init_main_conf(ngx_conf_t *cf, void *conf)
         cmcf->ncaptures = (cmcf->ncaptures + 1) * 3;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     return ngx_resolver_init_nameservers(cf, &cmcf->nameservers);
 #else
     return NGX_CONF_OK;
@@ -839,7 +839,7 @@ ngx_stream_core_create_srv_conf(ngx_conf_t *cf)
     cscf->file_name = cf->conf_file->file.name.data;
     cscf->line = cf->conf_file->line;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     cscf->resolver_next_nameserver_tries = NGX_CONF_UNSET;
     cscf->resolver_next_nameserver_timeout = NGX_CONF_UNSET_MSEC;
 #endif
@@ -882,7 +882,7 @@ ngx_stream_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->resolver = prev->resolver;
     }
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     ngx_conf_merge_bitmask_value(conf->resolver_next_nameserver,
                                  prev->resolver_next_nameserver,
@@ -1567,7 +1567,7 @@ ngx_stream_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_stream_core_srv_conf_t  *cscf = conf;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_str_t                    *value;
     ngx_stream_core_main_conf_t  *cmcf;
 #else
@@ -1580,7 +1580,7 @@ ngx_stream_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     cmcf = ngx_stream_conf_get_module_main_conf(cf, ngx_stream_core_module);
     cscf->resolver = ngx_resolver_create_conf(cf, &value[1],

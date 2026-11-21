@@ -100,7 +100,7 @@
 typedef struct ngx_ssl_ocsp_s   ngx_ssl_ocsp_t;
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 typedef struct {
     ngx_msec_t                  timeout;
     ngx_uint_t                  threshold;
@@ -120,12 +120,12 @@ struct ngx_ssl_s {
     ngx_rbtree_t                staple_rbtree;
     ngx_rbtree_node_t           staple_sentinel;
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     ngx_client_http_server_t   *ocsp_server;
     ngx_client_http_server_t   *stapling_server;
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_ssl_dynamic_record_t    dynamic_record;
 #endif
 
@@ -148,7 +148,7 @@ struct ngx_ssl_connection_s {
     ngx_event_handler_pt        saved_read_handler;
     ngx_event_handler_pt        saved_write_handler;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     ngx_msec_t                  handshake_start_msec;
     ngx_msec_t                  handshake_end_msec;
     ngx_event_t                *handshake_delay;
@@ -179,7 +179,7 @@ struct ngx_ssl_connection_s {
     unsigned                    write_blocked:1;
     unsigned                    sni_accepted:1;
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
     unsigned                    handshake_checked:1;
     unsigned                    reject_handshake:1;
 #endif
@@ -192,7 +192,7 @@ struct ngx_ssl_connection_s {
 #define NGX_SSL_DFLT_BUILTIN_SCACHE  -5
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #define NGX_SSL_MAX_SESSION_SIZE  16384
 #else
 #define NGX_SSL_MAX_SESSION_SIZE  8192
@@ -269,7 +269,7 @@ typedef struct {
 #define NGX_SSL_CACHE_INVALIDATE  0x80000000
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #define NGX_SSL_CERTIFICATE_DEFAULT  0
 #define NGX_SSL_CERTIFICATE_RUNTIME  1
 #endif
@@ -297,13 +297,13 @@ ngx_int_t ngx_ssl_trusted_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
 ngx_int_t ngx_ssl_crl(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *crl);
 ngx_int_t ngx_ssl_stapling(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_str_t *file, ngx_str_t *responder, ngx_uint_t verify);
-#if !(NGX_RESTY_EXT && NGX_CLIENT)
+#if !(NGX_EXT && NGX_CLIENT)
 ngx_int_t ngx_ssl_stapling_resolver(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_resolver_t *resolver, ngx_msec_t resolver_timeout);
 #endif
 ngx_int_t ngx_ssl_ocsp(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *responder,
     ngx_uint_t depth, ngx_shm_zone_t *shm_zone);
-#if !(NGX_RESTY_EXT && NGX_CLIENT)
+#if !(NGX_EXT && NGX_CLIENT)
 ngx_int_t ngx_ssl_ocsp_resolver(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_resolver_t *resolver, ngx_msec_t resolver_timeout);
 #endif
@@ -430,7 +430,7 @@ ngx_int_t ngx_ssl_get_client_v_remain(ngx_connection_t *c, ngx_pool_t *pool,
 ngx_int_t ngx_ssl_get_client_sigalg(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 ngx_int_t ngx_ssl_get_handshake_time(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *s);
 ngx_int_t ngx_ssl_get_handshake_start_msec(ngx_connection_t *c,
@@ -440,7 +440,7 @@ ngx_int_t ngx_ssl_get_handshake_end_msec(ngx_connection_t *c, ngx_pool_t *pool,
 #endif
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 ngx_int_t ngx_ssl_delay_handshake(ngx_connection_t *c, ngx_msec_t delay);
 #endif
 

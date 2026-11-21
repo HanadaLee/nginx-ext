@@ -185,7 +185,7 @@ struct ngx_connection_s {
     unsigned            reusable:1;
     unsigned            close:1;
     unsigned            shared:1;
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
     unsigned            stub:1;          /* no real client on this connection */
 #endif
 

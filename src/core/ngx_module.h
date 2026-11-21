@@ -198,7 +198,7 @@
 #define NGX_MODULE_SIGNATURE_34  "0"
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 /* Bump when an extension changes the public ABI without a version change. */
 #define NGX_RESTY_ABI_VERSION  3
@@ -218,7 +218,7 @@
 
 #define NGX_MODULE_SIGNATURE_RESTY_3  "1"
 
-#if (NGX_RESTY_EXT && NGX_CLIENT)
+#if (NGX_EXT && NGX_CLIENT)
 #define NGX_MODULE_SIGNATURE_RESTY_4  "1"
 #else
 #define NGX_MODULE_SIGNATURE_RESTY_4  "0"
@@ -231,7 +231,7 @@
 
 #endif
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 #define NGX_MODULE_SIGNATURE                                                  \
     NGX_MODULE_SIGNATURE_0 NGX_MODULE_SIGNATURE_1 NGX_MODULE_SIGNATURE_2      \
     NGX_MODULE_SIGNATURE_3 NGX_MODULE_SIGNATURE_4 NGX_MODULE_SIGNATURE_5      \
