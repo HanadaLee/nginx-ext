@@ -24,8 +24,7 @@ typedef struct {
 
 static ngx_inline ngx_int_t ngx_ssl_cert_already_in_hash(void);
 
-#if (NGX_EXT                                                            \
-     && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
+#if (NGX_EXT && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
 static enum ssl_select_cert_result_t ngx_ssl_select_certificate_callback(
     const SSL_CLIENT_HELLO *client_hello);
 #endif
@@ -1994,8 +1993,7 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
 ngx_int_t
 ngx_ssl_set_client_hello_callback(ngx_ssl_t *ssl, ngx_ssl_client_hello_arg *cb)
 {
-#if (NGX_EXT                                                            \
-     && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
+#if (NGX_EXT && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
 
     SSL_CTX_set_select_certificate_cb(ssl->ctx,
                                       ngx_ssl_select_certificate_callback);
@@ -2039,8 +2037,7 @@ ngx_ssl_set_client_hello_callback(ngx_ssl_t *ssl, ngx_ssl_client_hello_arg *cb)
 }
 
 
-#if (NGX_EXT                                                            \
-     && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
+#if (NGX_EXT && (defined OPENSSL_IS_BORINGSSL || defined OPENSSL_IS_AWSLC))
 
 static enum ssl_select_cert_result_t
 ngx_ssl_select_certificate_callback(const SSL_CLIENT_HELLO *client_hello)
