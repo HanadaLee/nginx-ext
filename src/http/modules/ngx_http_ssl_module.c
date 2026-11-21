@@ -386,9 +386,7 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, delay_handshake),
       NULL },
-#endif
 
-#if (NGX_EXT)
     { ngx_string("ssl_dynamic_record"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,

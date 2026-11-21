@@ -37,9 +37,7 @@
     ngx_value(NGX_SIG_ATOMIC_T_SIZE) ":"                                      \
     ngx_value(NGX_TIME_T_SIZE) ":"                                            \
     ngx_value(NGX_HTTP_CACHE_KEY_LEN)
-#endif
 
-#if (NGX_EXT)
 /*
  * Cache header version 5 has no dedicated flags field for response
  * Cache-Control metadata.  valid_msec is stored as u_short on disk, but the

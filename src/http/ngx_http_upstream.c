@@ -5657,9 +5657,7 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
     ngx_uint_t  next;
 #if (NGX_HTTP_CACHE)
     ngx_uint_t  stale;
-#endif
 
-#if (NGX_HTTP_CACHE)
     stale = ngx_http_upstream_get_bitmask(r, u->conf->cache_use_stale_conf,
                                           u->conf->cache_use_stale);
 #endif
