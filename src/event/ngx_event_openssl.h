@@ -101,6 +101,9 @@ typedef struct ngx_ssl_ocsp_s   ngx_ssl_ocsp_t;
 
 
 #if (NGX_EXT)
+typedef struct ngx_ssl_stapling_cache_s  ngx_ssl_stapling_cache_t;
+
+
 typedef struct {
     ngx_msec_t                  timeout;
     ngx_uint_t                  threshold;
@@ -126,6 +129,7 @@ struct ngx_ssl_s {
 #endif
 
 #if (NGX_EXT)
+    ngx_ssl_stapling_cache_t   *stapling_cache;
     ngx_ssl_dynamic_record_t    dynamic_record;
 #endif
 
