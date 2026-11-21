@@ -289,6 +289,15 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       offsetof(ngx_http_ssl_srv_conf_t, ocsp_responder),
       NULL },
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    { ngx_string("ssl_ocsp_http_client"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_client_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, ssl.ocsp_server),
+      &ngx_client_http_server_post },
+#endif
+
     { ngx_string("ssl_ocsp_cache"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
       ngx_http_ssl_ocsp_cache,
@@ -316,6 +325,15 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, stapling_responder),
       NULL },
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    { ngx_string("ssl_stapling_http_client"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_client_slot,
+      NGX_HTTP_SRV_CONF_OFFSET,
+      offsetof(ngx_http_ssl_srv_conf_t, ssl.stapling_server),
+      &ngx_client_http_server_post },
+#endif
 
     { ngx_string("ssl_stapling_verify"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
@@ -1136,6 +1154,16 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (conf->ssl.ocsp_server == NULL) {
+        conf->ssl.ocsp_server = prev->ssl.ocsp_server;
+    }
+
+    if (conf->ssl.stapling_server == NULL) {
+        conf->ssl.stapling_server = prev->ssl.stapling_server;
+    }
+#endif
+
     if (conf->ocsp) {
 
         if (conf->verify == 3) {
@@ -1673,11 +1701,14 @@ ngx_http_ssl_init(ngx_conf_t *cf)
     ngx_http_conf_addr_t        *addr;
     ngx_http_conf_port_t        *port;
     ngx_http_ssl_srv_conf_t     *sscf;
+#if !(NGX_RESTY_EXT && NGX_CLIENT)
     ngx_http_core_loc_conf_t    *clcf;
+#endif
     ngx_http_core_srv_conf_t   **cscfp, *cscf;
     ngx_http_core_main_conf_t   *cmcf;
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+#if !(NGX_RESTY_EXT && NGX_CLIENT)
     cscfp = cmcf->servers.elts;
 
     for (s = 0; s < cmcf->servers.nelts; s++) {
@@ -1708,6 +1739,7 @@ ngx_http_ssl_init(ngx_conf_t *cf)
             }
         }
     }
+#endif
 
     if (cmcf->ports == NULL) {
         return NGX_OK;
