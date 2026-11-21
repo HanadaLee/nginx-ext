@@ -120,6 +120,11 @@ struct ngx_ssl_s {
     ngx_rbtree_t                staple_rbtree;
     ngx_rbtree_node_t           staple_sentinel;
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    ngx_client_http_server_t   *ocsp_server;
+    ngx_client_http_server_t   *stapling_server;
+#endif
+
 #if (NGX_RESTY_EXT)
     ngx_ssl_dynamic_record_t    dynamic_record;
 #endif
@@ -292,12 +297,16 @@ ngx_int_t ngx_ssl_trusted_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
 ngx_int_t ngx_ssl_crl(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *crl);
 ngx_int_t ngx_ssl_stapling(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_str_t *file, ngx_str_t *responder, ngx_uint_t verify);
+#if !(NGX_RESTY_EXT && NGX_CLIENT)
 ngx_int_t ngx_ssl_stapling_resolver(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_resolver_t *resolver, ngx_msec_t resolver_timeout);
+#endif
 ngx_int_t ngx_ssl_ocsp(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *responder,
     ngx_uint_t depth, ngx_shm_zone_t *shm_zone);
+#if !(NGX_RESTY_EXT && NGX_CLIENT)
 ngx_int_t ngx_ssl_ocsp_resolver(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_resolver_t *resolver, ngx_msec_t resolver_timeout);
+#endif
 
 ngx_int_t ngx_ssl_ocsp_validate(ngx_connection_t *c);
 ngx_int_t ngx_ssl_ocsp_get_status(ngx_connection_t *c, const char **s);

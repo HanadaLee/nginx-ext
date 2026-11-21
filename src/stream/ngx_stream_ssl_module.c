@@ -299,6 +299,15 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       offsetof(ngx_stream_ssl_srv_conf_t, ocsp_responder),
       NULL },
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    { ngx_string("ssl_ocsp_http_client"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_client_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_ssl_srv_conf_t, ssl.ocsp_server),
+      &ngx_client_http_server_post },
+#endif
+
     { ngx_string("ssl_ocsp_cache"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
       ngx_stream_ssl_ocsp_cache,
@@ -326,6 +335,15 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       NGX_STREAM_SRV_CONF_OFFSET,
       offsetof(ngx_stream_ssl_srv_conf_t, stapling_responder),
       NULL },
+
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    { ngx_string("ssl_stapling_http_client"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_client_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_ssl_srv_conf_t, ssl.stapling_server),
+      &ngx_client_http_server_post },
+#endif
 
     { ngx_string("ssl_stapling_verify"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
@@ -1541,6 +1559,16 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+#if (NGX_RESTY_EXT && NGX_CLIENT)
+    if (conf->ssl.ocsp_server == NULL) {
+        conf->ssl.ocsp_server = prev->ssl.ocsp_server;
+    }
+
+    if (conf->ssl.stapling_server == NULL) {
+        conf->ssl.stapling_server = prev->ssl.stapling_server;
+    }
+#endif
+
     if (conf->ocsp) {
 
         if (conf->verify == 3) {
@@ -2106,6 +2134,7 @@ ngx_stream_ssl_init(ngx_conf_t *cf)
     ngx_stream_core_main_conf_t   *cmcf;
 
     cmcf = ngx_stream_conf_get_module_main_conf(cf, ngx_stream_core_module);
+#if !(NGX_RESTY_EXT && NGX_CLIENT)
     cscfp = cmcf->servers.elts;
 
     for (s = 0; s < cmcf->servers.nelts; s++) {
@@ -2136,6 +2165,7 @@ ngx_stream_ssl_init(ngx_conf_t *cf)
             }
         }
     }
+#endif
 
     h = ngx_array_push(&cmcf->phases[NGX_STREAM_SSL_PHASE].handlers);
     if (h == NULL) {
