@@ -1441,6 +1441,12 @@ if [ $USE_OPENSSL = YES ]; then
     ngx_module_srcs="src/event/ngx_event_openssl.c
                      src/event/ngx_event_openssl_cache.c
                      src/event/ngx_event_openssl_stapling.c"
+
+    if [ $NGX_EXT = YES ]; then
+        ngx_module_srcs="$ngx_module_srcs
+                         src/event/ngx_event_openssl_compression.c"
+    fi
+
     ngx_module_libs=
     ngx_module_link=YES
     ngx_module_order=

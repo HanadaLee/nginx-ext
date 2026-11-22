@@ -127,6 +127,12 @@ static ngx_conf_enum_t  ngx_stream_ssl_certificate_load_modes[] = {
 #endif
 
 
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+static ngx_conf_post_t  ngx_stream_ssl_compression_post =
+    { ngx_ssl_cert_compression_flag };
+#endif
+
+
 static ngx_command_t  ngx_stream_ssl_commands[] = {
 
     { ngx_string("ssl_handshake_timeout"),
@@ -185,7 +191,11 @@ static ngx_command_t  ngx_stream_ssl_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_STREAM_SRV_CONF_OFFSET,
       offsetof(ngx_stream_ssl_srv_conf_t, certificate_compression),
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+      &ngx_stream_ssl_compression_post },
+#else
       NULL },
+#endif
 
     { ngx_string("ssl_dhparam"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
@@ -1460,6 +1470,10 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     {
     static ngx_ssl_client_hello_arg cb = { ngx_stream_ssl_servername };
 
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+    ngx_ssl_cert_compression_observe(cf, &conf->ssl);
+#endif
+
     if (ngx_ssl_set_client_hello_callback(&conf->ssl, &cb) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
@@ -1518,13 +1532,23 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
             return NGX_CONF_ERROR;
         }
 
+#if !(NGX_EXT && NGX_SSL_CERT_COMPRESSION)
         if (ngx_ssl_certificate_compression(cf, &conf->ssl,
                                             conf->certificate_compression)
             != NGX_OK)
         {
             return NGX_CONF_ERROR;
         }
+#endif
     }
+
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+    if (conf->certificate_compression && conf->certificates) {
+        if (ngx_ssl_cert_compression_init(cf, &conf->ssl) != NGX_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+#endif
 
     if (conf->verify) {
 
@@ -1633,12 +1657,14 @@ ngx_stream_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->stapling) {
 
+#if !(NGX_EXT && NGX_SSL_CERT_COMPRESSION)
         if (conf->certificate_compression) {
             ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
                           "\"ssl_stapling\" is incompatible with "
                           "\"ssl_certificate_compression\"");
             return NGX_CONF_ERROR;
         }
+#endif
 
         if (ngx_ssl_stapling(cf, &conf->ssl, &conf->stapling_file,
                              &conf->stapling_responder, conf->stapling_verify)

@@ -19,6 +19,9 @@
 
 typedef struct {
     ngx_uint_t  engine;   /* unsigned  engine:1; */
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+    ngx_uint_t  cert_compression;
+#endif
 } ngx_openssl_conf_t;
 
 
@@ -742,6 +745,43 @@ retry:
 }
 
 
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+
+char *
+ngx_ssl_cert_compression_flag(ngx_conf_t *cf, void *post, void *data)
+{
+    ngx_flag_t          *enable = data;
+
+    ngx_openssl_conf_t  *oscf;
+
+    if (*enable) {
+        oscf = (ngx_openssl_conf_t *) ngx_get_conf(cf->cycle->conf_ctx,
+                                                   ngx_openssl_module);
+        oscf->cert_compression = 1;
+    }
+
+    return NGX_CONF_OK;
+}
+
+
+void
+ngx_ssl_cert_compression_observe(ngx_conf_t *cf, ngx_ssl_t *ssl)
+{
+    ngx_openssl_conf_t  *oscf;
+
+    oscf = (ngx_openssl_conf_t *) ngx_get_conf(cf->cycle->conf_ctx,
+                                               ngx_openssl_module);
+
+    /* SNI may select a different server after SSL_new() copies the callback. */
+
+    if (oscf->cert_compression) {
+        SSL_CTX_set_msg_callback(ssl->ctx, ngx_ssl_cert_compression_message);
+    }
+}
+
+#endif
+
+
 ngx_int_t
 ngx_ssl_certificate_compression(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_uint_t enable)
@@ -1350,6 +1390,12 @@ ngx_ssl_info_callback(const ngx_ssl_conn_t *ssl_conn, int where, int ret)
 
     if ((where & SSL_CB_ACCEPT_LOOP) == SSL_CB_ACCEPT_LOOP) {
         c = ngx_ssl_get_connection((ngx_ssl_conn_t *) ssl_conn);
+
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+        if (SSL_get_state(ssl_conn) == TLS_ST_SW_ENCRYPTED_EXTENSIONS) {
+            ngx_ssl_cert_compression_select((ngx_ssl_conn_t *) ssl_conn);
+        }
+#endif
 
         if (!c->ssl->handshake_buffer_set) {
             /*
@@ -2133,6 +2179,10 @@ done:
     if (rc == SSL_TLSEXT_ERR_ALERT_FATAL) {
         return SSL_CLIENT_HELLO_ERROR;
     }
+
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+    ngx_ssl_cert_compression_hello(ssl_conn);
+#endif
 
     return SSL_CLIENT_HELLO_SUCCESS;
 }

@@ -62,6 +62,10 @@ static int ngx_quic_compat_add_transport_params_callback(SSL *ssl,
 static int ngx_quic_compat_parse_transport_params_callback(SSL *ssl,
     unsigned int ext_type, unsigned int context, const unsigned char *in,
     size_t inlen, X509 *x, size_t chainidx, int *al, void *parse_arg);
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+static void ngx_quic_compat_observe(int write_p, int version, int content_type,
+    const void *buf, size_t len, SSL *ssl, void *arg);
+#endif
 static void ngx_quic_compat_message_callback(int write_p, int version,
     int content_type, const void *buf, size_t len, SSL *ssl, void *arg);
 static size_t ngx_quic_compat_create_header(ngx_quic_compat_record_t *rec,
@@ -404,13 +408,32 @@ SSL_set_quic_method(SSL *ssl, const SSL_QUIC_METHOD *quic_method)
 
     SSL_set_bio(ssl, rbio, wbio);
 
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+    SSL_set_msg_callback(ssl, ngx_quic_compat_observe);
+#else
     SSL_set_msg_callback(ssl, ngx_quic_compat_message_callback);
+#endif
 
     /* early data is not supported */
     SSL_set_max_early_data(ssl, 0);
 
     return 1;
 }
+
+
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+
+static void
+ngx_quic_compat_observe(int write_p, int version, int content_type,
+    const void *buf, size_t len, SSL *ssl, void *arg)
+{
+    ngx_ssl_cert_compression_message(write_p, version, content_type,
+                                     buf, len, ssl, arg);
+    ngx_quic_compat_message_callback(write_p, version, content_type,
+                                     buf, len, ssl, arg);
+}
+
+#endif
 
 
 static void

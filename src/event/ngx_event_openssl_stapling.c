@@ -1120,6 +1120,9 @@ ngx_ssl_certificate_status_callback(ngx_ssl_conn_t *ssl_conn, void *data)
     ngx_ssl_t           *ssl;
     ngx_connection_t    *c;
     ngx_ssl_stapling_t  *staple;
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+    int                (*handler)(ngx_ssl_conn_t *ssl, void *arg);
+#endif
 
     c = ngx_ssl_get_connection(ssl_conn);
 
@@ -1163,6 +1166,15 @@ ngx_ssl_certificate_status_callback(ngx_ssl_conn_t *ssl_conn, void *data)
         ngx_memcpy(p, staple->staple.data, staple->staple.len);
 
         SSL_set_tlsext_status_ocsp_resp(ssl_conn, p, staple->staple.len);
+
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+        /* A wrapping callback may decline the staple after we return. */
+        if (SSL_CTX_get_tlsext_status_cb(ssl_ctx, &handler)
+            && handler == ngx_ssl_certificate_status_callback)
+        {
+            ngx_ssl_cert_compression_stapled(ssl_conn);
+        }
+#endif
 
         rc = SSL_TLSEXT_ERR_OK;
     }
