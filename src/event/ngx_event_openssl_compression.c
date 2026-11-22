@@ -175,9 +175,9 @@ ngx_ssl_cert_compression_hello(ngx_ssl_conn_t *ssl)
     for (i = 1; i < len; i += 2) {
         alg = (p[i] << 8) | p[i + 1];
 
-        if ((alg == TLSEXT_comp_cert_zlib && BIO_f_zlib() != NULL)
-            || (alg == TLSEXT_comp_cert_brotli && BIO_f_brotli() != NULL)
-            || (alg == TLSEXT_comp_cert_zstd && BIO_f_zstd() != NULL))
+        if ((alg == TLSEXT_comp_cert_zlib && COMP_zlib_oneshot() != NULL)
+            || (alg == TLSEXT_comp_cert_brotli && COMP_brotli_oneshot() != NULL)
+            || (alg == TLSEXT_comp_cert_zstd && COMP_zstd_oneshot() != NULL))
         {
             break;
         }
