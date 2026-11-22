@@ -47,7 +47,7 @@ typedef struct {
 #endif
     ngx_uint_t                 dynamic; /* unsigned dynamic:1; */
 #if (NGX_EXT && NGX_EXPR)
-    ngx_http_sub_loc_conf_t    *parent;
+    ngx_http_sub_loc_conf_t   *parent;
 #endif
 
     ngx_array_t               *pairs;
