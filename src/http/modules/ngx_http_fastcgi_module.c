@@ -3559,11 +3559,11 @@ ngx_http_fastcgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_int_t                     rc;
     ngx_hash_init_t               hash;
     ngx_http_core_loc_conf_t     *clcf;
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXT)
+#if (NGX_EXPR)
     ngx_conf_expr_bitmask_ctx_t  *bm;
 #endif
 
-#if (NGX_EXT)
     ngx_uint_t                    i, j, found;
     ngx_keyval_t                 *src, *dst, *h, *temp_params;
     ngx_array_t                   params;

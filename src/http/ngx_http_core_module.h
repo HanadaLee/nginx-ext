@@ -348,13 +348,12 @@ typedef struct {
 
 } ngx_http_err_page_t;
 
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXT)
+#if (NGX_EXPR)
 ngx_http_err_page_t *ngx_http_find_error_page(ngx_http_request_t *r,
     ngx_int_t status);
 #endif
 
-
-#if (NGX_EXT)
 
 typedef struct {
     ngx_str_t                  name;

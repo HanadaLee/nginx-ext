@@ -641,10 +641,8 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_cache_control_masks[] = {
     { ngx_null_string, 0 }
 };
 
-#endif
 
-
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXPR)
 
 static ngx_flag_t
 ngx_http_upstream_get_flag(ngx_http_request_t *r, ngx_array_t *values,
@@ -818,6 +816,7 @@ ngx_http_upstream_init_conditional_conf(ngx_http_upstream_conf_t *conf)
 
 #undef ngx_http_upstream_init_conf_value
 
+#endif
 #endif
 
 

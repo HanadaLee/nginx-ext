@@ -186,7 +186,8 @@ static char *ngx_http_proxy_cookie_path(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_proxy_cookie_flags(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXT)
+#if (NGX_EXPR)
 static char *ngx_http_proxy_rewrite_rule(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf, size_t size,
     char *(*parse)(ngx_conf_t *, ngx_command_t *, void *));
@@ -207,7 +208,6 @@ static char *ngx_http_proxy_cookie_value_parse(ngx_conf_t *cf,
 static char *ngx_http_proxy_cookie_max_age_parse(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
 #endif
-#if (NGX_EXT)
 static char *ngx_http_proxy_cookie_value(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_proxy_cookie_max_age(ngx_conf_t *cf, ngx_command_t *cmd,

@@ -42,11 +42,11 @@ typedef struct {
     time_t                       valid;
     time_t                       refresh;
 
-#if (NGX_EXT && NGX_CLIENT)
+#if (NGX_EXT)
+#if (NGX_CLIENT)
     ngx_client_http_server_t    *server;
 #endif
 
-#if (NGX_EXT)
     struct ngx_ssl_ocsp_ctx_s   *active;
 #endif
 
@@ -1230,11 +1230,11 @@ ngx_ssl_stapling_update(ngx_ssl_stapling_t *staple)
         return;
     }
 
-#if (NGX_EXT && NGX_CLIENT)
+#if (NGX_EXT)
+#if (NGX_CLIENT)
     ctx->server = staple->server;
 #endif
 
-#if (NGX_EXT)
     staple->active = ctx;
 #endif
 

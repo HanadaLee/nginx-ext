@@ -11,10 +11,10 @@
 
 #if (NGX_EXT)
 #include "ngx_http_range_filter_module.h"
-#endif
 
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXPR)
 #include <ngx_http_expr_module.h>
+#endif
 #endif
 
 
