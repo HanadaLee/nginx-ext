@@ -3183,6 +3183,11 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
 
 #if (NGX_EXT && NGX_CLIENT)
     if (r->connection->stub) {
+        if (r->main->terminated && r->main->count == 1) {
+            /* Termination owns the last reference during request cleanup. */
+            return;
+        }
+
         ngx_http_close_request(r, 0);
         return;
     }
