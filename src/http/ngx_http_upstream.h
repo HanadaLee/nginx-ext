@@ -112,7 +112,7 @@ typedef struct ngx_http_upstream_hide_cookies_s
     ngx_http_upstream_hide_cookies_t;
 
 struct ngx_http_upstream_hide_cookies_s {
-    ngx_array_t                        values;
+    ngx_array_t                         values;
     ngx_http_upstream_hide_cookies_t   *parent;
 };
 #endif
@@ -286,7 +286,7 @@ typedef struct {
 #if (NGX_EXPR)
     ngx_http_upstream_hide_cookies_t *hide_cookies;
 #else
-    ngx_array_t                     *hide_cookies;
+    ngx_array_t                      *hide_cookies;
 #endif
 #endif
 
@@ -371,7 +371,7 @@ typedef struct {
     ngx_http_complex_value_t        *ssl_certificate_key;
     ngx_ssl_cache_t                 *ssl_certificate_cache;
 #if (NGX_EXT)
-    ngx_uint_t                      ssl_certificate_load;
+    ngx_uint_t                       ssl_certificate_load;
 #endif
     ngx_array_t                     *ssl_passwords;
 #endif

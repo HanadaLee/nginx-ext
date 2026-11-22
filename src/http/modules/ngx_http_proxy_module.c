@@ -30,10 +30,10 @@
 #if (NGX_EXT && NGX_EXPR)
 typedef struct {
     ngx_expr_when_id_t              expr_id;
-    ngx_uint_t                     level;  /* local rules precede ancestors */
-    unsigned                       off:1;
-    unsigned                       implicit:1;
-    unsigned                       empty:1;
+    ngx_uint_t                      level;  /* local rules precede ancestors */
+    unsigned                        off:1;
+    unsigned                        implicit:1;
+    unsigned                        empty:1;
 } ngx_http_proxy_rewrite_condition_t;
 #endif
 
@@ -74,8 +74,8 @@ typedef struct {
 #endif
     } cookie;
 
-    ngx_http_proxy_rewrite_t      *pr;
-    ngx_uint_t                     regex;
+    ngx_http_proxy_rewrite_t           *pr;
+    ngx_uint_t                          regex;
 } ngx_http_proxy_cookie_value_t;
 
 
@@ -90,8 +90,8 @@ typedef struct {
 #endif
     } cookie;
 
-    time_t                         max_age;
-    ngx_uint_t                     regex;
+    time_t                              max_age;
+    ngx_uint_t                          regex;
 } ngx_http_proxy_cookie_max_age_t;
 
 #endif
@@ -7078,11 +7078,11 @@ static char *
 ngx_http_proxy_rewrite_rule(ngx_conf_t *cf, ngx_command_t *cmd, void *conf,
     size_t size, char *(*parse)(ngx_conf_t *, ngx_command_t *, void *))
 {
-    char                                *rv;
-    u_char                              *p;
-    ngx_str_t                           *value;
-    ngx_uint_t                           i, off;
-    ngx_array_t                          parsed, **rules;
+    char                                 *rv;
+    u_char                               *p;
+    ngx_str_t                            *value;
+    ngx_uint_t                            i, off;
+    ngx_array_t                           parsed, **rules;
     ngx_expr_when_id_t                    expr_id;
     ngx_http_proxy_loc_conf_t             lcf;
     ngx_http_proxy_rewrite_condition_t   *condition;
@@ -7147,10 +7147,10 @@ static ngx_int_t
 ngx_http_proxy_merge_rewrites(ngx_conf_t *cf, ngx_array_t **rules,
     ngx_array_t *prev, size_t size, void *default_rule)
 {
-    u_char                              *p;
-    ngx_uint_t                           i, n, level, inherited_level;
-    ngx_uint_t                           add_default;
-    ngx_array_t                         *a;
+    u_char                               *p;
+    ngx_uint_t                            i, n, level, inherited_level;
+    ngx_uint_t                            add_default;
+    ngx_array_t                          *a;
     ngx_http_proxy_rewrite_condition_t   *condition, *fallback;
 
     if (*rules == NGX_CONF_UNSET_PTR) {

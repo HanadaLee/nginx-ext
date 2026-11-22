@@ -7246,7 +7246,7 @@ static ngx_int_t
 ngx_http_upstream_hide_cookie_match(ngx_http_request_t *r,
     ngx_http_upstream_hide_cookies_t *cookies, u_char *name, size_t len)
 {
-    ngx_uint_t                i, active;
+    ngx_uint_t                 i, active;
     ngx_conf_expr_str_ctx_t   *value;
 
     for ( /* void */; cookies; cookies = cookies->parent) {
@@ -8891,7 +8891,7 @@ ngx_http_upstream_param_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
 char *
 ngx_http_upstream_hide_cookie(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_str_t                           *value;
+    ngx_str_t                            *value;
     ngx_conf_expr_str_ctx_t              *cookie;
     ngx_http_upstream_hide_cookies_t    **cookies;
 

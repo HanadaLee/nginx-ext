@@ -74,7 +74,7 @@ typedef struct {
     ngx_stream_complex_value_t      *ssl_certificate_key;
     ngx_ssl_cache_t                 *ssl_certificate_cache;
 #if (NGX_EXT)
-    ngx_uint_t                      ssl_certificate_load;
+    ngx_uint_t                       ssl_certificate_load;
 #endif
     ngx_array_t                     *ssl_passwords;
     ngx_array_t                     *ssl_conf_commands;

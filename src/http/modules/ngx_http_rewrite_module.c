@@ -1445,8 +1445,8 @@ ngx_http_rewrite_parse_if_condition(ngx_conf_t *cf,
     ngx_http_rewrite_loc_conf_t *lcf, ngx_str_t *value,
     ngx_uint_t begin, ngx_uint_t last, ngx_uint_t depth)
 {
-    char                           *rv;
-    ngx_uint_t                      slots;
+    char                            *rv;
+    ngx_uint_t                       slots;
     ngx_http_rewrite_if_op_t         op;
     ngx_http_script_if_op_code_t    *op_code;
 
