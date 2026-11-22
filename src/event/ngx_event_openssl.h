@@ -129,12 +129,12 @@ struct ngx_ssl_s {
     ngx_rbtree_t                staple_rbtree;
     ngx_rbtree_node_t           staple_sentinel;
 
-#if (NGX_EXT && NGX_CLIENT)
+#if (NGX_EXT)
+#if (NGX_CLIENT)
     ngx_client_http_server_t   *ocsp_server;
     ngx_client_http_server_t   *stapling_server;
 #endif
 
-#if (NGX_EXT)
     ngx_ssl_stapling_cache_t   *stapling_cache;
     ngx_ssl_dynamic_record_t    dynamic_record;
 #endif

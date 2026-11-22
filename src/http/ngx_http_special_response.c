@@ -10,12 +10,11 @@
 #include <ngx_http.h>
 #include <nginx.h>
 
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXT)
+#if (NGX_EXPR)
 #include <ngx_http_expr_module.h>
 #endif
 
-
-#if (NGX_EXT)
 
 #define ngx_http_error_301_reason   "Moved Permanently"
 #define ngx_http_error_302_reason   "Found"
@@ -1096,10 +1095,8 @@ ngx_http_send_formatted_response(ngx_http_request_t *r,
     return ngx_http_output_filter(r, &out);
 }
 
-#endif
 
-
-#if (NGX_EXT && NGX_EXPR)
+#if (NGX_EXPR)
 
 ngx_http_err_page_t *
 ngx_http_find_error_page(ngx_http_request_t *r, ngx_int_t status)
@@ -1142,6 +1139,7 @@ ngx_http_find_error_page(ngx_http_request_t *r, ngx_int_t status)
     return NULL;
 }
 
+#endif
 #endif
 
 

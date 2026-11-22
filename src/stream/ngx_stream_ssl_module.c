@@ -124,12 +124,12 @@ static ngx_conf_enum_t  ngx_stream_ssl_certificate_load_modes[] = {
     { ngx_string("runtime"), NGX_SSL_CERTIFICATE_RUNTIME },
     { ngx_null_string, 0 }
 };
-#endif
 
 
-#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+#if (NGX_SSL_CERT_COMPRESSION)
 static ngx_conf_post_t  ngx_stream_ssl_compression_post =
     { ngx_ssl_cert_compression_flag };
+#endif
 #endif
 
 
@@ -1302,13 +1302,13 @@ static ngx_int_t
 ngx_stream_ssl_merge_handshake_conf(ngx_conf_t *cf,
     ngx_stream_ssl_srv_conf_t *conf, ngx_stream_ssl_srv_conf_t *prev)
 {
-#if (NGX_EXPR && !defined SSL_CLIENT_HELLO_SUCCESS                            \
+#if (NGX_EXPR)
+#if (!defined SSL_CLIENT_HELLO_SUCCESS                                        \
      && !defined OPENSSL_IS_BORINGSSL && !defined OPENSSL_IS_AWSLC)
     ngx_uint_t                            i;
     ngx_stream_expr_complex_value_ctx_t  *delay;
 #endif
 
-#if (NGX_EXPR)
     if (ngx_conf_merge_expr_flag_value(cf, &conf->reject_handshake,
                                        prev->reject_handshake, 0)
         != NGX_OK
