@@ -583,13 +583,6 @@ ngx_sprintf_str(u_char *buf, u_char *last, u_char *src, size_t len,
 
         } else {
             len = ngx_min((size_t) (last - buf), len);
-
-#if (NGX_EXT)
-            if (len == 0) {
-                return buf;
-            }
-#endif
-
             buf = ngx_cpymem(buf, src, len);
         }
 
