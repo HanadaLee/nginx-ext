@@ -94,6 +94,12 @@
 #endif
 
 
+#if (NGX_EXT && defined SSL_OP_NO_TX_CERTIFICATE_COMPRESSION                 \
+     && !defined OPENSSL_NO_COMP && !defined OPENSSL_NO_OCSP)
+#define NGX_SSL_CERT_COMPRESSION  1
+#endif
+
+
 #define HAVE_PROXY_SSL_PATCH 1
 
 
@@ -289,6 +295,19 @@ ngx_int_t ngx_ssl_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
 ngx_int_t ngx_ssl_connection_certificate(ngx_connection_t *c, ngx_pool_t *pool,
     ngx_str_t *cert, ngx_str_t *key, ngx_ssl_cache_t *cache,
     ngx_array_t *passwords);
+
+#if (NGX_EXT && NGX_SSL_CERT_COMPRESSION)
+char *ngx_ssl_cert_compression_flag(ngx_conf_t *cf, void *post, void *data);
+void ngx_ssl_cert_compression_observe(ngx_conf_t *cf, ngx_ssl_t *ssl);
+ngx_int_t ngx_ssl_cert_compression_init(ngx_conf_t *cf, ngx_ssl_t *ssl);
+void ngx_ssl_cert_compression_hello(ngx_ssl_conn_t *ssl);
+void ngx_ssl_cert_compression_stapled(ngx_ssl_conn_t *ssl);
+void ngx_ssl_cert_compression_select(ngx_ssl_conn_t *ssl);
+void ngx_ssl_cert_compression_message(int write_p, int version,
+    int content_type, const void *buf, size_t len, ngx_ssl_conn_t *ssl,
+    void *arg);
+#endif
+
 ngx_int_t ngx_ssl_certificate_compression(ngx_conf_t *cf, ngx_ssl_t *ssl,
     ngx_uint_t enable);
 
