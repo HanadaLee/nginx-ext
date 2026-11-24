@@ -141,11 +141,14 @@ typedef struct {
 
 
 typedef struct {
-#if (NGX_EXT && NGX_HTTP_CACHE && !(NGX_WIN32))
+#if (NGX_EXT && NGX_HTTP_CACHE)
+    ngx_flag_t                       cache_lock_expired;
+#if !(NGX_WIN32)
     ngx_shm_zone_t                  *cache_early_zone;
     ngx_int_t                      (*cache_early_guard)(ngx_http_request_t *r,
                                                         time_t started,
                                                         u_char *id);
+#endif
 #endif
     ngx_hash_t                       headers_in_hash;
     ngx_array_t                      upstreams;
@@ -334,9 +337,12 @@ typedef struct {
 #endif
     off_t                            cache_max_range_offset;
 
-#if (NGX_EXT && !(NGX_WIN32))
+#if (NGX_EXT)
+#if !(NGX_WIN32)
     ngx_flag_t                       cache_lock_early_read;
     ngx_shm_zone_t                  *cache_early_zone;
+#endif
+    ngx_flag_t                       cache_lock_expired;
 #endif
     ngx_flag_t                       cache_lock;
     ngx_msec_t                       cache_lock_timeout;
@@ -416,6 +422,7 @@ typedef struct {
 #if !(NGX_WIN32)
     ngx_array_t                     *cache_lock_early_read_conf;
 #endif
+    ngx_array_t                     *cache_lock_expired_conf;
     ngx_array_t                     *cache_lock_conf;
     ngx_array_t                     *cache_lock_timeout_conf;
     ngx_array_t                     *cache_lock_age_conf;
@@ -618,6 +625,8 @@ typedef struct {
     ngx_str_t   value;
     ngx_uint_t  skip_empty;
 } ngx_http_upstream_param_t;
+
+
 
 
 ngx_int_t ngx_http_upstream_create(ngx_http_request_t *r);
