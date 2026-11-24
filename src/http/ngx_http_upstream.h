@@ -341,6 +341,9 @@ typedef struct {
     ngx_flag_t                       cache_lock;
     ngx_msec_t                       cache_lock_timeout;
     ngx_msec_t                       cache_lock_age;
+#if (NGX_EXT)
+    ngx_msec_t                       cache_lock_poll_interval;
+#endif
 
     ngx_flag_t                       cache_revalidate;
     ngx_flag_t                       cache_convert_head;
@@ -416,6 +419,7 @@ typedef struct {
     ngx_array_t                     *cache_lock_conf;
     ngx_array_t                     *cache_lock_timeout_conf;
     ngx_array_t                     *cache_lock_age_conf;
+    ngx_array_t                     *cache_lock_poll_interval_conf;
     ngx_array_t                     *cache_background_update_conf;
 #endif
 

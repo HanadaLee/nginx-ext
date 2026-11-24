@@ -806,6 +806,8 @@ ngx_http_upstream_init_conditional_conf(ngx_http_upstream_conf_t *conf)
                                       ngx_conf_expr_msec_ctx_t);
     ngx_http_upstream_init_conf_value(conf, cache_lock_age,
                                       ngx_conf_expr_msec_ctx_t);
+    ngx_http_upstream_init_conf_value(conf, cache_lock_poll_interval,
+                                      ngx_conf_expr_msec_ctx_t);
     ngx_http_upstream_init_conf_value(conf, cache_background_update,
                                       ngx_conf_expr_flag_ctx_t);
 #endif
@@ -1373,10 +1375,16 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         c->lock_age = ngx_http_upstream_get_msec(r,
                               u->conf->cache_lock_age_conf,
                               u->conf->cache_lock_age);
+        c->lock_poll_interval = ngx_http_upstream_get_msec(r,
+                                         u->conf->cache_lock_poll_interval_conf,
+                                         u->conf->cache_lock_poll_interval);
 #else
         c->lock = u->conf->cache_lock;
         c->lock_timeout = u->conf->cache_lock_timeout;
         c->lock_age = u->conf->cache_lock_age;
+#if (NGX_EXT)
+        c->lock_poll_interval = u->conf->cache_lock_poll_interval;
+#endif
 #endif
 
         u->cache_status = NGX_HTTP_CACHE_MISS;
