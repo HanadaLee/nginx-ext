@@ -10,6 +10,95 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include <ngx_md5.h>
+#if (NGX_EXT && NGX_EXPR && !(NGX_WIN32))
+#include <ngx_http_expr_module.h>
+#endif
+
+
+#if (NGX_EXT && !(NGX_WIN32))
+
+#define NGX_HTTP_EARLY_BUCKETS   256
+#define NGX_HTTP_EARLY_WAYS      4
+#define NGX_HTTP_EARLY_SLOTS     (NGX_HTTP_EARLY_BUCKETS * NGX_HTTP_EARLY_WAYS)
+#define NGX_HTTP_EARLY_CHANGES   256
+#define NGX_HTTP_EARLY_WORDS     ((NGX_MAX_PROCESSES + 31) / 32)
+
+
+typedef enum {
+    NGX_HTTP_EARLY_FREE = 0,
+    NGX_HTTP_EARLY_WRITING,
+    NGX_HTTP_EARLY_PUBLISHING,
+    NGX_HTTP_EARLY_COMPLETE,
+    NGX_HTTP_EARLY_FAILED
+} ngx_http_cache_early_state_e;
+
+
+typedef struct {
+    ngx_http_file_cache_sh_t      *zone;
+    u_char                         key[NGX_HTTP_CACHE_KEY_LEN];
+    u_char                         suffix[11];
+    u_char                         id[NGX_HTTP_CACHE_KEY_LEN];
+    ngx_http_cache_early_state_e   state;
+    ngx_msec_t                     lock_time;
+    ngx_pid_t                      pid;
+    ngx_atomic_uint_t              epoch;
+    ngx_file_uniq_t                ino;
+    dev_t                          dev;
+    off_t                          written;
+    off_t                          expected;
+    size_t                         body_start;
+    time_t                         valid;
+    time_t                         started;
+    uint32_t                       readers[NGX_HTTP_EARLY_WORDS];
+} ngx_http_cache_early_slot_t;
+
+
+typedef struct {
+    u_char                         id[NGX_HTTP_CACHE_KEY_LEN];
+    unsigned                       all:1;
+} ngx_http_cache_early_change_t;
+
+
+typedef struct {
+    ngx_atomic_t                   epoch;
+    ngx_http_cache_early_change_t  changes[NGX_HTTP_EARLY_CHANGES];
+    ngx_pid_t                      pids[NGX_MAX_PROCESSES];
+    ngx_http_cache_early_slot_t    slots[NGX_HTTP_EARLY_SLOTS];
+} ngx_http_cache_early_sh_t;
+
+
+typedef struct ngx_http_cache_early_wait_s  ngx_http_cache_early_wait_t;
+
+
+struct ngx_http_cache_early_wait_s {
+    ngx_queue_t                    queue;
+    ngx_event_t                    event;
+    ngx_http_cache_early_wait_t   *next;
+    ngx_http_cache_early_slot_t   *slot;
+    ngx_uint_t                     index;
+    ngx_uint_t                     users;
+};
+
+
+struct ngx_http_cache_early_s {
+    ngx_http_request_t            *request;
+    ngx_slab_pool_t               *pool;
+    ngx_http_cache_early_slot_t   *slot;
+    ngx_http_cache_early_wait_t   *wait;
+    ngx_http_cleanup_t            *cleanup;
+    ngx_file_t                     file;
+    ngx_queue_t                    queue;
+    ngx_event_t                    event;
+    ngx_chain_t                   *free;
+    ngx_chain_t                   *busy;
+    off_t                          cursor;
+    off_t                          seen;
+    ngx_msec_t                     last_progress;
+    ngx_msec_t                     timeout;
+    unsigned                       queued:1;
+};
+
+#endif
 
 
 static ngx_int_t ngx_http_file_cache_lock(ngx_http_request_t *r,
@@ -66,6 +155,30 @@ static ngx_int_t ngx_http_file_cache_delete_file(ngx_tree_ctx_t *ctx,
 static void ngx_http_file_cache_set_watermark(ngx_http_file_cache_t *cache);
 
 
+#if (NGX_EXT && !(NGX_WIN32))
+
+static void ngx_http_cache_early_watch(ngx_http_request_t *r);
+static ngx_int_t ngx_http_cache_early_open(ngx_http_request_t *r);
+static ngx_uint_t ngx_http_cache_early_publishing(ngx_http_request_t *r);
+static ngx_int_t ngx_http_cache_early_commit(ngx_http_request_t *r);
+static ngx_uint_t ngx_http_cache_early_valid(ngx_http_request_t *r);
+static void ngx_http_cache_early_finish(ngx_http_cache_t *c,
+    ngx_uint_t complete);
+static ngx_int_t ngx_http_cache_early_send(ngx_http_request_t *r);
+static ngx_int_t ngx_http_cache_early_init(ngx_shm_zone_t *zone, void *data);
+static ngx_int_t ngx_http_cache_early_allowed(ngx_http_request_t *r,
+    time_t started, u_char *id);
+static ngx_int_t ngx_http_cache_early_eligible(ngx_http_request_t *r);
+static void ngx_http_cache_early_tick(ngx_event_t *ev);
+static void ngx_http_cache_early_resume(ngx_event_t *ev);
+static void ngx_http_cache_early_writer(ngx_http_request_t *r);
+static void ngx_http_cache_early_release(ngx_http_cache_early_wait_t *wait,
+    ngx_slab_pool_t *pool);
+static void ngx_http_cache_early_cleanup(void *data);
+
+#endif
+
+
 ngx_str_t  ngx_http_cache_status[] = {
     ngx_string("MISS"),
     ngx_string("BYPASS"),
@@ -78,6 +191,13 @@ ngx_str_t  ngx_http_cache_status[] = {
 
 
 static u_char  ngx_http_file_cache_key[] = { LF, 'K', 'E', 'Y', ':', ' ' };
+
+
+#if (NGX_EXT && !(NGX_WIN32))
+static ngx_http_cache_early_wait_t
+    *ngx_http_cache_early_waits[NGX_HTTP_EARLY_SLOTS];
+static ngx_str_t  ngx_http_cache_early_name = ngx_string("cache_early_read");
+#endif
 
 
 static ngx_int_t
@@ -412,10 +532,21 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
 {
     ngx_msec_t                 now, timer;
     ngx_http_file_cache_t     *cache;
+#if (NGX_EXT && !(NGX_WIN32))
+    ngx_int_t                  rc;
+#endif
 
     if (!c->lock) {
         return NGX_DECLINED;
     }
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (!c->wait_time && r->upstream && r->upstream->conf
+        && r->upstream->conf->cache_early_zone)
+    {
+        ngx_http_cache_early_watch(r);
+    }
+#endif
 
     now = ngx_current_msec;
 
@@ -425,7 +556,14 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
 
     timer = c->node->lock_time - now;
 
+#if (NGX_EXT && !(NGX_WIN32))
+    if (!c->node->updating
+        || ((ngx_msec_int_t) timer <= 0
+            && !ngx_http_cache_early_publishing(r)))
+    {
+#else
     if (!c->node->updating || (ngx_msec_int_t) timer <= 0) {
+#endif
         c->node->updating = 1;
         c->node->lock_time = now + c->lock_age;
         c->updating = 1;
@@ -441,6 +579,15 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
     if (c->updating) {
         return NGX_DECLINED;
     }
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early_read && (c->lock_timeout || !c->wait_time)) {
+        rc = ngx_http_cache_early_open(r);
+        if (rc != NGX_DECLINED) {
+            return rc;
+        }
+    }
+#endif
 
     if (c->lock_timeout == 0) {
         return NGX_HTTP_CACHE_SCARCE;
@@ -461,6 +608,12 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
     }
 
     timer = c->wait_time - now;
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early_read) {
+        timer = ngx_min(timer, NGX_HTTP_CACHE_EARLY_INTERVAL);
+    }
+#endif
 
     ngx_add_timer(&c->wait_event, (timer > 500) ? 500 : timer);
 
@@ -526,6 +679,12 @@ ngx_http_file_cache_lock_wait(ngx_http_request_t *r, ngx_http_cache_t *c)
         c->lock_timeout = 0;
         return NGX_OK;
     }
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early_read) {
+        return NGX_OK;
+    }
+#endif
 
     cache = c->file_cache;
     wait = 0;
@@ -1472,6 +1631,16 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http file cache update");
 
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early_watch && c->updating
+        && (!ngx_http_cache_early_valid(r)
+            || ngx_http_cache_early_commit(r) != NGX_OK))
+    {
+        ngx_http_file_cache_free(c, tf);
+        return;
+    }
+#endif
+
     cache = c->file_cache;
 
     c->updated = 1;
@@ -1507,6 +1676,20 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
         }
     }
 
+#if (NGX_EXT && !(NGX_WIN32))
+    if (rc == NGX_OK && c->early_watch && !ngx_http_cache_early_valid(r)) {
+        if (ngx_file_info(c->file.name.data, &fi) != NGX_FILE_ERROR
+            && ngx_file_uniq(&fi) == uniq)
+        {
+            (void) ngx_delete_file(c->file.name.data);
+        }
+
+        rc = NGX_ERROR;
+        fs_size = 0;
+        uniq = 0;
+    }
+#endif
+
     ngx_shmtx_lock(&cache->shpool->mutex);
 
     c->node->count--;
@@ -1524,6 +1707,12 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
     c->node->updating = 0;
 
     ngx_shmtx_unlock(&cache->shpool->mutex);
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early) {
+        ngx_http_cache_early_finish(c, rc == NGX_OK);
+    }
+#endif
 }
 
 
@@ -1684,6 +1873,12 @@ ngx_http_cache_send(ngx_http_request_t *r)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http file cache send: %s", c->file.name.data);
 
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early_reader) {
+        return ngx_http_cache_early_send(r);
+    }
+#endif
+
     /* we need to allocate all before the header would be sent */
 
     b = ngx_calloc_buf(r->pool);
@@ -1735,6 +1930,12 @@ ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf)
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->file.log, 0,
                    "http file cache free, fd: %d", c->file.fd);
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->early) {
+        ngx_http_cache_early_finish(c, 0);
+    }
+#endif
 
     ngx_shmtx_lock(&cache->shpool->mutex);
 
@@ -2449,6 +2650,1084 @@ ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status)
 }
 
 #endif
+
+
+#if (NGX_EXT && !(NGX_WIN32))
+
+ngx_int_t
+ngx_http_cache_early_configure(ngx_conf_t *cf, ngx_shm_zone_t **zone)
+{
+    ngx_http_upstream_main_conf_t  *umcf;
+
+    *zone = ngx_shared_memory_add(cf, &ngx_http_cache_early_name,
+                                  2 * 1024 * 1024, &ngx_http_cache_early_name);
+    if (*zone == NULL) {
+        return NGX_ERROR;
+    }
+
+    (*zone)->init = ngx_http_cache_early_init;
+
+    umcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_upstream_module);
+    umcf->cache_early_zone = *zone;
+
+#if (NGX_HTTP_CACHE_EARLY_GUARD_REQUIRED)
+    (*zone)->data = umcf;
+#endif
+
+    return NGX_OK;
+}
+
+
+static ngx_int_t
+ngx_http_cache_early_init(ngx_shm_zone_t *zone, void *data)
+{
+    ngx_slab_pool_t                *pool;
+#if (NGX_HTTP_CACHE_EARLY_GUARD_REQUIRED)
+    ngx_http_upstream_main_conf_t  *umcf;
+
+    umcf = zone->data;
+    if (umcf->cache_early_guard == NULL) {
+        ngx_log_error(NGX_LOG_WARN, zone->shm.log, 0,
+                      "proxy_cache_lock_early_read disabled: "
+                      "no in-flight invalidation handler");
+    }
+#endif
+
+    if (data != NULL) {
+        zone->data = data;
+        return NGX_OK;
+    }
+
+    pool = (ngx_slab_pool_t *) zone->shm.addr;
+    zone->data = ngx_slab_calloc(pool, sizeof(ngx_http_cache_early_sh_t));
+
+    return zone->data ? NGX_OK : NGX_ERROR;
+}
+
+
+static void
+ngx_http_cache_early_watch(ngx_http_request_t *r)
+{
+    ngx_table_elt_t            *range;
+    ngx_http_cache_t           *c;
+    ngx_http_upstream_t        *u;
+    ngx_http_cache_early_sh_t  *sh;
+
+    c = r->cache;
+    u = r->upstream;
+
+    if (!c->lock_age || c->file_cache->use_temp_path || !u->buffering
+        || r->method != NGX_HTTP_GET || r->background
+        || r->headers_in.content_length_n > 0 || r->headers_in.chunked
+        || r->headers_in.authorization || r->headers_in.cookie
+        || r->headers_in.if_range || r->headers_in.if_match
+        || r->headers_in.if_none_match || r->headers_in.if_modified_since
+        || r->headers_in.if_unmodified_since)
+    {
+        return;
+    }
+
+    range = r->headers_in.range;
+    if (range
+        && ngx_strlchr(range->value.data,
+                       range->value.data + range->value.len, ','))
+    {
+        return;
+    }
+
+#if (NGX_EXPR)
+    if (!ngx_http_get_expr_flag_value(r,
+                                      u->conf->cache_lock_early_read_conf))
+    {
+#else
+    if (!u->conf->cache_lock_early_read) {
+#endif
+        return;
+    }
+
+    sh = u->conf->cache_early_zone->data;
+    c->early_epoch = sh->epoch;
+
+    if (ngx_http_cache_early_allowed(r, 0, c->early_id) != NGX_OK) {
+        return;
+    }
+
+    c->early_read = 1;
+    c->early_watch = 1;
+}
+
+
+void
+ngx_http_cache_early_invalidate(ngx_shm_zone_t *zone, const u_char *id)
+{
+    ngx_slab_pool_t                *pool;
+    ngx_http_cache_early_sh_t      *sh;
+    ngx_http_cache_early_change_t  *change;
+
+    if (zone->shm.addr == NULL) {
+        return;
+    }
+
+    sh = zone->data;
+    pool = (ngx_slab_pool_t *) zone->shm.addr;
+
+    ngx_shmtx_lock(&pool->mutex);
+    change = &sh->changes[sh->epoch % NGX_HTTP_EARLY_CHANGES];
+    change->all = (id == NULL);
+
+    if (id) {
+        ngx_memcpy(change->id, id, NGX_HTTP_CACHE_KEY_LEN);
+    }
+
+    (void) ngx_atomic_fetch_add(&sh->epoch, 1);
+    ngx_shmtx_unlock(&pool->mutex);
+}
+
+
+/* Called with the fill zone locked. An overrun cannot prove freshness. */
+static ngx_uint_t
+ngx_http_cache_early_current(ngx_http_cache_early_sh_t *sh, const u_char *id,
+    ngx_atomic_uint_t *epoch)
+{
+    ngx_atomic_uint_t               n;
+    ngx_http_cache_early_change_t  *change;
+
+    if (sh->epoch - *epoch > NGX_HTTP_EARLY_CHANGES) {
+        return 0;
+    }
+
+    for (n = *epoch; n != sh->epoch; n++) {
+        change = &sh->changes[n % NGX_HTTP_EARLY_CHANGES];
+        if (change->all
+            || ngx_memcmp(change->id, id, NGX_HTTP_CACHE_KEY_LEN) == 0)
+        {
+            return 0;
+        }
+    }
+
+    *epoch = n;
+
+    return 1;
+}
+
+
+static ngx_uint_t
+ngx_http_cache_early_bucket(ngx_http_cache_t *c)
+{
+    return (c->crc32 % NGX_HTTP_EARLY_BUCKETS) * NGX_HTTP_EARLY_WAYS;
+}
+
+
+static ngx_int_t
+ngx_http_cache_early_allowed(ngx_http_request_t *r, time_t started, u_char *id)
+{
+    ngx_http_upstream_main_conf_t  *umcf;
+
+    umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+    if (umcf->cache_early_guard) {
+        return umcf->cache_early_guard(r, started, id);
+    }
+
+#if (NGX_HTTP_CACHE_EARLY_GUARD_REQUIRED)
+    return NGX_DECLINED;
+#else
+    return NGX_OK;
+#endif
+}
+
+
+static ngx_int_t
+ngx_http_cache_early_eligible(ngx_http_request_t *r)
+{
+    u_char                          *p, *last, *type;
+    off_t                            max;
+    ngx_uint_t                       i;
+    ngx_list_part_t                 *part;
+    ngx_table_elt_t                 *h;
+    ngx_http_upstream_headers_in_t  *in;
+
+    static ngx_str_t  byteranges = ngx_string("multipart/byteranges");
+
+    in = &r->upstream->headers_in;
+    max = NGX_MAX_OFF_T_VALUE - (off_t) r->cache->body_start;
+
+    if (in->content_length_n <= 0 || in->content_length_n > max
+        || in->chunked || in->set_cookie || in->vary
+        || r->cache->vary.len || r->cache->secondary || r->cache->purged
+        || r->cache->update_variant || r->cache->valid_sec <= ngx_time()
+        || (in->status_n != NGX_HTTP_OK
+            && in->status_n != NGX_HTTP_PARTIAL_CONTENT))
+    {
+        return NGX_DECLINED;
+    }
+
+    if (in->status_n == NGX_HTTP_PARTIAL_CONTENT && in->content_type) {
+        p = in->content_type->value.data;
+        last = p + in->content_type->value.len;
+
+        while (p < last && (*p == ' ' || *p == '\t')) {
+            p++;
+        }
+
+        type = p;
+        while (p < last && *p != ';' && *p != ' ' && *p != '\t') {
+            p++;
+        }
+
+        if ((size_t) (p - type) == byteranges.len
+            && ngx_strncasecmp(type, byteranges.data, byteranges.len) == 0)
+        {
+            return NGX_DECLINED;
+        }
+    }
+
+    part = &in->headers.part;
+    h = part->elts;
+
+    for (i = 0; /* void */; i++) {
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            h = part->elts;
+            i = 0;
+        }
+
+        if (h[i].key.len == sizeof("Content-Encoding") - 1
+            && ngx_strncasecmp(h[i].key.data, (u_char *) "Content-Encoding",
+                               h[i].key.len) == 0)
+        {
+            return NGX_DECLINED;
+        }
+
+        p = h[i].value.data;
+        last = p + h[i].value.len;
+
+        if (h[i].key.len == sizeof("Cache-Control") - 1
+            && ngx_strncasecmp(h[i].key.data, (u_char *) "Cache-Control",
+                               h[i].key.len) == 0
+            && (ngx_strlcasestrn(p, last, (u_char *) "private", 6)
+                || ngx_strlcasestrn(p, last, (u_char *) "no-store", 7)
+                || ngx_strlcasestrn(p, last, (u_char *) "no-cache", 7)))
+        {
+            return NGX_DECLINED;
+        }
+
+        if (in->status_n == NGX_HTTP_OK
+            && h[i].key.len == sizeof("Content-Range") - 1
+            && ngx_strncasecmp(h[i].key.data, (u_char *) "Content-Range",
+                               h[i].key.len) == 0)
+        {
+            return NGX_DECLINED;
+        }
+    }
+
+    return NGX_OK;
+}
+
+
+void
+ngx_http_cache_early_progress(ngx_http_request_t *r, ngx_temp_file_t *tf)
+{
+    off_t                         written;
+    uint32_t                      bits;
+    ngx_uint_t                    i, b, j, n;
+    ngx_file_info_t               fi;
+    ngx_http_cache_t             *c;
+    ngx_shm_zone_t               *zone;
+    ngx_slab_pool_t              *pool;
+    ngx_http_cache_early_t       *e;
+    ngx_http_cache_early_sh_t    *sh;
+    ngx_http_cache_early_slot_t  *slot;
+
+    c = r->cache;
+
+    if (tf == NULL || tf->file.fd == NGX_INVALID_FILE || !c->updating
+        || r->upstream->cache_status != NGX_HTTP_CACHE_MISS
+        || tf->offset <= (off_t) c->body_start)
+    {
+        return;
+    }
+
+    written = tf->offset - c->body_start;
+    e = c->early;
+
+    if (e != NULL) {
+        if (written != e->seen) {
+            ngx_shmtx_lock(&e->pool->mutex);
+            e->slot->written = written;
+            ngx_shmtx_unlock(&e->pool->mutex);
+
+            e->seen = written;
+        }
+
+        return;
+    }
+
+    if (ngx_http_cache_early_allowed(r, r->start_sec, NULL) != NGX_OK
+        || tf->file.name.len != c->file.name.len + 11
+        || ngx_memcmp(tf->file.name.data, c->file.name.data, c->file.name.len)
+        || ngx_http_cache_early_eligible(r) != NGX_OK
+        || ngx_fd_info(tf->file.fd, &fi) == NGX_FILE_ERROR)
+    {
+        c->early_read = 0;
+        return;
+    }
+
+    zone = r->upstream->conf->cache_early_zone;
+    pool = (ngx_slab_pool_t *) zone->shm.addr;
+    sh = zone->data;
+
+    e = ngx_pcalloc(r->pool, sizeof(ngx_http_cache_early_t));
+    if (e == NULL) {
+        c->early_read = 0;
+        return;
+    }
+
+    b = ngx_http_cache_early_bucket(c);
+
+    ngx_shmtx_lock(&pool->mutex);
+
+    for (i = b; i < b + NGX_HTTP_EARLY_WAYS; i++) {
+        slot = &sh->slots[i];
+
+        if (slot->state == NGX_HTTP_EARLY_FREE) {
+            break;
+        }
+
+        if (slot->state == NGX_HTTP_EARLY_WRITING
+            || slot->state == NGX_HTTP_EARLY_PUBLISHING)
+        {
+            if (kill(slot->pid, 0) == 0 || ngx_errno != NGX_ESRCH) {
+                continue;
+            }
+
+            slot->state = NGX_HTTP_EARLY_FAILED;
+        }
+
+        for (j = 0; j < NGX_HTTP_EARLY_WORDS; j++) {
+            bits = slot->readers[j];
+
+            for (n = 0; bits; n++, bits >>= 1) {
+                if ((bits & 1) && kill(sh->pids[32 * j + n], 0) == -1
+                    && ngx_errno == NGX_ESRCH)
+                {
+                    slot->readers[j] &= ~((uint32_t) 1 << n);
+                }
+            }
+
+            if (slot->readers[j]) {
+                break;
+            }
+        }
+
+        if (j == NGX_HTTP_EARLY_WORDS) {
+            break;
+        }
+    }
+
+    if (i == b + NGX_HTTP_EARLY_WAYS) {
+        ngx_shmtx_unlock(&pool->mutex);
+
+        c->early_read = 0;
+        return;
+    }
+
+    slot = &sh->slots[i];
+    ngx_memzero(slot, sizeof(ngx_http_cache_early_slot_t));
+
+    slot->zone = c->file_cache->sh;
+    ngx_memcpy(slot->key, c->key, NGX_HTTP_CACHE_KEY_LEN);
+    ngx_memcpy(slot->suffix, tf->file.name.data + c->file.name.len, 11);
+    slot->lock_time = c->lock_time;
+    slot->epoch = c->early_epoch;
+    ngx_memcpy(slot->id, c->early_id, NGX_HTTP_CACHE_KEY_LEN);
+    slot->body_start = c->body_start;
+    slot->written = written;
+    slot->expected = r->upstream->headers_in.content_length_n;
+    slot->ino = ngx_file_uniq(&fi);
+    slot->dev = fi.st_dev;
+    slot->valid = c->valid_sec;
+    slot->started = r->start_sec;
+    slot->pid = ngx_pid;
+    slot->state = NGX_HTTP_EARLY_WRITING;
+    ngx_shmtx_unlock(&pool->mutex);
+
+    e->slot = slot;
+    e->pool = pool;
+    e->seen = written;
+    c->early = e;
+}
+
+
+/* Called with the keys zone locked; the lock order is keys, then fills. */
+static ngx_uint_t
+ngx_http_cache_early_is_publishing(ngx_http_cache_t *c, ngx_shm_zone_t *zone)
+{
+    ngx_uint_t                    b, i, active;
+    ngx_slab_pool_t              *pool;
+    ngx_http_cache_early_sh_t    *sh;
+    ngx_http_cache_early_slot_t  *slot;
+
+    if (zone == NULL) {
+        return 0;
+    }
+
+    sh = zone->data;
+    pool = (ngx_slab_pool_t *) zone->shm.addr;
+    b = ngx_http_cache_early_bucket(c);
+    active = 0;
+
+    ngx_shmtx_lock(&pool->mutex);
+
+    for (i = b; i < b + NGX_HTTP_EARLY_WAYS; i++) {
+        slot = &sh->slots[i];
+
+        if (slot->state == NGX_HTTP_EARLY_PUBLISHING
+            && slot->zone == c->file_cache->sh
+            && ngx_memcmp(slot->key, c->key, NGX_HTTP_CACHE_KEY_LEN) == 0)
+        {
+            if (kill(slot->pid, 0) == 0 || ngx_errno != NGX_ESRCH) {
+                active = 1;
+            } else {
+                slot->state = NGX_HTTP_EARLY_FAILED;
+            }
+
+            break;
+        }
+    }
+
+    ngx_shmtx_unlock(&pool->mutex);
+
+    return active;
+}
+
+
+static ngx_uint_t
+ngx_http_cache_early_publishing(ngx_http_request_t *r)
+{
+    ngx_http_upstream_main_conf_t  *umcf;
+
+    umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+
+    return ngx_http_cache_early_is_publishing(r->cache,
+                                              umcf->cache_early_zone);
+}
+
+
+static ngx_int_t
+ngx_http_cache_early_commit(ngx_http_request_t *r)
+{
+    ngx_int_t                   rc;
+    ngx_http_cache_t           *c;
+    ngx_http_cache_early_t     *e;
+    ngx_http_cache_early_sh_t  *sh;
+
+    c = r->cache;
+    e = c->early;
+    sh = r->upstream->conf->cache_early_zone->data;
+
+    if (e == NULL) {
+        ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+        rc = (c->node->updating && !c->node->purged
+              && c->node->lock_time == c->lock_time) ? NGX_OK : NGX_DECLINED;
+        ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+        return rc;
+    }
+
+    rc = ngx_http_cache_early_allowed(r, e->slot->started, NULL);
+
+    ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+    ngx_shmtx_lock(&e->pool->mutex);
+
+    if (rc != NGX_OK
+        || !ngx_http_cache_early_current(sh, c->early_id, &c->early_epoch)
+        || e->slot->written != e->slot->expected
+        || c->node->purged)
+    {
+        e->slot->state = NGX_HTTP_EARLY_FAILED;
+        rc = NGX_DECLINED;
+
+    } else if (!c->node->updating || c->node->lock_time != c->lock_time) {
+        /* Readers already pinned this inode; only the new owner may rename. */
+        e->slot->state = NGX_HTTP_EARLY_COMPLETE;
+        rc = NGX_DECLINED;
+
+    } else {
+        e->slot->state = NGX_HTTP_EARLY_PUBLISHING;
+        rc = NGX_OK;
+    }
+
+    ngx_shmtx_unlock(&e->pool->mutex);
+    ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+    if (rc == NGX_DECLINED) {
+        c->early = NULL;
+    }
+
+    return rc;
+}
+
+
+static ngx_uint_t
+ngx_http_cache_early_valid(ngx_http_request_t *r)
+{
+    ngx_uint_t                  valid;
+    ngx_http_cache_t           *c;
+    ngx_shm_zone_t             *zone;
+    ngx_slab_pool_t            *pool;
+    ngx_http_cache_early_sh_t  *sh;
+
+    c = r->cache;
+    zone = r->upstream->conf->cache_early_zone;
+    sh = zone->data;
+
+    if (sh->epoch == c->early_epoch) {
+        return 1;
+    }
+
+    /* A response outside the early-read policy uses native cache admission. */
+    if (c->early == NULL && ngx_http_cache_early_eligible(r) != NGX_OK) {
+        return 1;
+    }
+
+    pool = (ngx_slab_pool_t *) zone->shm.addr;
+
+    ngx_shmtx_lock(&pool->mutex);
+    valid = ngx_http_cache_early_current(sh, c->early_id, &c->early_epoch);
+    ngx_shmtx_unlock(&pool->mutex);
+
+    return valid;
+}
+
+
+static void
+ngx_http_cache_early_finish(ngx_http_cache_t *c, ngx_uint_t complete)
+{
+    ngx_http_cache_early_t  *e;
+
+    e = c->early;
+    if (e->wait == NULL) {
+        ngx_shmtx_lock(&e->pool->mutex);
+        e->slot->state = (complete && e->slot->written == e->slot->expected)
+                         ? NGX_HTTP_EARLY_COMPLETE : NGX_HTTP_EARLY_FAILED;
+        ngx_shmtx_unlock(&e->pool->mutex);
+    } else {
+        ngx_http_cache_early_cleanup(e);
+    }
+
+    c->early = NULL;
+}
+
+
+static ngx_int_t
+ngx_http_cache_early_open(ngx_http_request_t *r)
+{
+    u_char                        *name, *p;
+    ngx_fd_t                       fd;
+    ngx_int_t                      rc;
+    size_t                         size;
+    uint32_t                       bit;
+    ngx_uint_t                     b, i, j;
+    ngx_msec_t                     lock_time;
+    ngx_buf_t                     *buf;
+    ngx_str_t                     *key;
+    ngx_file_info_t                fi;
+    ngx_http_cache_t              *c;
+    ngx_http_cache_early_t        *e;
+    ngx_http_cache_early_sh_t     *sh;
+    ngx_http_cache_early_slot_t   *slot;
+    ngx_http_cache_early_wait_t   *wait;
+    ngx_http_file_cache_header_t  *h;
+    ngx_slab_pool_t               *pool;
+    ngx_shm_zone_t                *zone;
+    ngx_pool_cleanup_t            *cln;
+    ngx_pool_cleanup_file_t       *cf;
+
+    c = r->cache;
+
+    if (c->secondary || c->exists || c->purged) {
+        c->early_read = 0;
+        return NGX_DECLINED;
+    }
+
+    zone = r->upstream->conf->cache_early_zone;
+    sh = zone->data;
+    pool = (ngx_slab_pool_t *) zone->shm.addr;
+    b = ngx_http_cache_early_bucket(c);
+    j = ngx_process_slot / 32;
+    bit = (uint32_t) 1 << (ngx_process_slot % 32);
+
+    ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+    lock_time = c->node->lock_time;
+    rc = c->node->updating && !c->node->purged ? NGX_OK : NGX_DECLINED;
+    ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+    if (rc != NGX_OK) {
+        return NGX_DECLINED;
+    }
+
+    ngx_shmtx_lock(&pool->mutex);
+
+    if (sh->pids[ngx_process_slot] != ngx_pid) {
+        for (i = 0; i < NGX_HTTP_EARLY_SLOTS; i++) {
+            sh->slots[i].readers[j] &= ~bit;
+        }
+
+        sh->pids[ngx_process_slot] = ngx_pid;
+    }
+
+    for (i = b; i < b + NGX_HTTP_EARLY_WAYS; i++) {
+        slot = &sh->slots[i];
+
+        if (slot->state == NGX_HTTP_EARLY_WRITING
+            && slot->zone == c->file_cache->sh && slot->lock_time == lock_time
+            && slot->valid > ngx_time()
+            && ngx_memcmp(slot->id, c->early_id, NGX_HTTP_CACHE_KEY_LEN) == 0
+            && ngx_http_cache_early_current(sh, slot->id, &slot->epoch)
+            && ngx_memcmp(slot->key, c->key, NGX_HTTP_CACHE_KEY_LEN) == 0)
+        {
+            break;
+        }
+    }
+
+    if (i == b + NGX_HTTP_EARLY_WAYS) {
+        ngx_shmtx_unlock(&pool->mutex);
+
+        return NGX_DECLINED;
+    }
+
+    slot->readers[j] |= bit;
+    size = slot->body_start;
+    c->early_epoch = slot->epoch;
+    ngx_shmtx_unlock(&pool->mutex);
+
+    for (wait = ngx_http_cache_early_waits[i]; wait; wait = wait->next) {
+        if (wait->slot == slot) {
+            break;
+        }
+    }
+
+    if (wait == NULL) {
+        wait = ngx_calloc(sizeof(ngx_http_cache_early_wait_t), ngx_cycle->log);
+        if (wait == NULL) {
+            ngx_shmtx_lock(&pool->mutex);
+            slot->readers[j] &= ~bit;
+            ngx_shmtx_unlock(&pool->mutex);
+
+            c->early_read = 0;
+            return NGX_DECLINED;
+        }
+
+        ngx_queue_init(&wait->queue);
+        wait->event.handler = ngx_http_cache_early_tick;
+        wait->event.data = wait;
+        wait->slot = slot;
+        wait->index = i;
+        wait->next = ngx_http_cache_early_waits[i];
+        ngx_http_cache_early_waits[i] = wait;
+    }
+
+    wait->event.log = ngx_cycle->log;
+    wait->users++;
+
+    rc = NGX_DECLINED;
+    fd = NGX_INVALID_FILE;
+
+    if (ngx_http_cache_early_allowed(r, slot->started, NULL) != NGX_OK
+        || size <= c->header_start || size > c->body_start)
+    {
+        goto failed;
+    }
+
+    name = ngx_pnalloc(r->pool, c->file.name.len + 12);
+    if (name == NULL) {
+        goto failed;
+    }
+
+    p = ngx_cpymem(name, c->file.name.data, c->file.name.len);
+    p = ngx_cpymem(p, slot->suffix, 11);
+    *p = '\0';
+
+    fd = ngx_open_file(name, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
+    if (fd == NGX_INVALID_FILE || ngx_fd_info(fd, &fi) == NGX_FILE_ERROR
+        || ngx_file_uniq(&fi) != slot->ino || fi.st_dev != slot->dev)
+    {
+        goto failed;
+    }
+
+    buf = ngx_create_temp_buf(r->pool, size);
+    if (buf == NULL || pread(fd, buf->pos, size, 0) != (ssize_t) size) {
+        goto failed;
+    }
+
+    h = (ngx_http_file_cache_header_t *) buf->pos;
+    if (h->version != NGX_HTTP_CACHE_VERSION || h->valid_sec <= ngx_time()
+        || h->body_start != size || h->header_start != c->header_start
+        || h->crc32 != c->crc32 || h->vary_len
+        || h->etag_len > sizeof(h->etag))
+    {
+        goto failed;
+    }
+
+    p = buf->pos + sizeof(*h) + sizeof("\nKEY: ") - 1;
+    key = c->keys.elts;
+
+    for (i = 0; i < c->keys.nelts; i++) {
+        if (ngx_memcmp(p, key[i].data, key[i].len) != 0) {
+            goto failed;
+        }
+
+        p += key[i].len;
+    }
+
+    e = ngx_pcalloc(r->pool, sizeof(ngx_http_cache_early_t));
+    if (e == NULL) {
+        goto failed;
+    }
+
+    e->cleanup = ngx_http_cleanup_add(r, 0);
+    if (e->cleanup == NULL) {
+        goto failed;
+    }
+
+    ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+    rc = (!c->node->purged && c->node->updating
+          && c->node->lock_time == lock_time) ? NGX_OK : NGX_DECLINED;
+    ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+    if (rc != NGX_OK) {
+        goto failed;
+    }
+
+    cln = ngx_pool_cleanup_add(r->pool, sizeof(ngx_pool_cleanup_file_t));
+    if (cln == NULL) {
+        rc = NGX_ERROR;
+        goto failed;
+    }
+
+    cf = cln->data;
+    cf->fd = fd;
+    cf->name = name;
+    cf->log = r->connection->log;
+    cln->handler = ngx_pool_cleanup_file;
+
+    buf->last += size;
+    c->file.fd = fd;
+    c->file.log = r->connection->log;
+    c->uniq = slot->ino;
+    c->buf = buf;
+    c->body_start = size;
+    c->length = size + slot->expected;
+    c->valid_sec = h->valid_sec;
+    c->last_modified = h->last_modified;
+    c->date = h->date;
+    c->etag.data = h->etag;
+    c->etag.len = h->etag_len;
+    c->must_revalidate = (h->valid_msec & NGX_HTTP_CACHE_MUST_REVALIDATE) != 0;
+    c->early_reader = 1;
+    c->early = e;
+
+    e->cleanup->handler = ngx_http_cache_early_cleanup;
+    e->cleanup->data = e;
+    e->request = r;
+    e->slot = slot;
+    e->file = c->file;
+    e->file.name.data = name;
+    e->file.name.len = c->file.name.len + 11;
+    e->wait = wait;
+    e->pool = pool;
+    e->last_progress = ngx_current_msec;
+    e->timeout = r->upstream->read_timeout;
+
+    e->event.data = e;
+    e->event.handler = ngx_http_cache_early_resume;
+    e->event.log = r->connection->log;
+
+    return NGX_OK;
+
+failed:
+
+    if (fd != NGX_INVALID_FILE) {
+        (void) ngx_close_file(fd);
+    }
+
+    ngx_http_cache_early_release(wait, pool);
+    c->early_read = 0;
+
+    return rc;
+}
+
+
+static void
+ngx_http_cache_early_release(ngx_http_cache_early_wait_t *wait,
+    ngx_slab_pool_t *pool)
+{
+    ngx_http_cache_early_wait_t  **next;
+
+    if (--wait->users) {
+        wait->event.log = ngx_cycle->log;
+        return;
+    }
+
+    ngx_shmtx_lock(&pool->mutex);
+    wait->slot->readers[ngx_process_slot / 32] &=
+                                   ~((uint32_t) 1 << (ngx_process_slot % 32));
+    ngx_shmtx_unlock(&pool->mutex);
+
+    next = &ngx_http_cache_early_waits[wait->index];
+
+    while (*next != wait) {
+        next = &(*next)->next;
+    }
+
+    *next = wait->next;
+    ngx_free(wait);
+}
+
+
+static void
+ngx_http_cache_early_cleanup(void *data)
+{
+    ngx_http_cache_early_t  *e = data;
+
+    ngx_http_cache_t  *c;
+
+    if (e->cleanup->handler == NULL) {
+        return;
+    }
+
+    e->cleanup->handler = NULL;
+
+    if (e->queued) {
+        ngx_queue_remove(&e->queue);
+        e->queued = 0;
+    }
+
+    if (e->event.posted) {
+        ngx_delete_posted_event(&e->event);
+    }
+
+    if (ngx_queue_empty(&e->wait->queue) && e->wait->event.timer_set) {
+        ngx_del_timer(&e->wait->event);
+    }
+
+    ngx_http_cache_early_release(e->wait, e->pool);
+
+    c = e->request->cache;
+    if (c && c->early == e) {
+        c->early = NULL;
+        c->early_reader = 0;
+    }
+}
+
+
+static void
+ngx_http_cache_early_tick(ngx_event_t *ev)
+{
+    ngx_queue_t                  *q;
+    ngx_http_cache_early_t       *e;
+    ngx_http_cache_early_wait_t  *wait;
+
+    wait = ev->data;
+
+    while (!ngx_queue_empty(&wait->queue)) {
+        q = ngx_queue_head(&wait->queue);
+        ngx_queue_remove(q);
+        e = ngx_queue_data(q, ngx_http_cache_early_t, queue);
+        e->queued = 0;
+        ngx_post_event(&e->event, &ngx_posted_events);
+    }
+}
+
+
+static void
+ngx_http_cache_early_resume(ngx_event_t *ev)
+{
+    ngx_http_cache_early_t  *e = ev->data;
+
+    ngx_connection_t  *c;
+
+    c = e->request->connection;
+    ngx_http_cache_early_writer(e->request);
+    ngx_http_run_posted_requests(c);
+}
+
+
+static void
+ngx_http_cache_early_writer(ngx_http_request_t *r)
+{
+    ngx_int_t  rc;
+
+    rc = ngx_http_cache_early_send(r);
+    if (rc != NGX_DONE) {
+        ngx_http_finalize_request(r, rc);
+    }
+}
+
+
+ngx_uint_t
+ngx_http_cache_early_ready(ngx_http_request_t *r)
+{
+    ngx_uint_t               failed;
+    ngx_http_cache_early_t  *e;
+
+    e = r->cache->early;
+
+    ngx_shmtx_lock(&e->pool->mutex);
+    failed = (e->slot->state == NGX_HTTP_EARLY_FAILED);
+    ngx_shmtx_unlock(&e->pool->mutex);
+
+    if (!failed && ngx_http_cache_early_valid(r)) {
+        return 1;
+    }
+
+    /* No response header or body filter has seen the old representation. */
+    ngx_http_cache_early_cleanup(e);
+    r->cache->early_read = 0;
+    r->cache->early_watch = 0;
+    r->upstream->cacheable = 0;
+    r->cached = 0;
+
+    return 0;
+}
+
+
+static ngx_int_t
+ngx_http_cache_early_send(ngx_http_request_t *r)
+{
+    off_t                         available;
+    ngx_int_t                     rc;
+    ngx_uint_t                    last;
+    ngx_buf_t                    *b;
+    ngx_event_t                  *wev;
+    ngx_chain_t                  *out;
+    ngx_http_cache_t             *c;
+    ngx_http_cache_early_t       *e;
+    ngx_http_cache_early_state_e  state;
+    ngx_http_core_loc_conf_t     *clcf;
+
+    c = r->cache;
+    e = c->early;
+    wev = r->connection->write;
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+    if (wev->timedout || r->connection->error || r->main->terminated) {
+        return NGX_ERROR;
+    }
+
+    ngx_shmtx_lock(&e->pool->mutex);
+    state = e->slot->state;
+    available = e->slot->written;
+    ngx_shmtx_unlock(&e->pool->mutex);
+
+    if (state == NGX_HTTP_EARLY_FAILED || available > e->slot->expected
+        || !ngx_http_cache_early_valid(r))
+    {
+        return NGX_ERROR;
+    }
+
+    if (!r->header_sent) {
+        rc = ngx_http_send_header(r);
+        if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+            return rc;
+        }
+
+        if (r->cache != c || c->early != e) {
+            return NGX_DONE;
+        }
+    }
+
+    if (e->seen != available || wev->delayed || !wev->ready) {
+        e->seen = available;
+        e->last_progress = ngx_current_msec;
+    }
+
+    last = (state == NGX_HTTP_EARLY_COMPLETE);
+
+    if (!last && available == e->slot->expected) {
+        available--;
+    }
+
+    rc = NGX_OK;
+    out = NULL;
+
+    if (!wev->delayed && !r->aio) {
+        if (e->busy) {
+            last = 0;
+
+        } else if (available > e->cursor || last) {
+            out = ngx_chain_get_free_buf(r->pool, &e->free);
+            if (out == NULL) {
+                return NGX_ERROR;
+            }
+
+            b = out->buf;
+            ngx_memzero(b, sizeof(ngx_buf_t));
+
+            b->file = &e->file;
+            b->file_pos = c->body_start + e->cursor;
+            b->file_last = c->body_start + available;
+            b->in_file = (available > e->cursor);
+            b->last_buf = last && r == r->main;
+            b->last_in_chain = last;
+            b->flush = !last;
+            b->tag = (ngx_buf_tag_t) &ngx_http_cache_early_name;
+            e->cursor = available;
+        }
+
+        if (out || e->busy || r->buffered || r->connection->buffered) {
+            rc = ngx_http_output_filter(r, out);
+        }
+
+        ngx_chain_update_chains(r->pool, &e->free, &e->busy, &out,
+                                (ngx_buf_tag_t) &ngx_http_cache_early_name);
+        if (rc == NGX_ERROR) {
+            return rc;
+        }
+
+        if (last) {
+            r->write_event_handler = ngx_http_request_empty_handler;
+            ngx_http_cache_early_cleanup(e);
+            return rc;
+        }
+    }
+
+    r->write_event_handler = ngx_http_cache_early_writer;
+
+    if (rc == NGX_AGAIN || wev->delayed || r->aio) {
+        if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        if (!wev->delayed && !wev->ready && !wev->timer_set) {
+            ngx_add_timer(wev, clcf->send_timeout);
+        }
+    }
+
+    if ((ngx_msec_int_t) (ngx_current_msec - e->last_progress)
+        > (ngx_msec_int_t) e->timeout
+        && !r->aio && !wev->delayed && wev->ready)
+    {
+        return NGX_ERROR;
+    }
+
+    if (!e->queued) {
+        ngx_queue_insert_tail(&e->wait->queue, &e->queue);
+        e->queued = 1;
+    }
+
+    if (!e->wait->event.timer_set) {
+        ngx_add_timer(&e->wait->event, NGX_HTTP_CACHE_EARLY_INTERVAL);
+    }
+
+    return NGX_DONE;
+}
+
+#endif /* NGX_EXT && !(NGX_WIN32) */
 
 
 char *
