@@ -223,10 +223,12 @@ static char *ngx_http_proxy_cache_key(ngx_conf_t *cf, ngx_command_t *cmd,
 #if (NGX_EXT)
 static char *ngx_http_proxy_cache_lock_poll_interval(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
-#endif
-#if (NGX_EXT && !(NGX_WIN32))
+static char *ngx_http_proxy_cache_lock_expired(ngx_conf_t *cf,
+    ngx_command_t *cmd, void *conf);
+#if !(NGX_WIN32)
 static char *ngx_http_proxy_cache_early_read(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
+#endif
 #endif
 #endif
 #if (NGX_HTTP_SSL)
@@ -977,7 +979,26 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
       NULL },
 
-#if (NGX_EXT && !(NGX_WIN32))
+#if (NGX_EXT)
+
+    { ngx_string("proxy_cache_lock_expired"),
+#if (NGX_EXPR)
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+                        |NGX_CONF_FLAG,
+      ngx_http_proxy_cache_lock_expired,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_expired_conf),
+#else
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_http_proxy_cache_lock_expired,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_expired),
+#endif
+      NULL },
+
+#if !(NGX_WIN32)
 
     { ngx_string("proxy_cache_lock_early_read"),
 #if (NGX_EXPR)
@@ -996,6 +1017,7 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
 #endif
       NULL },
 
+#endif
 #endif
 
     { ngx_string("proxy_cache_lock_timeout"),
@@ -5162,13 +5184,17 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
 #if !(NGX_WIN32)
     conf->upstream.cache_lock_early_read_conf = NGX_CONF_UNSET_PTR;
 #endif
+    conf->upstream.cache_lock_expired_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_timeout_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_age_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_poll_interval_conf = NGX_CONF_UNSET_PTR;
 #else
-#if (NGX_EXT && !(NGX_WIN32))
+#if (NGX_EXT)
+#if !(NGX_WIN32)
     conf->upstream.cache_lock_early_read = NGX_CONF_UNSET;
+#endif
+    conf->upstream.cache_lock_expired = NGX_CONF_UNSET;
 #endif
     conf->upstream.cache_lock = NGX_CONF_UNSET;
     conf->upstream.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
@@ -5855,7 +5881,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
 #endif
 
-#if (NGX_EXT && !(NGX_WIN32))
+#if (NGX_EXT)
+#if !(NGX_WIN32)
 
     if (conf->upstream.cache_early_zone == NULL) {
         conf->upstream.cache_early_zone = prev->upstream.cache_early_zone;
@@ -5875,7 +5902,20 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->upstream.cache_lock_early_read,
                          prev->upstream.cache_lock_early_read, 0);
 #endif
+#endif
 
+#if (NGX_EXPR)
+    if (ngx_conf_merge_expr_flag_value(cf,
+                                      &conf->upstream.cache_lock_expired_conf,
+                                      prev->upstream.cache_lock_expired_conf, 0)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+#else
+    ngx_conf_merge_value(conf->upstream.cache_lock_expired,
+                         prev->upstream.cache_lock_expired, 0);
+#endif
 #endif
 
     ngx_conf_merge_value(conf->upstream.cache_revalidate,
@@ -7840,7 +7880,40 @@ ngx_http_proxy_cache_key(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-#if (NGX_EXT && !(NGX_WIN32))
+#if (NGX_EXT)
+
+static char *
+ngx_http_proxy_cache_lock_expired(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *data)
+{
+    char                           *rv;
+    ngx_str_t                      *value;
+    ngx_http_upstream_main_conf_t  *umcf;
+
+#if !(NGX_WIN32)
+    rv = ngx_http_proxy_cache_early_read(cf, cmd, data);
+#elif (NGX_EXPR)
+    rv = ngx_conf_set_conditional_flag_slot(cf, cmd, data);
+#else
+    rv = ngx_conf_set_flag_slot(cf, cmd, data);
+#endif
+
+    if (rv != NGX_CONF_OK) {
+        return rv;
+    }
+
+    value = cf->args->elts;
+
+    if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {
+        umcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_upstream_module);
+        umcf->cache_lock_expired = 1;
+    }
+
+    return NGX_CONF_OK;
+}
+
+
+#if !(NGX_WIN32)
 
 static char *
 ngx_http_proxy_cache_early_read(ngx_conf_t *cf, ngx_command_t *cmd, void *data)
@@ -7871,6 +7944,7 @@ ngx_http_proxy_cache_early_read(ngx_conf_t *cf, ngx_command_t *cmd, void *data)
     return NGX_CONF_OK;
 }
 
+#endif
 #endif
 
 #endif

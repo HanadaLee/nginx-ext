@@ -146,6 +146,17 @@ static ngx_int_t ngx_http_file_cache_update_variant(ngx_http_request_t *r,
     ngx_http_cache_t *c);
 static void ngx_http_file_cache_cleanup(void *data);
 
+#if (NGX_EXT)
+static void ngx_http_file_cache_expired_pool_cleanup(void *data);
+static ngx_uint_t ngx_http_file_cache_commit_busy(ngx_http_cache_t *c);
+static ngx_int_t ngx_http_file_cache_commit(ngx_http_request_t *r,
+    ngx_http_cache_t *c);
+
+#if !(NGX_WIN32)
+static void ngx_http_file_cache_expired_watch(ngx_http_request_t *r);
+#endif
+#endif
+
 static time_t ngx_http_file_cache_forced_expire(ngx_http_file_cache_t *cache);
 static time_t ngx_http_file_cache_expire(ngx_http_file_cache_t *cache);
 static void ngx_http_file_cache_delete(ngx_http_file_cache_t *cache,
@@ -177,6 +188,8 @@ static void ngx_http_cache_early_finish(ngx_http_cache_t *c,
     ngx_uint_t complete);
 static ngx_int_t ngx_http_cache_early_send(ngx_http_request_t *r);
 static ngx_int_t ngx_http_cache_early_init(ngx_shm_zone_t *zone, void *data);
+static ngx_uint_t ngx_http_cache_early_current(ngx_http_cache_early_sh_t *sh,
+    const u_char *id, ngx_atomic_uint_t *epoch);
 static ngx_int_t ngx_http_cache_early_allowed(ngx_http_request_t *r,
     time_t started, u_char *id);
 static ngx_int_t ngx_http_cache_early_eligible(ngx_http_request_t *r);
@@ -221,6 +234,10 @@ ngx_http_file_cache_init(ngx_shm_zone_t *shm_zone, void *data)
     size_t                  len;
     ngx_uint_t              n;
     ngx_http_file_cache_t  *cache;
+#if (NGX_EXT)
+    ngx_queue_t                 *q;
+    ngx_http_file_cache_node_t  *fcn;
+#endif
 
     cache = shm_zone->data;
 
@@ -268,6 +285,24 @@ ngx_http_file_cache_init(ngx_shm_zone_t *shm_zone, void *data)
 #if (NGX_EXT)
         cache->sh->rbtree.insert = ngx_http_file_cache_rbtree_insert_value;
         cache->shpool->log_nomem = 0;
+
+        /*
+         * An on-disk snapshot has no surviving refresh or commit owner.
+         * A live reload keeps these fields in the ocache branch above.
+         */
+
+        for (q = ngx_queue_head(&cache->sh->queue);
+             q != ngx_queue_sentinel(&cache->sh->queue);
+             q = ngx_queue_next(q))
+        {
+            fcn = ngx_queue_data(q, ngx_http_file_cache_node_t, queue);
+            fcn->lock_commit_pid = 0;
+
+            if (fcn->lock_expired) {
+                fcn->lock_expired = 0;
+                fcn->updating = 0;
+            }
+        }
 #endif
 
         return NGX_OK;
@@ -407,6 +442,9 @@ ngx_http_file_cache_open(ngx_http_request_t *r)
     ngx_uint_t                 test;
     ngx_http_cache_t          *c;
     ngx_pool_cleanup_t        *cln;
+#if (NGX_EXT)
+    ngx_pool_t                *pool;
+#endif
     ngx_open_file_info_t       of;
     ngx_http_file_cache_t     *cache;
     ngx_http_core_loc_conf_t  *clcf;
@@ -420,6 +458,49 @@ ngx_http_file_cache_open(ngx_http_request_t *r)
     if (c->reading) {
         return ngx_http_file_cache_read(r, c);
     }
+
+#if (NGX_EXT)
+    pool = r->pool;
+
+    if (c->lock_expired && c->lock_expired_buffer_size == 0) {
+        c->lock_expired_buffer_size = c->body_start;
+    }
+
+    if (c->lock_expired_wait) {
+        if (c->lock_timeout == 0 || c->lock_expired_uncached
+            || (ngx_msec_int_t) (c->wait_time - ngx_current_msec) <= 0)
+        {
+            c->lock_expired_uncached = 1;
+            return NGX_HTTP_CACHE_STALE;
+        }
+
+        /*
+         * Retain the first fd and buffer in the request pool. Only repeated
+         * open attempts use the recyclable pool below.
+         */
+
+        if (c->lock_expired_pool) {
+            ngx_destroy_pool(c->lock_expired_pool);
+        }
+
+        c->lock_expired_pool = ngx_create_pool(512, r->connection->log);
+        if (c->lock_expired_pool == NULL) {
+            return NGX_ERROR;
+        }
+
+        c->file.fd = NGX_INVALID_FILE;
+        c->buf = NULL;
+        c->body_start = c->lock_expired_buffer_size;
+        c->etag.len = 0;
+        c->last_modified = -1;
+        c->lock_expired_wait = 0;
+        r->cached = 0;
+    }
+
+    if (c->lock_expired_pool) {
+        pool = c->lock_expired_pool;
+    }
+#endif
 
     cache = c->file_cache;
 
@@ -495,7 +576,11 @@ ngx_http_file_cache_open(ngx_http_request_t *r)
     of.directio = NGX_OPEN_FILE_DIRECTIO_OFF;
     of.read_ahead = clcf->read_ahead;
 
+#if (NGX_EXT)
+    if (ngx_open_cached_file(clcf->open_file_cache, &c->file.name, &of, pool)
+#else
     if (ngx_open_cached_file(clcf->open_file_cache, &c->file.name, &of, r->pool)
+#endif
         != NGX_OK)
     {
         switch (of.err) {
@@ -523,7 +608,11 @@ ngx_http_file_cache_open(ngx_http_request_t *r)
     c->length = of.size;
     c->fs_size = (of.fs_size + cache->bsize - 1) / cache->bsize;
 
+#if (NGX_EXT)
+    c->buf = ngx_create_temp_buf(pool, c->body_start);
+#else
     c->buf = ngx_create_temp_buf(r->pool, c->body_start);
+#endif
     if (c->buf == NULL) {
         return NGX_ERROR;
     }
@@ -563,6 +652,253 @@ ngx_http_file_cache_lock_timer(ngx_http_cache_t *c, ngx_msec_t now,
     return timer;
 }
 
+
+static void
+ngx_http_file_cache_expired_pool_cleanup(void *data)
+{
+    ngx_http_cache_t  *c = data;
+
+    if (c->lock_expired_pool) {
+        ngx_destroy_pool(c->lock_expired_pool);
+        c->lock_expired_pool = NULL;
+    }
+}
+
+
+/*
+ * Called with the cache metadata mutex held; no file I/O is performed here.
+ */
+static ngx_uint_t
+ngx_http_file_cache_commit_busy(ngx_http_cache_t *c)
+{
+    ngx_pid_t  pid;
+#if (NGX_WIN32)
+    HANDLE     process;
+    DWORD      status;
+#endif
+
+    pid = c->node->lock_commit_pid;
+
+    if (pid == 0) {
+        return 0;
+    }
+
+#if (NGX_WIN32)
+    process = OpenProcess(SYNCHRONIZE, 0, pid);
+
+    if (process == NULL) {
+        if (ngx_errno != ERROR_INVALID_PARAMETER) {
+            return 1;
+        }
+
+    } else {
+        status = WaitForSingleObject(process, 0);
+        CloseHandle(process);
+
+        if (status != WAIT_OBJECT_0) {
+            return 1;
+        }
+    }
+#else
+    if (kill(pid, 0) != -1 || ngx_errno != NGX_ESRCH) {
+        return 1;
+    }
+#endif
+
+    c->node->lock_commit_pid = 0;
+
+    return 0;
+}
+
+
+static ngx_int_t
+ngx_http_file_cache_commit(ngx_http_request_t *r, ngx_http_cache_t *c)
+{
+    ngx_int_t                       rc;
+    ngx_http_upstream_main_conf_t  *umcf;
+
+    umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+
+    if (!umcf->cache_lock_expired && !c->lock_expired_owner
+        && !c->node->lock_expired && !c->node->lock_commit_pid)
+    {
+        return NGX_OK;
+    }
+
+    ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+
+    rc = NGX_DECLINED;
+
+    if (!ngx_http_file_cache_commit_busy(c)
+        && (!(c->lock_expired_owner || c->node->lock_expired)
+            || (c->lock_expired_owner && c->node->lock_expired
+                && c->node->updating
+                && c->lock_generation == c->node->lock_generation)))
+    {
+        c->node->lock_commit_pid = ngx_pid;
+        c->lock_expired_commit = 1;
+        rc = NGX_OK;
+    }
+
+    ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+    return rc;
+}
+
+
+ngx_int_t
+ngx_http_file_cache_lock_expired_valid(ngx_http_request_t *r)
+{
+    ngx_uint_t                      valid;
+    ngx_http_cache_t               *c;
+    ngx_http_file_cache_node_t     *fcn;
+#if !(NGX_WIN32)
+    ngx_slab_pool_t                *pool;
+    ngx_http_upstream_main_conf_t  *umcf;
+#endif
+
+    c = r->cache;
+
+    if (!c->lock_expired_owner) {
+        return NGX_OK;
+    }
+
+    ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+
+    fcn = ngx_http_file_cache_lookup(c->file_cache, c->key);
+    valid = fcn && fcn->lock_expired
+            && fcn->lock_generation == c->lock_generation;
+
+    ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+    if (!valid) {
+        return NGX_DECLINED;
+    }
+
+#if !(NGX_WIN32)
+    umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+
+    if (umcf->cache_early_zone) {
+        if (!c->lock_expired_watch) {
+            return NGX_DECLINED;
+        }
+
+        pool = (ngx_slab_pool_t *) umcf->cache_early_zone->shm.addr;
+
+        ngx_shmtx_lock(&pool->mutex);
+
+        valid = ngx_http_cache_early_current(umcf->cache_early_zone->data,
+                                            c->early_id, &c->early_epoch);
+
+        ngx_shmtx_unlock(&pool->mutex);
+
+        if (!valid) {
+            return NGX_DECLINED;
+        }
+    }
+#endif
+
+    return NGX_OK;
+}
+
+
+#if !(NGX_WIN32)
+
+static void
+ngx_http_file_cache_expired_watch(ngx_http_request_t *r)
+{
+    ngx_slab_pool_t                *pool;
+    ngx_http_cache_t               *c;
+    ngx_http_cache_early_sh_t      *sh;
+    ngx_http_upstream_main_conf_t  *umcf;
+
+    c = r->cache;
+    c->lock_expired_watch = 0;
+
+    umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+
+    if (umcf->cache_early_zone == NULL) {
+        return;
+    }
+
+    if (ngx_http_cache_early_allowed(r, 0, c->early_id) != NGX_OK) {
+        return;
+    }
+
+    sh = umcf->cache_early_zone->data;
+    pool = (ngx_slab_pool_t *) umcf->cache_early_zone->shm.addr;
+
+    ngx_shmtx_lock(&pool->mutex);
+
+    c->early_epoch = sh->epoch;
+
+    ngx_shmtx_unlock(&pool->mutex);
+
+    c->lock_expired_watch = 1;
+}
+
+#endif
+
+
+ngx_int_t
+ngx_http_file_cache_lock_expired(ngx_http_request_t *r)
+{
+    ngx_msec_t           now, timer;
+    ngx_http_cache_t    *c;
+    ngx_pool_cleanup_t  *cln;
+
+    c = r->cache;
+    now = ngx_current_msec;
+
+    if (c->lock_timeout == 0
+        || (c->wait_time && (ngx_msec_int_t) (c->wait_time - now) <= 0)
+        || r->main->blocked >= NGX_HTTP_MAX_BLOCKED)
+    {
+        c->lock_expired_uncached = 1;
+        return NGX_HTTP_CACHE_STALE;
+    }
+
+    if (!c->lock_expired_pool_cleanup) {
+        cln = ngx_pool_cleanup_add(r->pool, 0);
+        if (cln == NULL) {
+            return NGX_ERROR;
+        }
+
+        cln->handler = ngx_http_file_cache_expired_pool_cleanup;
+        cln->data = c;
+        c->lock_expired_pool_cleanup = 1;
+    }
+
+    if (c->wait_time == 0) {
+        c->wait_time = now + c->lock_timeout;
+        c->wait_event.handler = ngx_http_file_cache_lock_wait_handler;
+        c->wait_event.data = r;
+        c->wait_event.log = r->connection->log;
+    }
+
+    c->lock_expired_wait = 1;
+    c->waiting = 1;
+
+    ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+
+    timer = c->node->lock_time - now;
+
+    if (!c->node->updating
+        || ((ngx_msec_int_t) timer <= 0
+            && !ngx_http_file_cache_commit_busy(c)))
+    {
+        timer = 1;
+    }
+
+    ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+
+    timer = ngx_http_file_cache_lock_timer(c, now, timer);
+    ngx_add_timer(&c->wait_event, timer);
+
+    r->main->blocked++;
+
+    return NGX_AGAIN;
+}
 
 #endif
 
@@ -605,14 +941,22 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
     timer = c->node->lock_time - now;
 
 #if (NGX_EXT && !(NGX_WIN32))
-    if (!c->node->updating
-        || ((ngx_msec_int_t) timer <= 0
-            && !ngx_http_cache_early_publishing(r)))
+    if ((!c->node->updating
+         || ((ngx_msec_int_t) timer <= 0
+             && !ngx_http_cache_early_publishing(r)))
+        && !ngx_http_file_cache_commit_busy(c))
+    {
+#elif (NGX_EXT)
+    if ((!c->node->updating || ((ngx_msec_int_t) timer <= 0))
+        && !ngx_http_file_cache_commit_busy(c))
     {
 #else
     if (!c->node->updating || (ngx_msec_int_t) timer <= 0) {
 #endif
         c->node->updating = 1;
+#if (NGX_EXT)
+        c->node->lock_expired = 0;
+#endif
         c->node->lock_time = now + c->lock_age;
         c->updating = 1;
         c->lock_time = c->node->lock_time;
@@ -755,6 +1099,13 @@ ngx_http_file_cache_lock_wait(ngx_http_request_t *r, ngx_http_cache_t *c)
         wait = 1;
     }
 
+#if (NGX_EXT)
+    if (ngx_http_file_cache_commit_busy(c)) {
+        wait = 1;
+        timer = c->lock_poll_interval;
+    }
+#endif
+
     ngx_shmtx_unlock(&cache->shpool->mutex);
 
     if (wait) {
@@ -893,6 +1244,16 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
         ngx_shmtx_unlock(&cache->shpool->mutex);
     }
 
+#if (NGX_EXT)
+    if (c->lock_expired && !c->lock_expired_owner && c->wait_time
+        && c->valid_sec < ngx_time()
+        && (ngx_msec_int_t) (c->wait_time - ngx_current_msec) <= 0)
+    {
+        c->lock_expired_uncached = 1;
+        return NGX_HTTP_CACHE_STALE;
+    }
+#endif
+
     now = ngx_time();
 
     if (c->valid_sec < now) {
@@ -901,17 +1262,84 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
 
         ngx_shmtx_lock(&cache->shpool->mutex);
 
+#if (NGX_EXT)
+        if (r->background && r->parent && r->parent->cache
+            && r->parent->cache->lock_expired_owner
+            && r->parent->cache->node == c->node
+            && r->parent->cache->lock_generation == c->node->lock_generation)
+        {
+            /*
+             * Transfer the parent's lease even if the subrequest's conditional
+             * configuration disables expired locking.
+             */
+
+            c->lock_expired = 1;
+            c->lock_expired_buffer_size = c->buffer_size;
+            c->updating = 1;
+            c->lock_expired_owner = 1;
+            c->lock_time = c->node->lock_time;
+            c->lock_generation = c->node->lock_generation;
+
+            r->parent->cache->updating = 0;
+            r->parent->cache->lock_expired_owner = 0;
+
+            rc = NGX_HTTP_CACHE_STALE;
+
+        } else if (ngx_http_file_cache_commit_busy(c)) {
+            rc = NGX_HTTP_CACHE_UPDATING;
+
+        } else if (c->lock_expired && !r->background
+                   && (!c->node->updating
+                       || (c->node->lock_expired
+                           && (ngx_msec_int_t) (c->node->lock_time
+                                               - ngx_current_msec) <= 0))
+                   && (!c->wait_time
+                       || (ngx_msec_int_t) (c->wait_time
+                                           - ngx_current_msec) > 0))
+        {
+            c->node->lock_time = ngx_current_msec + c->lock_age;
+
+            if (++c->node->lock_generation == 0) {
+                c->node->lock_generation++;
+            }
+
+            c->lock_generation = c->node->lock_generation;
+            c->node->lock_expired = 1;
+            c->node->updating = 1;
+            c->lock_expired_owner = 1;
+            c->updating = 1;
+            c->lock_time = c->node->lock_time;
+            rc = NGX_HTTP_CACHE_STALE;
+
+        } else
+#endif
         if (c->node->updating) {
             rc = NGX_HTTP_CACHE_UPDATING;
 
         } else {
+#if (NGX_EXT)
+            c->node->lock_expired = 0;
+#endif
             c->node->updating = 1;
             c->updating = 1;
             c->lock_time = c->node->lock_time;
             rc = NGX_HTTP_CACHE_STALE;
         }
 
+#if (NGX_EXT && !(NGX_WIN32))
+        if (c->lock_expired) {
+            c->early_read = 0;
+            c->early_watch = 0;
+        }
+#endif
+
         ngx_shmtx_unlock(&cache->shpool->mutex);
+
+#if (NGX_EXT && !(NGX_WIN32))
+        if (c->lock_expired_owner) {
+            ngx_http_file_cache_expired_watch(r);
+        }
+#endif
 
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                        "http file cache expired: %i %T %T",
@@ -1628,6 +2056,9 @@ static ngx_int_t
 ngx_http_file_cache_update_variant(ngx_http_request_t *r, ngx_http_cache_t *c)
 {
     ngx_http_file_cache_t  *cache;
+#if (NGX_EXT)
+    ngx_uint_t              expired_owner;
+#endif
 
     if (!c->secondary) {
         return NGX_OK;
@@ -1652,7 +2083,22 @@ ngx_http_file_cache_update_variant(ngx_http_request_t *r, ngx_http_cache_t *c)
     ngx_shmtx_lock(&cache->shpool->mutex);
 
     c->node->count--;
+#if (NGX_EXT)
+    expired_owner = c->lock_expired_owner && c->node->lock_expired
+                    && c->node->updating
+                    && c->lock_generation == c->node->lock_generation;
+
+    if (!c->node->lock_expired || expired_owner) {
+        c->node->updating = 0;
+    }
+
+    if (c->lock_expired_owner) {
+        c->updating = 0;
+        c->lock_generation = 0;
+    }
+#else
     c->node->updating = 0;
+#endif
     c->node = NULL;
 
     ngx_shmtx_unlock(&cache->shpool->mutex);
@@ -1669,6 +2115,28 @@ ngx_http_file_cache_update_variant(ngx_http_request_t *r, ngx_http_cache_t *c)
     if (ngx_http_file_cache_name(r, cache->path) != NGX_OK) {
         return NGX_ERROR;
     }
+
+#if (NGX_EXT)
+    if (expired_owner) {
+        ngx_shmtx_lock(&cache->shpool->mutex);
+
+        if (!c->node->updating && !ngx_http_file_cache_commit_busy(c)) {
+            c->node->lock_time = ngx_current_msec + c->lock_age;
+
+            if (++c->node->lock_generation == 0) {
+                c->node->lock_generation++;
+            }
+
+            c->node->lock_expired = 1;
+            c->node->updating = 1;
+            c->lock_time = c->node->lock_time;
+            c->lock_generation = c->node->lock_generation;
+            c->updating = 1;
+        }
+
+        ngx_shmtx_unlock(&cache->shpool->mutex);
+    }
+#endif
 
     return NGX_OK;
 }
@@ -1700,6 +2168,21 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
             || ngx_http_cache_early_commit(r) != NGX_OK))
     {
         ngx_http_file_cache_free(c, tf);
+        return;
+    }
+#endif
+
+#if (NGX_EXT)
+    if (ngx_http_file_cache_lock_expired_valid(r) != NGX_OK
+        || ngx_http_file_cache_commit(r, c) != NGX_OK)
+    {
+        ngx_http_file_cache_free(c, tf);
+
+        if (c->lock_expired_owner) {
+            r->upstream->cacheable = 0;
+            r->cache = NULL;
+        }
+
         return;
     }
 #endif
@@ -1753,8 +2236,31 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
     }
 #endif
 
+#if (NGX_EXT)
+    if (rc == NGX_OK && ngx_http_file_cache_lock_expired_valid(r) != NGX_OK) {
+
+        /* no replacement may publish until this check is complete */
+
+        if (ngx_file_info(c->file.name.data, &fi) != NGX_FILE_ERROR
+            && ngx_file_uniq(&fi) == uniq)
+        {
+            (void) ngx_delete_file(c->file.name.data);
+        }
+
+        rc = NGX_ERROR;
+        fs_size = 0;
+        uniq = 0;
+    }
+#endif
+
     ngx_shmtx_lock(&cache->shpool->mutex);
 
+#if (NGX_EXT)
+    if (c->lock_expired_commit) {
+        c->node->lock_commit_pid = 0;
+        c->lock_expired_commit = 0;
+    }
+#endif
     c->node->count--;
     c->node->error = 0;
     c->node->uniq = uniq;
@@ -1765,6 +2271,9 @@ ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf)
 
     if (rc == NGX_OK) {
         c->node->exists = 1;
+#if (NGX_EXT)
+        c->lock_expired_committed = c->lock_expired_owner;
+#endif
     }
 
     c->node->updating = 0;
@@ -1794,6 +2303,14 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
 
     c = r->cache;
 
+#if (NGX_EXT)
+    if (ngx_http_file_cache_lock_expired_valid(r) != NGX_OK
+        || ngx_http_file_cache_commit(r, c) != NGX_OK)
+    {
+        return;
+    }
+#endif
+
     ngx_memzero(&file, sizeof(ngx_file_t));
 
     file.name = c->file.name;
@@ -1809,12 +2326,20 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                            "http file cache \"%s\" not found",
                            file.name.data);
+#if (NGX_EXT)
+            goto release;
+#else
             return;
+#endif
         }
 
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, err,
                       ngx_open_file_n " \"%s\" failed", file.name.data);
+#if (NGX_EXT)
+        goto release;
+#else
         return;
+#endif
     }
 
     /*
@@ -1911,8 +2436,29 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
         ngx_memcpy(h.variant, c->variant, NGX_HTTP_CACHE_KEY_LEN);
     }
 
+#if (NGX_EXT)
+    n = ngx_write_file(&file, (u_char *) &h,
+                       sizeof(ngx_http_file_cache_header_t), 0);
+
+    if ((size_t) n == sizeof(ngx_http_file_cache_header_t)
+        && ngx_http_file_cache_lock_expired_valid(r) == NGX_OK)
+    {
+        c->lock_expired_committed = c->lock_expired_owner;
+
+    } else if (c->lock_expired_owner) {
+
+        /* a purge during this write must not leave a refreshed old header */
+
+        if (ngx_file_info(file.name.data, &fi) != NGX_FILE_ERROR
+            && ngx_file_uniq(&fi) == c->uniq)
+        {
+            (void) ngx_delete_file(file.name.data);
+        }
+    }
+#else
     (void) ngx_write_file(&file, (u_char *) &h,
                           sizeof(ngx_http_file_cache_header_t), 0);
+#endif
 
 done:
 
@@ -1920,6 +2466,17 @@ done:
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, ngx_errno,
                       ngx_close_file_n " \"%s\" failed", file.name.data);
     }
+
+#if (NGX_EXT)
+release:
+
+    if (c->lock_expired_commit) {
+        ngx_shmtx_lock(&c->file_cache->shpool->mutex);
+        c->node->lock_commit_pid = 0;
+        c->lock_expired_commit = 0;
+        ngx_shmtx_unlock(&c->file_cache->shpool->mutex);
+    }
+#endif
 }
 
 
@@ -2005,9 +2562,27 @@ ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf)
     fcn = c->node;
     fcn->count--;
 
+#if (NGX_EXT)
+    if (c->updating
+        && ((c->lock_expired_owner && fcn->lock_expired
+             && c->lock_generation == fcn->lock_generation)
+            || (!c->lock_expired_owner && !fcn->lock_expired
+                && c->lock_time == fcn->lock_time)))
+    {
+#else
     if (c->updating && fcn->lock_time == c->lock_time) {
+#endif
         fcn->updating = 0;
     }
+
+#if (NGX_EXT)
+    if (c->lock_expired_owner
+        && (!fcn->lock_expired
+            || fcn->lock_generation != c->lock_generation))
+    {
+        c->error = 0;
+    }
+#endif
 
     if (c->error) {
         fcn->error = c->error;

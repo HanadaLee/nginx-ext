@@ -75,7 +75,12 @@ typedef struct {
     unsigned                         updating:1;
     unsigned                         deleting:1;
     unsigned                         purged:1;
+#if (NGX_EXT)
+    unsigned                         lock_expired:1;
+                                     /* 9 unused bits */
+#else
                                      /* 10 unused bits */
+#endif
 
     ngx_file_uniq_t                  uniq;
     time_t                           expire;
@@ -83,6 +88,10 @@ typedef struct {
     size_t                           body_start;
     off_t                            fs_size;
     ngx_msec_t                       lock_time;
+#if (NGX_EXT)
+    ngx_pid_t                        lock_commit_pid;
+    uint32_t                         lock_generation;
+#endif
 } ngx_http_file_cache_node_t;
 
 
@@ -133,17 +142,33 @@ struct ngx_http_cache_s {
     ngx_msec_t                       lock_age;
 #if (NGX_EXT)
     ngx_msec_t                       lock_poll_interval;
+    uint32_t                         lock_generation;
 #endif
     ngx_msec_t                       lock_time;
     ngx_msec_t                       wait_time;
 
-#if (NGX_EXT && !(NGX_WIN32))
+#if (NGX_EXT)
+#if !(NGX_WIN32)
     ngx_http_cache_early_t          *early;
     ngx_atomic_uint_t                early_epoch;
     u_char                           early_id[NGX_HTTP_CACHE_KEY_LEN];
     unsigned                         early_watch:1;
     unsigned                         early_read:1;
     unsigned                         early_reader:1;
+#endif
+
+    ngx_pool_t                      *lock_expired_pool;
+    size_t                           lock_expired_buffer_size;
+
+    unsigned                         lock_expired:1;
+    unsigned                         lock_expired_owner:1;
+    unsigned                         lock_expired_wait:1;
+    unsigned                         lock_expired_uncached:1;
+    unsigned                         lock_expired_bypass:1;
+    unsigned                         lock_expired_watch:1;
+    unsigned                         lock_expired_committed:1;
+    unsigned                         lock_expired_pool_cleanup:1;
+    unsigned                         lock_expired_commit:1;
 #endif
 
     ngx_event_t                      wait_event;
@@ -235,6 +260,10 @@ ngx_int_t ngx_http_file_cache_new(ngx_http_request_t *r);
 ngx_int_t ngx_http_file_cache_create(ngx_http_request_t *r);
 void ngx_http_file_cache_create_key(ngx_http_request_t *r);
 ngx_int_t ngx_http_file_cache_open(ngx_http_request_t *r);
+#if (NGX_EXT)
+ngx_int_t ngx_http_file_cache_lock_expired(ngx_http_request_t *r);
+ngx_int_t ngx_http_file_cache_lock_expired_valid(ngx_http_request_t *r);
+#endif
 ngx_int_t ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf);
 void ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf);
 void ngx_http_file_cache_update_header(ngx_http_request_t *r);

@@ -800,6 +800,8 @@ ngx_http_upstream_init_conditional_conf(ngx_http_upstream_conf_t *conf)
     ngx_http_upstream_init_conf_value(conf, cache_lock_early_read,
                                       ngx_conf_expr_flag_ctx_t);
 #endif
+    ngx_http_upstream_init_conf_value(conf, cache_lock_expired,
+                                      ngx_conf_expr_flag_ctx_t);
     ngx_http_upstream_init_conf_value(conf, cache_lock,
                                       ngx_conf_expr_flag_ctx_t);
     ngx_http_upstream_init_conf_value(conf, cache_lock_timeout,
@@ -1378,17 +1380,34 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         c->lock_poll_interval = ngx_http_upstream_get_msec(r,
                                          u->conf->cache_lock_poll_interval_conf,
                                          u->conf->cache_lock_poll_interval);
+        c->lock_expired = c->lock && ngx_http_upstream_get_flag(r,
+                                               u->conf->cache_lock_expired_conf,
+                                               u->conf->cache_lock_expired);
 #else
         c->lock = u->conf->cache_lock;
         c->lock_timeout = u->conf->cache_lock_timeout;
         c->lock_age = u->conf->cache_lock_age;
 #if (NGX_EXT)
         c->lock_poll_interval = u->conf->cache_lock_poll_interval;
+        c->lock_expired = c->lock && u->conf->cache_lock_expired;
 #endif
 #endif
 
         u->cache_status = NGX_HTTP_CACHE_MISS;
     }
+
+#if (NGX_EXT)
+    if (c->lock_expired_wait && !c->waiting) {
+        rc = ngx_http_test_predicates(r, u->conf->cache_bypass);
+        if (rc == NGX_ERROR) {
+            return NGX_ERROR;
+        }
+        if (rc == NGX_DECLINED) {
+            c->lock_expired_uncached = 1;
+            c->lock_expired_bypass = 1;
+        }
+    }
+#endif
 
     rc = ngx_http_file_cache_open(r);
 
@@ -1407,12 +1426,12 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         background = ngx_http_upstream_get_flag(r,
                                       u->conf->cache_background_update_conf,
                                       u->conf->cache_background_update);
-        if (!c->must_revalidate
+        if (!c->lock_expired_uncached && !c->must_revalidate
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
             && background)
 #else
-        if (!c->must_revalidate
+        if (!c->lock_expired_uncached && !c->must_revalidate
             && ((u->conf->cache_use_stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
             && u->conf->cache_background_update)
@@ -1475,6 +1494,15 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         u->cache_status = NGX_HTTP_CACHE_HIT;
     }
 
+#if (NGX_EXT)
+    /* Stale policy, including a purge adapter's override, is decided first. */
+    if (rc == NGX_HTTP_CACHE_STALE && c->lock_expired && !c->updating
+        && !r->background && !c->lock_expired_uncached)
+    {
+        rc = ngx_http_file_cache_lock_expired(r);
+    }
+#endif
+
     switch (rc) {
 
     case NGX_OK:
@@ -1483,12 +1511,28 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     case NGX_HTTP_CACHE_STALE:
 
+#if (NGX_EXT)
+        if (c->lock_expired_uncached) {
+            u->cacheable = 0;
+            r->cached = 0;
+            c->etag.len = 0;
+            c->last_modified = -1;
+        }
+#endif
+
         c->valid_sec = 0;
         c->updating_sec = 0;
         c->error_sec = 0;
 
         u->buffer.start = NULL;
         u->cache_status = NGX_HTTP_CACHE_EXPIRED;
+
+#if (NGX_EXT)
+        /* A bypass also forbids stale-on-error; a lock timeout does not. */
+        if (c->lock_expired_bypass) {
+            u->cache_status = NGX_HTTP_CACHE_BYPASS;
+        }
+#endif
 
         break;
 
@@ -3646,6 +3690,9 @@ ngx_http_upstream_test_next(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     if (status == NGX_HTTP_NOT_MODIFIED
         && u->cache_status == NGX_HTTP_CACHE_EXPIRED
+#if (NGX_EXT)
+        && !r->cache->lock_expired_uncached
+#endif
         && u->conf->cache_revalidate)
     {
         time_t     now, valid, updating, error;
@@ -4351,7 +4398,13 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
         }
 #endif
 
+#if (NGX_EXT)
+        if (u->cache_status == NGX_HTTP_CACHE_BYPASS
+            && r->cache != NULL && !r->cache->lock_expired_bypass)
+        {
+#else
         if (u->cache_status == NGX_HTTP_CACHE_BYPASS) {
+#endif
 
             /* create cache if previously bypassed */
 
@@ -6028,6 +6081,17 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
         }
 
         ngx_http_file_cache_free(r->cache, u->pipe->temp_file);
+
+#if (NGX_EXT)
+        if (r->cache->lock_expired_owner
+            && (!r->cache->lock_expired_committed
+                || ngx_http_file_cache_lock_expired_valid(r) != NGX_OK))
+        {
+            /* Keep failed/obsolete refreshes out of log-phase cache indexes. */
+            r->cache = NULL;
+            u->cacheable = 0;
+        }
+#endif
     }
 
 #endif
@@ -8077,7 +8141,27 @@ ngx_http_upstream_cache_last_modified(ngx_http_request_t *r,
 {
     u_char  *p;
 
+#if (NGX_EXT)
+    if (r->cache != NULL && r->cache->lock_expired_uncached) {
+        if (r->headers_in.if_modified_since == NULL) {
+            v->not_found = 1;
+
+        } else {
+            v->valid = 1;
+            v->no_cacheable = 0;
+            v->not_found = 0;
+            v->len = r->headers_in.if_modified_since->value.len;
+            v->data = r->headers_in.if_modified_since->value.data;
+        }
+
+        return NGX_OK;
+    }
+#endif
+
     if (r->upstream == NULL
+#if (NGX_EXT)
+        || r->cache == NULL
+#endif
         || !r->upstream->conf->cache_revalidate
         || r->upstream->cache_status != NGX_HTTP_CACHE_EXPIRED
         || r->cache->last_modified == -1)
@@ -8105,7 +8189,27 @@ static ngx_int_t
 ngx_http_upstream_cache_etag(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
+#if (NGX_EXT)
+    if (r->cache != NULL && r->cache->lock_expired_uncached) {
+        if (r->headers_in.if_none_match == NULL) {
+            v->not_found = 1;
+
+        } else {
+            v->valid = 1;
+            v->no_cacheable = 0;
+            v->not_found = 0;
+            v->len = r->headers_in.if_none_match->value.len;
+            v->data = r->headers_in.if_none_match->value.data;
+        }
+
+        return NGX_OK;
+    }
+#endif
+
     if (r->upstream == NULL
+#if (NGX_EXT)
+        || r->cache == NULL
+#endif
         || !r->upstream->conf->cache_revalidate
         || r->upstream->cache_status != NGX_HTTP_CACHE_EXPIRED
         || r->cache->etag.len == 0)
