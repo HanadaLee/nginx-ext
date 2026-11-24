@@ -1130,7 +1130,8 @@ ngx_http_ssl_check_handshake(ngx_connection_t *c, int *ad)
 #if (NGX_PCRE)
         if (hc->ssl_servername_regex
             && ngx_http_regex_exec(r, hc->ssl_servername_regex,
-                                   hc->ssl_servername) != NGX_OK)
+                                   hc->ssl_servername)
+               != NGX_OK)
         {
             ngx_http_free_request(r, 0);
             c->log->action = action;

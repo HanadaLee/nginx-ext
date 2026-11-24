@@ -334,8 +334,7 @@ next_level:
     for (l = 0; l < lcf->logs->nelts; l++) {
 
 #if (NGX_EXT && NGX_EXPR)
-        if (ngx_http_expr_get_result(r, log[l].expr_id) != NGX_EXPR_WHEN_HIT)
-        {
+        if (ngx_http_expr_get_result(r, log[l].expr_id) != NGX_EXPR_WHEN_HIT) {
             continue;
         }
 
@@ -519,9 +518,9 @@ ngx_http_log_sample(ngx_http_request_t *r, ngx_http_complex_value_t *cv)
 
         if (sample == NGX_ERROR || sample > 2147483647) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "invalid access_log sample value \"%V\": "
-                          "expected an integer between 0 and 2147483647",
-                          &value);
+                          "invalid access_log sample value "
+                          "\"%V\": expected an integer between "
+                          "0 and 2147483647", &value);
             return 0;
         }
     }
@@ -1462,7 +1461,7 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     conf->parent = prev;
 
     /* Only a chain without an unconditional entry needs the default log. */
-    for (fallback = conf; /* void */; fallback = fallback->parent) {
+    for (fallback = conf; /* void */ ; fallback = fallback->parent) {
         if (fallback->logs) {
             log = fallback->logs->elts;
             for (i = 0; i < fallback->logs->nelts; i++) {
@@ -1792,9 +1791,9 @@ process_formats:
 
                 if (n == (ngx_uint_t) NGX_ERROR || n > 2147483647) {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                       "invalid access_log sample value \"%V\": "
-                                       "expected an integer between 0 and "
-                                       "2147483647", &s);
+                                       "invalid access_log sample value "
+                                       "\"%V\": expected an integer between "
+                                       "0 and 2147483647", &s);
                     return NGX_CONF_ERROR;
                 }
 

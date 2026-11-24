@@ -1334,7 +1334,7 @@ ngx_http_client_process_response_headers(ngx_http_request_t *r)
     part = &r->headers_out.headers.part;
     h = part->elts;
 
-    for (i = 0; /* void */; i++) {
+    for (i = 0; /* void */ ; i++) {
 
         if (i >= part->nelts) {
             if (part->next == NULL) {
@@ -1427,7 +1427,7 @@ ngx_http_client_process_response_body(ngx_http_request_t *r, ngx_chain_t *in)
         return NGX_OK;
     }
 
-    for ( /* void */; in; in = in->next) {
+    for ( /* void */ ; in; in = in->next) {
         size = ngx_buf_size(in->buf);
 
         if (size == 0) {
@@ -1647,7 +1647,7 @@ ngx_http_client_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
         limit = NGX_MAX_OFF_T_VALUE;
     }
 
-    for ( /* void */; in && limit; in = in->next) {
+    for ( /* void */ ; in && limit; in = in->next) {
         b = in->buf;
 
         if (ngx_buf_special(b)) {
@@ -1871,7 +1871,7 @@ ngx_http_client_complete(ngx_event_t *ev)
             client->response.body.data = p;
             client->response.body.len = client->length;
 
-            for ( /* void */; cl; cl = cl->next) {
+            for ( /* void */ ; cl; cl = cl->next) {
                 p = ngx_cpymem(p, cl->buf->pos, cl->buf->last - cl->buf->pos);
             }
         }
@@ -1910,8 +1910,7 @@ ngx_http_client_set_upstream_error(ngx_http_request_t *r, ngx_int_t rc)
         return;
     }
 
-    if (rc == NGX_HTTP_GATEWAY_TIME_OUT || rc == NGX_HTTP_REQUEST_TIME_OUT)
-    {
+    if (rc == NGX_HTTP_GATEWAY_TIME_OUT || rc == NGX_HTTP_REQUEST_TIME_OUT) {
         client->upstream_error = NGX_CLIENT_HTTP_TIMEDOUT;
 
     } else {

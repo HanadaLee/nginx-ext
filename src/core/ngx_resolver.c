@@ -6038,7 +6038,8 @@ ngx_resolver_select_peer(ngx_resolver_t *r, ngx_resolver_node_t *rn,
     for (i = first; i < r->connections.nelts; i++) {
         peer = rec[i].peer;
 
-        if (best != NGX_CONF_UNSET_UINT && peer->level != rec[best].peer->level)
+        if (best != NGX_CONF_UNSET_UINT
+            && peer->level != rec[best].peer->level)
         {
             break;
         }
@@ -6100,7 +6101,7 @@ ngx_resolver_start_query(ngx_resolver_t *r, ngx_resolver_node_t *rn)
 
     rn->state->sequence = sequence;
 
-    for (p = &rn->waiting; *p; /* void */) {
+    for (p = &rn->waiting; *p; /* void */ ) {
         ctx = *p;
 
         if (ctx->query_state && ctx->query_state->event.timer_set
@@ -6212,7 +6213,7 @@ ngx_resolver_next(ngx_resolver_t *r, ngx_resolver_node_t *rn,
 
     delay = 0;
 
-    for (p = &rn->waiting; *p; /* void */) {
+    for (p = &rn->waiting; *p; /* void */ ) {
         ctx = *p;
 
         if (ngx_resolver_check_budget(ctx) != NGX_OK) {
@@ -6339,7 +6340,7 @@ ngx_resolver_join_query(ngx_resolver_t *r, ngx_resolver_node_t *rn,
         }
 
         if (!rn->state->pending) {
-            for ( /* void */; ctx; ctx = ctx->next) {
+            for ( /* void */ ; ctx; ctx = ctx->next) {
                 ngx_resolver_charge_query(ctx, rn->state->sequence);
             }
         }
@@ -7795,7 +7796,7 @@ ngx_resolver_retry_wait(ngx_resolver_t *r, ngx_resolver_node_t *rn)
     ngx_resolver_ctx_t          *ctx, **p;
     ngx_resolver_query_state_t  *qs;
 
-    for (p = &rn->waiting; *p; /* void */) {
+    for (p = &rn->waiting; *p; /* void */ ) {
         ctx = *p;
         qs = ctx->query_state;
 

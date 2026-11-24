@@ -479,7 +479,7 @@ struct ngx_http_core_loc_conf_s {
     ngx_flag_t    chunked_transfer_encoding; /* chunked_transfer_encoding */
     ngx_flag_t    etag;                    /* etag */
 #if (NGX_EXT)
-    ngx_uint_t    set_auto_redirect;        /* auto_redirect */
+    ngx_uint_t    set_auto_redirect;       /* auto_redirect */
 #endif
 
 #if (NGX_HTTP_GZIP)
@@ -532,7 +532,8 @@ struct ngx_http_core_loc_conf_s {
     ngx_array_t  *error_page_fields;       /* error_page_field */
     ngx_uint_t    error_page_format;       /* error_page_format */
 
-    ngx_flag_t    ignore_if_unmodified_since; /* ignore_if_unmodified_since */
+    ngx_flag_t    ignore_if_unmodified_since;
+                                           /* ignore_if_unmodified_since */
     ngx_flag_t    ignore_if_match;         /* ignore_if_match */
     ngx_uint_t    not_modified_check;      /* not_modified_check */
 #endif
