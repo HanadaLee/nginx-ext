@@ -220,6 +220,10 @@ static char *ngx_http_proxy_cache(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_proxy_cache_key(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+#if (NGX_EXT)
+static char *ngx_http_proxy_cache_lock_poll_interval(ngx_conf_t *cf,
+    ngx_command_t *cmd, void *conf);
+#endif
 #if (NGX_EXT && !(NGX_WIN32))
 static char *ngx_http_proxy_cache_early_read(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
@@ -1010,6 +1014,28 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_timeout),
 #endif
       NULL },
+
+#if (NGX_EXT)
+
+    { ngx_string("proxy_cache_lock_poll_interval"),
+#if (NGX_EXPR)
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+                        |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
+                        |NGX_HTTP_LOC_WHEN_CONF
+                        |NGX_CONF_TAKE1,
+      ngx_http_proxy_cache_lock_poll_interval,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t,
+               upstream.cache_lock_poll_interval_conf),
+#else
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_http_proxy_cache_lock_poll_interval,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_lock_poll_interval),
+#endif
+      NULL },
+
+#endif
 
     { ngx_string("proxy_cache_lock_age"),
 #if (NGX_EXT && NGX_EXPR)
@@ -5139,6 +5165,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_lock_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_timeout_conf = NGX_CONF_UNSET_PTR;
     conf->upstream.cache_lock_age_conf = NGX_CONF_UNSET_PTR;
+    conf->upstream.cache_lock_poll_interval_conf = NGX_CONF_UNSET_PTR;
 #else
 #if (NGX_EXT && !(NGX_WIN32))
     conf->upstream.cache_lock_early_read = NGX_CONF_UNSET;
@@ -5146,6 +5173,9 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.cache_lock = NGX_CONF_UNSET;
     conf->upstream.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream.cache_lock_age = NGX_CONF_UNSET_MSEC;
+#if (NGX_EXT)
+    conf->upstream.cache_lock_poll_interval = NGX_CONF_UNSET_MSEC;
+#endif
 #endif
 
     conf->upstream.cache_revalidate = NGX_CONF_UNSET;
@@ -5796,6 +5826,14 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
+                              &conf->upstream.cache_lock_poll_interval_conf,
+                              prev->upstream.cache_lock_poll_interval_conf, 500)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_conf_merge_expr_msec_value(cf,
                                        &conf->upstream.cache_lock_age_conf,
                                        prev->upstream.cache_lock_age_conf, 5000)
         != NGX_OK)
@@ -5811,6 +5849,10 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_msec_value(conf->upstream.cache_lock_age,
                               prev->upstream.cache_lock_age, 5000);
+#if (NGX_EXT)
+    ngx_conf_merge_msec_value(conf->upstream.cache_lock_poll_interval,
+                              prev->upstream.cache_lock_poll_interval, 500);
+#endif
 #endif
 
 #if (NGX_EXT && !(NGX_WIN32))
@@ -7744,6 +7786,30 @@ ngx_http_proxy_cache(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     return NGX_CONF_OK;
 }
+
+
+#if (NGX_EXT)
+
+static char *
+ngx_http_proxy_cache_lock_poll_interval(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf)
+{
+    ngx_str_t  *value;
+
+    value = cf->args->elts;
+
+    if (ngx_parse_time(&value[1], 0) == 0) {
+        return "value must be greater than zero";
+    }
+
+#if (NGX_EXPR)
+    return ngx_conf_set_conditional_msec_slot(cf, cmd, conf);
+#else
+    return ngx_conf_set_msec_slot(cf, cmd, conf);
+#endif
+}
+
+#endif
 
 
 static char *

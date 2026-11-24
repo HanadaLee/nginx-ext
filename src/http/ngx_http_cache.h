@@ -87,8 +87,6 @@ typedef struct {
 
 
 #if (NGX_EXT && !(NGX_WIN32))
-#define NGX_HTTP_CACHE_EARLY_INTERVAL  50
-
 typedef struct ngx_http_cache_early_s  ngx_http_cache_early_t;
 #endif
 
@@ -133,6 +131,9 @@ struct ngx_http_cache_s {
 
     ngx_msec_t                       lock_timeout;
     ngx_msec_t                       lock_age;
+#if (NGX_EXT)
+    ngx_msec_t                       lock_poll_interval;
+#endif
     ngx_msec_t                       lock_time;
     ngx_msec_t                       wait_time;
 

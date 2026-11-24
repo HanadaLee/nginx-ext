@@ -77,6 +77,15 @@ struct ngx_http_cache_early_wait_s {
     ngx_http_cache_early_slot_t   *slot;
     ngx_uint_t                     index;
     ngx_uint_t                     users;
+
+    ngx_slab_pool_t               *pool;
+    ngx_http_cache_early_sh_t     *sh;
+    ngx_http_cache_early_state_e   state;
+    off_t                          written;
+    ngx_atomic_uint_t              epoch;
+    ngx_msec_t                     interval;
+
+    unsigned                       recalc:1;
 };
 
 
@@ -95,6 +104,7 @@ struct ngx_http_cache_early_s {
     off_t                          seen;
     ngx_msec_t                     last_progress;
     ngx_msec_t                     timeout;
+    ngx_msec_t                     interval;
     unsigned                       queued:1;
 };
 
@@ -135,6 +145,7 @@ static ngx_int_t ngx_http_file_cache_reopen(ngx_http_request_t *r,
 static ngx_int_t ngx_http_file_cache_update_variant(ngx_http_request_t *r,
     ngx_http_cache_t *c);
 static void ngx_http_file_cache_cleanup(void *data);
+
 static time_t ngx_http_file_cache_forced_expire(ngx_http_file_cache_t *cache);
 static time_t ngx_http_file_cache_expire(ngx_http_file_cache_t *cache);
 static void ngx_http_file_cache_delete(ngx_http_file_cache_t *cache,
@@ -169,6 +180,8 @@ static ngx_int_t ngx_http_cache_early_init(ngx_shm_zone_t *zone, void *data);
 static ngx_int_t ngx_http_cache_early_allowed(ngx_http_request_t *r,
     time_t started, u_char *id);
 static ngx_int_t ngx_http_cache_early_eligible(ngx_http_request_t *r);
+static void ngx_http_cache_early_timer(ngx_event_t *ev, ngx_msec_t delay);
+static void ngx_http_cache_early_dequeue(ngx_http_cache_early_t *e);
 static void ngx_http_cache_early_tick(ngx_event_t *ev);
 static void ngx_http_cache_early_resume(ngx_event_t *ev);
 static void ngx_http_cache_early_writer(ngx_http_request_t *r);
@@ -527,6 +540,33 @@ done:
 }
 
 
+#if (NGX_EXT)
+
+static ngx_msec_t
+ngx_http_file_cache_lock_timer(ngx_http_cache_t *c, ngx_msec_t now,
+    ngx_msec_t lock_timer)
+{
+    ngx_msec_t  timer, interval;
+
+    interval = c->lock_poll_interval;
+
+    if (interval == 0 || interval == NGX_CONF_UNSET_MSEC) {
+        interval = 500;
+    }
+
+    timer = ngx_min(c->wait_time - now, interval);
+
+    if ((ngx_msec_int_t) lock_timer > 0) {
+        timer = ngx_min(timer, lock_timer);
+    }
+
+    return timer;
+}
+
+
+#endif
+
+
 static ngx_int_t
 ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
 {
@@ -539,6 +579,14 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
     if (!c->lock) {
         return NGX_DECLINED;
     }
+
+#if (NGX_EXT)
+    if (c->lock_poll_interval == 0
+        || c->lock_poll_interval == NGX_CONF_UNSET_MSEC)
+    {
+        c->lock_poll_interval = 500;
+    }
+#endif
 
 #if (NGX_EXT && !(NGX_WIN32))
     if (!c->wait_time && r->upstream && r->upstream->conf
@@ -581,6 +629,12 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
     }
 
 #if (NGX_EXT && !(NGX_WIN32))
+    if (c->wait_time && (ngx_msec_int_t) (c->wait_time - now) <= 0) {
+        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                      "cache lock timeout");
+        c->lock_timeout = 0;
+    }
+
     if (c->early_read && (c->lock_timeout || !c->wait_time)) {
         rc = ngx_http_cache_early_open(r);
         if (rc != NGX_DECLINED) {
@@ -607,15 +661,13 @@ ngx_http_file_cache_lock(ngx_http_request_t *r, ngx_http_cache_t *c)
         c->wait_event.log = r->connection->log;
     }
 
+#if (NGX_EXT)
+    timer = ngx_http_file_cache_lock_timer(c, now, timer);
+    ngx_add_timer(&c->wait_event, timer);
+#else
     timer = c->wait_time - now;
-
-#if (NGX_EXT && !(NGX_WIN32))
-    if (c->early_read) {
-        timer = ngx_min(timer, NGX_HTTP_CACHE_EARLY_INTERVAL);
-    }
-#endif
-
     ngx_add_timer(&c->wait_event, (timer > 500) ? 500 : timer);
+#endif
 
     r->main->blocked++;
 
@@ -693,14 +745,25 @@ ngx_http_file_cache_lock_wait(ngx_http_request_t *r, ngx_http_cache_t *c)
 
     timer = c->node->lock_time - now;
 
+#if (NGX_EXT && !(NGX_WIN32))
+    if (c->node->updating
+        && ((ngx_msec_int_t) timer > 0 || ngx_http_cache_early_publishing(r)))
+    {
+#else
     if (c->node->updating && (ngx_msec_int_t) timer > 0) {
+#endif
         wait = 1;
     }
 
     ngx_shmtx_unlock(&cache->shpool->mutex);
 
     if (wait) {
+#if (NGX_EXT)
+        timer = ngx_http_file_cache_lock_timer(c, now, timer);
+        ngx_add_timer(&c->wait_event, timer);
+#else
         ngx_add_timer(&c->wait_event, (timer > 500) ? 500 : timer);
+#endif
         return NGX_AGAIN;
     }
 
@@ -3327,6 +3390,9 @@ ngx_http_cache_early_open(ngx_http_request_t *r)
         wait->event.data = wait;
         wait->slot = slot;
         wait->index = i;
+        wait->pool = pool;
+        wait->sh = sh;
+        wait->written = -1;
         wait->next = ngx_http_cache_early_waits[i];
         ngx_http_cache_early_waits[i] = wait;
     }
@@ -3442,6 +3508,7 @@ ngx_http_cache_early_open(ngx_http_request_t *r)
     e->pool = pool;
     e->last_progress = ngx_current_msec;
     e->timeout = r->upstream->read_timeout;
+    e->interval = c->lock_poll_interval;
 
     e->event.data = e;
     e->event.handler = ngx_http_cache_early_resume;
@@ -3502,17 +3569,14 @@ ngx_http_cache_early_cleanup(void *data)
 
     e->cleanup->handler = NULL;
 
-    if (e->queued) {
-        ngx_queue_remove(&e->queue);
-        e->queued = 0;
+    ngx_http_cache_early_dequeue(e);
+
+    if (e->event.timer_set) {
+        ngx_del_timer(&e->event);
     }
 
     if (e->event.posted) {
         ngx_delete_posted_event(&e->event);
-    }
-
-    if (ngx_queue_empty(&e->wait->queue) && e->wait->event.timer_set) {
-        ngx_del_timer(&e->wait->event);
     }
 
     ngx_http_cache_early_release(e->wait, e->pool);
@@ -3526,13 +3590,96 @@ ngx_http_cache_early_cleanup(void *data)
 
 
 static void
-ngx_http_cache_early_tick(ngx_event_t *ev)
+ngx_http_cache_early_timer(ngx_event_t *ev, ngx_msec_t delay)
 {
-    ngx_queue_t                  *q;
-    ngx_http_cache_early_t       *e;
+    if (ev->timer_set) {
+        if ((ngx_msec_int_t) (ngx_current_msec + delay - ev->timer.key) >= 0) {
+            return;
+        }
+
+        /* do not postpone an earlier deadline with a lazy timer update */
+
+        ngx_del_timer(ev);
+    }
+
+    ngx_add_timer(ev, delay);
+}
+
+
+static void
+ngx_http_cache_early_dequeue(ngx_http_cache_early_t *e)
+{
     ngx_http_cache_early_wait_t  *wait;
 
+    if (!e->queued) {
+        return;
+    }
+
+    wait = e->wait;
+    e->queued = 0;
+    ngx_queue_remove(&e->queue);
+
+    if (ngx_queue_empty(&wait->queue)) {
+        if (wait->event.timer_set) {
+            ngx_del_timer(&wait->event);
+        }
+
+        wait->recalc = 0;
+
+    } else if (e->interval == wait->interval) {
+        wait->recalc = 1;
+    }
+}
+
+
+static void
+ngx_http_cache_early_tick(ngx_event_t *ev)
+{
+    off_t                         written;
+    ngx_queue_t                  *q;
+    ngx_atomic_uint_t             epoch;
+    ngx_http_cache_early_t       *e;
+    ngx_http_cache_early_wait_t  *wait;
+    ngx_http_cache_early_state_e  state;
+
     wait = ev->data;
+
+    ngx_shmtx_lock(&wait->pool->mutex);
+    written = wait->slot->written;
+    state = wait->slot->state;
+    epoch = wait->sh->epoch;
+    ngx_shmtx_unlock(&wait->pool->mutex);
+
+    if (written == wait->written
+        && state == wait->state
+        && epoch == wait->epoch)
+    {
+        if (wait->recalc) {
+            wait->interval = NGX_TIMER_INFINITE;
+
+            for (q = ngx_queue_head(&wait->queue);
+                 q != ngx_queue_sentinel(&wait->queue);
+                 q = ngx_queue_next(q))
+            {
+                e = ngx_queue_data(q, ngx_http_cache_early_t, queue);
+                wait->interval = ngx_min(wait->interval, e->interval);
+            }
+
+            wait->recalc = 0;
+        }
+
+        ngx_add_timer(ev, wait->interval);
+        return;
+    }
+
+    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, ev->log, 0,
+                   "http cache early wake: %O state:%ui", written,
+                   (ngx_uint_t) state);
+
+    wait->written = written;
+    wait->state = state;
+    wait->epoch = epoch;
+    wait->recalc = 0;
 
     while (!ngx_queue_empty(&wait->queue)) {
         q = ngx_queue_head(&wait->queue);
@@ -3601,7 +3748,9 @@ ngx_http_cache_early_send(ngx_http_request_t *r)
 {
     off_t                         available;
     ngx_int_t                     rc;
-    ngx_uint_t                    last;
+    ngx_uint_t                    last, busy;
+    ngx_msec_t                    timer;
+    ngx_msec_int_t                left;
     ngx_buf_t                    *b;
     ngx_event_t                  *wev;
     ngx_chain_t                  *out;
@@ -3708,21 +3857,50 @@ ngx_http_cache_early_send(ngx_http_request_t *r)
         }
     }
 
-    if ((ngx_msec_int_t) (ngx_current_msec - e->last_progress)
-        > (ngx_msec_int_t) e->timeout
-        && !r->aio && !wev->delayed && wev->ready)
-    {
-        return NGX_ERROR;
+    busy = (rc == NGX_AGAIN || wev->delayed || !wev->ready || r->aio
+            || e->busy || r->buffered || r->connection->buffered);
+
+    if (!busy && (e->cursor < available || state == NGX_HTTP_EARLY_COMPLETE)) {
+
+        /* the busy chain drained before the new bytes were sent */
+
+        ngx_http_cache_early_dequeue(e);
+        ngx_post_event(&e->event, &ngx_posted_events);
+        return NGX_DONE;
     }
 
-    if (!e->queued) {
+    timer = e->interval;
+
+    if (!r->aio && !wev->delayed && wev->ready) {
+        left = (ngx_msec_int_t) (e->last_progress + e->timeout
+                                 - ngx_current_msec);
+        if (left <= 0) {
+            return NGX_ERROR;
+        }
+
+        if (!busy || (ngx_msec_t) left < timer) {
+            timer = (ngx_msec_t) left;
+        }
+    }
+
+    if (busy) {
+        ngx_http_cache_early_dequeue(e);
+
+    } else if (!e->queued) {
+        if (ngx_queue_empty(&e->wait->queue)
+            || e->interval < e->wait->interval)
+        {
+            e->wait->interval = e->interval;
+        }
+
         ngx_queue_insert_tail(&e->wait->queue, &e->queue);
         e->queued = 1;
+        ngx_http_cache_early_timer(&e->wait->event, e->wait->interval);
     }
 
-    if (!e->wait->event.timer_set) {
-        ngx_add_timer(&e->wait->event, NGX_HTTP_CACHE_EARLY_INTERVAL);
-    }
+    /* check the reader timeout even when the shared file is idle */
+
+    ngx_http_cache_early_timer(&e->event, timer);
 
     return NGX_DONE;
 }
