@@ -134,9 +134,9 @@ static ngx_stream_variable_t  ngx_stream_upstream_vars[] = {
       NGX_STREAM_VAR_NOCACHEABLE, 0 },
 
 #if (NGX_EXT)
-     { ngx_string("upstream_status"), NULL,
-       ngx_stream_upstream_status_variable, 0,
-       NGX_STREAM_VAR_NOCACHEABLE, 0 },
+    { ngx_string("upstream_status"), NULL,
+      ngx_stream_upstream_status_variable, 0,
+      NGX_STREAM_VAR_NOCACHEABLE, 0 },
 #endif
 
     { ngx_string("upstream_bytes_sent"), NULL,

@@ -2270,7 +2270,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
                                       &conf->upstream.next_upstream_tries_conf,
-                                     prev->upstream.next_upstream_tries_conf, 0)
+                                      prev->upstream.next_upstream_tries_conf,
+                                      0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2293,8 +2294,9 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     if (ngx_conf_merge_expr_flag_value(cf,
-                                     &conf->upstream.ignore_client_abort_conf,
-                                     prev->upstream.ignore_client_abort_conf, 0)
+                                       &conf->upstream.ignore_client_abort_conf,
+                                       prev->upstream.ignore_client_abort_conf,
+                                       0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2337,9 +2339,9 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.socket_sndbuf, 0);
 
 #if (NGX_EXT && NGX_EXPR)
-    if (ngx_conf_merge_expr_msec_value(cf,
-                                       &conf->upstream.connect_timeout_conf,
-                                     prev->upstream.connect_timeout_conf, 60000)
+    if (ngx_conf_merge_expr_msec_value(cf, &conf->upstream.connect_timeout_conf,
+                                       prev->upstream.connect_timeout_conf,
+                                       60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2500,8 +2502,9 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-                       &conf->upstream.ignore_headers_conf,
-                       prev->upstream.ignore_headers_conf, NGX_CONF_BITMASK_SET)
+                                          &conf->upstream.ignore_headers_conf,
+                                          prev->upstream.ignore_headers_conf,
+                                          NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2515,8 +2518,9 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_EXT)
 #if (NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-                      &conf->upstream.ignore_cache_control,
-                      prev->upstream.ignore_cache_control, NGX_CONF_BITMASK_SET)
+                                          &conf->upstream.ignore_cache_control,
+                                          prev->upstream.ignore_cache_control,
+                                          NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -2782,8 +2786,9 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     if (ngx_conf_merge_expr_msec_value(cf,
-                                   &conf->upstream.cache_lock_timeout_conf,
-                                   prev->upstream.cache_lock_timeout_conf, 5000)
+                                       &conf->upstream.cache_lock_timeout_conf,
+                                       prev->upstream.cache_lock_timeout_conf,
+                                       5000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -3009,8 +3014,8 @@ ngx_http_uwsgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
             temp_params = params.elts;
             for (j = 0; j < params.nelts; j++) {
                 if (temp_params[j].key.len == src[i].key.len
-                    && ngx_strcasecmp(temp_params[j].key.data,
-                                      src[i].key.data) == 0)
+                    && ngx_strcasecmp(temp_params[j].key.data, src[i].key.data)
+                       == 0)
                 {
                     found = 1;
                     break;

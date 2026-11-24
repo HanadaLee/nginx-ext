@@ -2450,8 +2450,9 @@ ngx_http_script_number_equal_code(ngx_http_script_engine_t *e)
 
     e->ip += sizeof(uintptr_t);
 
-    if (ngx_http_script_compare_number(res->data, res->len, val->data,
-                                       val->len, &cmp) != NGX_OK)
+    if (ngx_http_script_compare_number(res->data, res->len, val->data, val->len,
+                                       &cmp)
+        != NGX_OK)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script number equal: error "
@@ -2489,8 +2490,9 @@ ngx_http_script_greater_than_code(ngx_http_script_engine_t *e)
 
     e->ip += sizeof(uintptr_t);
 
-    if (ngx_http_script_compare_number(res->data, res->len, val->data,
-                                       val->len, &cmp) != NGX_OK)
+    if (ngx_http_script_compare_number(res->data, res->len, val->data, val->len,
+                                       &cmp)
+        != NGX_OK)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script greater than: error "
@@ -2528,8 +2530,9 @@ ngx_http_script_greater_equal_code(ngx_http_script_engine_t *e)
 
     e->ip += sizeof(uintptr_t);
 
-    if (ngx_http_script_compare_number(res->data, res->len, val->data,
-                                       val->len, &cmp) != NGX_OK)
+    if (ngx_http_script_compare_number(res->data, res->len, val->data, val->len,
+                                       &cmp)
+        != NGX_OK)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script greater equal: error "
@@ -2567,8 +2570,9 @@ ngx_http_script_less_than_code(ngx_http_script_engine_t *e)
 
     e->ip += sizeof(uintptr_t);
 
-    if (ngx_http_script_compare_number(res->data, res->len, val->data,
-                                       val->len, &cmp) != NGX_OK)
+    if (ngx_http_script_compare_number(res->data, res->len, val->data, val->len,
+                                       &cmp)
+        != NGX_OK)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script less than: error "
@@ -2606,8 +2610,9 @@ ngx_http_script_less_equal_code(ngx_http_script_engine_t *e)
 
     e->ip += sizeof(uintptr_t);
 
-    if (ngx_http_script_compare_number(res->data, res->len, val->data,
-                                       val->len, &cmp) != NGX_OK)
+    if (ngx_http_script_compare_number(res->data, res->len, val->data, val->len,
+                                       &cmp)
+        != NGX_OK)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script less equal: error "
@@ -2726,8 +2731,8 @@ ngx_http_script_ends_with_code(ngx_http_script_engine_t *e)
     }
 
     if (val->len == 0
-        || ngx_strncmp(res->data + res->len - val->len, val->data,
-                       val->len) == 0)
+        || ngx_strncmp(res->data + res->len - val->len, val->data, val->len)
+           == 0)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script ends with: true");
@@ -2764,8 +2769,8 @@ ngx_http_script_not_ends_with_code(ngx_http_script_engine_t *e)
     }
 
     if (val->len == 0
-        || ngx_strncmp(res->data + res->len - val->len, val->data,
-                       val->len) == 0)
+        || ngx_strncmp(res->data + res->len - val->len, val->data, val->len)
+           == 0)
     {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                        "http script does not end with: false");

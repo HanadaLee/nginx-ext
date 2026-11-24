@@ -873,7 +873,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
     part = &ctx->ctx.headers_in.part;
     header = part->elts;
 
-    for (i = 0; /* void */; i++) {
+    for (i = 0; /* void */ ; i++) {
 
         if (i >= part->nelts) {
             if (part->next == NULL) {
@@ -1079,7 +1079,7 @@ ngx_http_proxy_v2_create_request(ngx_http_request_t *r)
     part = &ctx->ctx.headers_in.part;
     header = part->elts;
 
-    for (i = 0; /* void */; i++) {
+    for (i = 0; /* void */ ; i++) {
 
         if (i >= part->nelts) {
             if (part->next == NULL) {

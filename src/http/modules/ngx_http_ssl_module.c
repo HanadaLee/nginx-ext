@@ -884,8 +884,8 @@ ngx_http_ssl_merge_handshake_conf(ngx_conf_t *cf,
 
 #else
     ngx_conf_merge_value(conf->reject_handshake, prev->reject_handshake, 0);
-    ngx_conf_merge_ptr_value(conf->delay_handshake,
-                            prev->delay_handshake, NULL);
+    ngx_conf_merge_ptr_value(conf->delay_handshake, prev->delay_handshake,
+                             NULL);
 #endif
 
 #if (!defined SSL_CLIENT_HELLO_SUCCESS                                        \

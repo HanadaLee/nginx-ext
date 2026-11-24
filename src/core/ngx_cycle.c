@@ -1554,7 +1554,8 @@ ngx_shared_memory_add_ext(ngx_conf_t *cf, ngx_shm_zone_params_t *zp)
     if (shm_zone->state != NULL) {
         if (shm_zone->state->file.name.len != zp->file.len
             || ngx_strncmp(shm_zone->state->file.name.data, zp->file.data,
-                           zp->file.len) != 0)
+                           zp->file.len)
+               != 0)
         {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                "conflicting state files for zone \"%V\"",

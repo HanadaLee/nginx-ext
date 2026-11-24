@@ -505,8 +505,9 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
         && r->method == NGX_HTTP_GET
         && r->headers_in.range != NULL
         && ngx_strlchr(r->headers_in.range->value.data,
-                      r->headers_in.range->value.data
-                      + r->headers_in.range->value.len, ',') != NULL)
+                       r->headers_in.range->value.data
+                       + r->headers_in.range->value.len, ',')
+           != NULL)
     {
         ctx->multipart = ngx_pcalloc(r->pool,
                                      sizeof(ngx_http_slice_multipart_t));

@@ -273,7 +273,8 @@ next_level:
     for (l = 0; l < lscf->logs->nelts; l++) {
 
 #if (NGX_EXT && NGX_EXPR)
-        if (ngx_stream_expr_get_result(s, log[l].expr_id) != NGX_EXPR_WHEN_HIT)
+        if (ngx_stream_expr_get_result(s, log[l].expr_id)
+            != NGX_EXPR_WHEN_HIT)
         {
             continue;
         }
@@ -1415,9 +1416,9 @@ process_formats:
 
                 if (n == (ngx_uint_t) NGX_ERROR || n > 2147483647) {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                       "invalid access_log sample value \"%V\": "
-                                       "expected an integer between 0 and "
-                                       "2147483647", &s);
+                                       "invalid access_log sample value "
+                                       "\"%V\": expected an integer between "
+                                       "0 and 2147483647", &s);
                     return NGX_CONF_ERROR;
                 }
 

@@ -1672,7 +1672,7 @@ ngx_http_grpc_create_request(ngx_http_request_t *r)
     part = &ctx->headers_in.part;
     header = part->elts;
 
-    for (i = 0; /* void */; i++) {
+    for (i = 0; /* void */ ; i++) {
 
         if (i >= part->nelts) {
             if (part->next == NULL) {
@@ -3205,7 +3205,7 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
 
 #if (NGX_EXT)
             ngx_http_upstream_set_error(r,
-                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
 #endif
 
             return NGX_ERROR;
@@ -3238,7 +3238,7 @@ ngx_http_grpc_filter(void *data, ssize_t bytes)
 
 #if (NGX_EXT)
                         ngx_http_upstream_set_error(r,
-                                         NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
 #endif
 
                         return NGX_ERROR;
@@ -5331,7 +5331,8 @@ ngx_http_grpc_http_variable(ngx_http_request_t *r,
 
     if (name->len == sizeof("grpc_http_host") - 1
         && ngx_strncasecmp(name->data, (u_char *) "grpc_http_host",
-                           sizeof("grpc_http_host") - 1) == 0)
+                           sizeof("grpc_http_host") - 1)
+           == 0)
     {
         v->valid = 1;
         v->no_cacheable = 0;
@@ -5569,15 +5570,16 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_num_value(cf,
                                       &conf->upstream.next_upstream_tries_conf,
-                                     prev->upstream.next_upstream_tries_conf, 0)
+                                      prev->upstream.next_upstream_tries_conf,
+                                      0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
 
-    if (ngx_conf_merge_expr_msec_value(cf,
-                                       &conf->upstream.connect_timeout_conf,
-                                     prev->upstream.connect_timeout_conf, 60000)
+    if (ngx_conf_merge_expr_msec_value(cf, &conf->upstream.connect_timeout_conf,
+                                       prev->upstream.connect_timeout_conf,
+                                       60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5629,8 +5631,9 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_EXT && NGX_EXPR)
     if (ngx_conf_merge_expr_bitmask_value(cf,
-                       &conf->upstream.ignore_headers_conf,
-                       prev->upstream.ignore_headers_conf, NGX_CONF_BITMASK_SET)
+                                          &conf->upstream.ignore_headers_conf,
+                                          prev->upstream.ignore_headers_conf,
+                                          NGX_CONF_BITMASK_SET)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -5839,8 +5842,8 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
             temp_headers = headers.elts;
             for (j = 0; j < headers.nelts; j++) {
                 if (temp_headers[j].key.len == src[i].key.len
-                    && ngx_strcasecmp(temp_headers[j].key.data,
-                                      src[i].key.data) == 0)
+                    && ngx_strcasecmp(temp_headers[j].key.data, src[i].key.data)
+                       == 0)
                 {
                     found = 1;
                     break;
@@ -5958,14 +5961,15 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
             }
 
             if ((src[i].key.len == 10
-                 && ngx_strncasecmp(src[i].key.data,
-                                    (u_char *) ":authority", 10) == 0)
+                 && ngx_strncasecmp(src[i].key.data, (u_char *) ":authority",
+                                    10)
+                    == 0)
                 || (src[i].key.len == 4
                     && ngx_strncasecmp(src[i].key.data, (u_char *) "Host", 4)
                        == 0))
             {
-                conf->host_value = ngx_pcalloc(cf->pool,
-                                               sizeof(ngx_http_complex_value_t));
+                conf->host_value =
+                    ngx_pcalloc(cf->pool, sizeof(ngx_http_complex_value_t));
                 if (conf->host_value == NULL) {
                     return NGX_ERROR;
                 }
@@ -5986,8 +5990,8 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
             if (src[i].key.data[0] == ':') {
 
                 if (src[i].key.len == 7
-                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":method",
-                                       7) == 0)
+                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":method", 7)
+                       == 0)
                 {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                        "\":method\" is not allowed "
@@ -5996,8 +6000,8 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
                 }
 
                 if (src[i].key.len == 5
-                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":path",
-                                       5) == 0)
+                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":path", 5)
+                       == 0)
                 {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                        "\":path\" is not allowed "
@@ -6006,8 +6010,8 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
                 }
 
                 if (src[i].key.len == 7
-                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":scheme",
-                                       7) == 0)
+                    && ngx_strncasecmp(src[i].key.data, (u_char *) ":scheme", 7)
+                       == 0)
                 {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                        "\":scheme\" is not allowed "

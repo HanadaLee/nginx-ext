@@ -2631,7 +2631,7 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
         part = &r->headers_in.headers.part;
         header = part->elts;
 
-        for (i = 0; /* void */; i++) {
+        for (i = 0; /* void */ ; i++) {
 
             if (i >= part->nelts) {
                 if (part->next == NULL) {
@@ -2646,7 +2646,8 @@ ngx_http_get_request_id(ngx_http_request_t *r, ngx_str_t *id)
             if (header[i].key.len == clcf->request_id_header.len
                 && ngx_strncasecmp(header[i].key.data,
                                    clcf->request_id_header.data,
-                                   clcf->request_id_header.len) == 0)
+                                   clcf->request_id_header.len)
+                   == 0)
             {
                 if (header[i].value.len == 0 || header[i].value.len > 1024) {
                     break;
@@ -5839,8 +5840,8 @@ ngx_http_core_error_page_field(ngx_conf_t *cf, ngx_command_t *cmd,
 
     for (i = 0; i < clcf->error_page_fields->nelts; i++) {
         if (field[i].name.len == value[1].len
-            && ngx_strncmp(field[i].name.data, value[1].data,
-                           value[1].len) == 0)
+            && ngx_strncmp(field[i].name.data, value[1].data, value[1].len)
+               == 0)
         {
             return "is duplicate";
         }

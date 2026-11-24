@@ -470,7 +470,8 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (ngx_conf_merge_expr_num_value(cf,
                                       &conf->upstream.next_upstream_tries_conf,
-                                     prev->upstream.next_upstream_tries_conf, 0)
+                                      prev->upstream.next_upstream_tries_conf,
+                                      0)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -494,9 +495,9 @@ ngx_http_tunnel_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.socket_sndbuf, 0);
 
 #if (NGX_EXT && NGX_EXPR)
-    if (ngx_conf_merge_expr_msec_value(cf,
-                                       &conf->upstream.connect_timeout_conf,
-                                     prev->upstream.connect_timeout_conf, 60000)
+    if (ngx_conf_merge_expr_msec_value(cf, &conf->upstream.connect_timeout_conf,
+                                       prev->upstream.connect_timeout_conf,
+                                       60000)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;

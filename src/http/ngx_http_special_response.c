@@ -1107,7 +1107,7 @@ ngx_http_find_error_page(ngx_http_request_t *r, ngx_int_t status)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
-    for ( ; clcf; clcf = clcf->error_pages_parent) {
+    for ( /* void */ ; clcf; clcf = clcf->error_pages_parent) {
         if (clcf->error_pages == NULL
             || clcf->error_pages == NGX_CONF_UNSET_PTR)
         {

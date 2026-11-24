@@ -187,8 +187,8 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
                 continue;
             }
 
-            if (ngx_strncmp(r->headers_in.user.data, u[i].data,
-                login_len) != 0)
+            if (ngx_strncmp(r->headers_in.user.data, u[i].data, login_len)
+                != 0)
             {
                 continue;
             }

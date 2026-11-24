@@ -882,14 +882,12 @@ ngx_http_upstream_init(ngx_http_request_t *r)
 
 #if (NGX_EXT && NGX_EXPR)
     u->connect_timeout = ngx_http_upstream_get_msec(r,
-                              u->conf->connect_timeout_conf,
-                              u->conf->connect_timeout);
-    u->send_timeout = ngx_http_upstream_get_msec(r,
-                           u->conf->send_timeout_conf,
-                           u->conf->send_timeout);
-    u->read_timeout = ngx_http_upstream_get_msec(r,
-                           u->conf->read_timeout_conf,
-                           u->conf->read_timeout);
+                                                 u->conf->connect_timeout_conf,
+                                                 u->conf->connect_timeout);
+    u->send_timeout = ngx_http_upstream_get_msec(r, u->conf->send_timeout_conf,
+                                                 u->conf->send_timeout);
+    u->read_timeout = ngx_http_upstream_get_msec(r, u->conf->read_timeout_conf,
+                                                 u->conf->read_timeout);
 #else
     u->connect_timeout = u->conf->connect_timeout;
     u->send_timeout = u->conf->send_timeout;
@@ -1378,17 +1376,17 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
         c->lock = ngx_http_upstream_get_flag(r, u->conf->cache_lock_conf,
                                              u->conf->cache_lock);
         c->lock_timeout = ngx_http_upstream_get_msec(r,
-                                  u->conf->cache_lock_timeout_conf,
-                                  u->conf->cache_lock_timeout);
+                                              u->conf->cache_lock_timeout_conf,
+                                              u->conf->cache_lock_timeout);
         c->lock_age = ngx_http_upstream_get_msec(r,
-                              u->conf->cache_lock_age_conf,
-                              u->conf->cache_lock_age);
+                                                 u->conf->cache_lock_age_conf,
+                                                 u->conf->cache_lock_age);
         c->lock_poll_interval = ngx_http_upstream_get_msec(r,
-                                         u->conf->cache_lock_poll_interval_conf,
-                                         u->conf->cache_lock_poll_interval);
+                                        u->conf->cache_lock_poll_interval_conf,
+                                        u->conf->cache_lock_poll_interval);
         c->lock_expired = c->lock && ngx_http_upstream_get_flag(r,
-                                               u->conf->cache_lock_expired_conf,
-                                               u->conf->cache_lock_expired);
+                                              u->conf->cache_lock_expired_conf,
+                                              u->conf->cache_lock_expired);
 #else
         c->lock = u->conf->cache_lock;
         c->lock_timeout = u->conf->cache_lock_timeout;
@@ -1430,8 +1428,8 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
                                               u->conf->cache_use_stale_conf,
                                               u->conf->cache_use_stale);
         background = ngx_http_upstream_get_flag(r,
-                                      u->conf->cache_background_update_conf,
-                                      u->conf->cache_background_update);
+                                         u->conf->cache_background_update_conf,
+                                         u->conf->cache_background_update);
         if (!c->lock_expired_uncached && !c->must_revalidate
             && ((stale & NGX_HTTP_UPSTREAM_FT_UPDATING)
                 || c->stale_updating) && !r->background
@@ -1768,8 +1766,8 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
 
 #if (NGX_EXT && NGX_EXPR)
     max_offset = ngx_http_upstream_get_off(r,
-                                    u->conf->cache_max_range_offset_conf,
-                                    u->conf->cache_max_range_offset);
+                                           u->conf->cache_max_range_offset_conf,
+                                           u->conf->cache_max_range_offset);
 #endif
 
     h = r->headers_in.range;
@@ -2428,7 +2426,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
 
 #if (NGX_EXT)
         ngx_http_upstream_set_error(r,
-                                   NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED);
+                                    NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED);
 #endif
 
         ngx_http_upstream_finalize_request(r, u,
@@ -2629,7 +2627,7 @@ failed:
 #if (NGX_EXT)
     if (u->state->error == NGX_HTTP_UPSTREAM_ERR_NONE) {
         ngx_http_upstream_set_error(r,
-                                   NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED);
+                                    NGX_HTTP_UPSTREAM_ERR_SSL_HANDSHAKE_FAILED);
     }
 #endif
 
@@ -3177,7 +3175,8 @@ ngx_http_upstream_send_request_handler(ngx_http_request_t *r,
             ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_WRITE_TIMEOUT);
 
         } else {
-            ngx_http_upstream_set_error(r, NGX_HTTP_UPSTREAM_ERR_CONNECT_TIMEOUT);
+            ngx_http_upstream_set_error(r,
+                                        NGX_HTTP_UPSTREAM_ERR_CONNECT_TIMEOUT);
         }
 #endif
 
@@ -3356,7 +3355,7 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
 #if (NGX_EXT)
             ngx_http_upstream_set_error(r,
-                                       NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
+                                        NGX_HTTP_UPSTREAM_ERR_INVALID_RESPONSE);
 #endif
 
             ngx_http_upstream_next(r, u, NGX_HTTP_UPSTREAM_FT_ERROR);
@@ -3388,7 +3387,7 @@ again:
 
 #if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
-                                        NGX_HTTP_UPSTREAM_ERR_HEADER_TOO_LARGE);
+                                       NGX_HTTP_UPSTREAM_ERR_HEADER_TOO_LARGE);
 #endif
 
                 ngx_http_upstream_next(r, u,
@@ -3859,7 +3858,7 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
 
             if (ho == NULL) {
                 ngx_http_upstream_finalize_request(r, u,
-                                       NGX_HTTP_INTERNAL_SERVER_ERROR);
+                                               NGX_HTTP_INTERNAL_SERVER_ERROR);
                 return NGX_OK;
             }
 
@@ -5632,12 +5631,12 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
 
 #if (NGX_EXT)
                 ngx_http_upstream_set_error(r,
-                             NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
+                                     NGX_HTTP_UPSTREAM_ERR_PREMATURELY_CLOSED);
 
             } else if (p->upstream_error) {
                 if (u->state->error == NGX_HTTP_UPSTREAM_ERR_NONE) {
                     ngx_http_upstream_set_error(r,
-                                        NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
+                                            NGX_HTTP_UPSTREAM_ERR_READ_FAILED);
                 }
 #endif
             }
@@ -6448,13 +6447,11 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
     p = ngx_strlcasestrn(start, last, (u_char *) "s-maxage=", 9 - 1);
 
 #if (NGX_EXT)
-    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE))
-    {
+    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE)) {
         offset = 9;
         must_revalidate = 1;
 
-    } else if (!(ignore & NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE))
-    {
+    } else if (!(ignore & NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE)) {
         p = ngx_strlcasestrn(start, last, (u_char *) "max-age=", 8 - 1);
         offset = 8;
 
@@ -6527,8 +6524,7 @@ extensions:
                          23 - 1);
 
 #if (NGX_EXT)
-    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR))
-    {
+    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR)) {
         n = ngx_http_upstream_process_delta_seconds(p + 23, last);
 
         if (n == NGX_ERROR) {
@@ -6541,7 +6537,8 @@ extensions:
 
     } else {
         val = ngx_http_complex_value_sec(r,
-            u->conf->cache_stale_while_revalidate, 0);
+                                         u->conf->cache_stale_while_revalidate,
+                                         0);
 
         if (val > 0) {
             r->cache->updating_sec = val;
@@ -6565,8 +6562,7 @@ extensions:
     p = ngx_strlcasestrn(start, last, (u_char *) "stale-if-error=", 15 - 1);
 
 #if (NGX_EXT)
-    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE))
-    {
+    if (p && !(ignore & NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE)) {
         n = ngx_http_upstream_process_delta_seconds(p + 15, last);
 
         if (n == NGX_ERROR) {
@@ -7372,7 +7368,7 @@ ngx_http_upstream_hide_cookie_match(ngx_http_request_t *r,
     ngx_uint_t                 i, active;
     ngx_conf_expr_str_ctx_t   *value;
 
-    for ( /* void */; cookies; cookies = cookies->parent) {
+    for ( /* void */ ; cookies; cookies = cookies->parent) {
         active = 0;
         value = cookies->values.elts;
 
@@ -7450,10 +7446,14 @@ ngx_http_upstream_rewrite_set_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
             p = start; /* empty cookie name */
         }
 
-        while (start < p && *start == ' ') { start++; }
+        while (start < p && *start == ' ') {
+            start++;
+        }
 
         len = p - start;
-        while (len && *(start + len - 1) == ' ') { len--; }
+        while (len && *(start + len - 1) == ' ') {
+            len--;
+        }
 
 #if (NGX_EXPR)
         if (ngx_http_upstream_hide_cookie_match(r, u->conf->hide_cookies,
@@ -7741,8 +7741,7 @@ ngx_http_upstream_set_error(ngx_http_request_t *r,
         return;
     }
 
-    if (u->state && u->state->peer)
-    {
+    if (u->state && u->state->peer) {
         u->state->error = code;
         return;
     }
@@ -9069,7 +9068,8 @@ ngx_http_upstream_hide_cookie(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
 
         if (ngx_array_init(&(*cookies)->values, cf->pool, 4,
-                           sizeof(ngx_conf_expr_str_ctx_t)) != NGX_OK)
+                           sizeof(ngx_conf_expr_str_ctx_t))
+            != NGX_OK)
         {
             return NGX_CONF_ERROR;
         }

@@ -483,7 +483,7 @@ ngx_ssl_comp_cache_key(ngx_ssl_conn_t *ssl, ngx_ssl_comp_ctx_t *ctx)
 
     cert = SSL_get_certificate(ssl);
 
-    for (i = 0; /* void */; i++) {
+    for (i = 0; /* void */ ; i++) {
         if (!X509_digest(cert, EVP_sha256(), digest, NULL)
             || !EVP_DigestUpdate(md, digest, sizeof(digest)))
         {

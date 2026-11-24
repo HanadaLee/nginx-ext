@@ -788,7 +788,7 @@ ngx_http_file_cache_lock_expired_valid(ngx_http_request_t *r)
         ngx_shmtx_lock(&pool->mutex);
 
         valid = ngx_http_cache_early_current(umcf->cache_early_zone->data,
-                                            c->early_id, &c->early_epoch);
+                                             c->early_id, &c->early_epoch);
 
         ngx_shmtx_unlock(&pool->mutex);
 
@@ -3522,7 +3522,7 @@ ngx_http_cache_early_eligible(ngx_http_request_t *r)
     part = &in->headers.part;
     h = part->elts;
 
-    for (i = 0; /* void */; i++) {
+    for (i = 0; /* void */ ; i++) {
         if (i >= part->nelts) {
             if (part->next == NULL) {
                 break;
@@ -3535,7 +3535,8 @@ ngx_http_cache_early_eligible(ngx_http_request_t *r)
 
         if (h[i].key.len == sizeof("Content-Encoding") - 1
             && ngx_strncasecmp(h[i].key.data, (u_char *) "Content-Encoding",
-                               h[i].key.len) == 0)
+                               h[i].key.len)
+               == 0)
         {
             return NGX_DECLINED;
         }
@@ -3545,7 +3546,8 @@ ngx_http_cache_early_eligible(ngx_http_request_t *r)
 
         if (h[i].key.len == sizeof("Cache-Control") - 1
             && ngx_strncasecmp(h[i].key.data, (u_char *) "Cache-Control",
-                               h[i].key.len) == 0
+                               h[i].key.len)
+               == 0
             && (ngx_strlcasestrn(p, last, (u_char *) "private", 6)
                 || ngx_strlcasestrn(p, last, (u_char *) "no-store", 7)
                 || ngx_strlcasestrn(p, last, (u_char *) "no-cache", 7)))
@@ -3556,7 +3558,8 @@ ngx_http_cache_early_eligible(ngx_http_request_t *r)
         if (in->status_n == NGX_HTTP_OK
             && h[i].key.len == sizeof("Content-Range") - 1
             && ngx_strncasecmp(h[i].key.data, (u_char *) "Content-Range",
-                               h[i].key.len) == 0)
+                               h[i].key.len)
+               == 0)
         {
             return NGX_DECLINED;
         }
