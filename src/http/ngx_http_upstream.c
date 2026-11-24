@@ -796,6 +796,10 @@ ngx_http_upstream_init_conditional_conf(ngx_http_upstream_conf_t *conf)
                                       ngx_conf_expr_bitmask_ctx_t);
     ngx_http_upstream_init_conf_value(conf, cache_max_range_offset,
                                       ngx_conf_expr_off_ctx_t);
+#if !(NGX_WIN32)
+    ngx_http_upstream_init_conf_value(conf, cache_lock_early_read,
+                                      ngx_conf_expr_flag_ctx_t);
+#endif
     ngx_http_upstream_init_conf_value(conf, cache_lock,
                                       ngx_conf_expr_flag_ctx_t);
     ngx_http_upstream_init_conf_value(conf, cache_lock_timeout,
@@ -1454,6 +1458,12 @@ ngx_http_upstream_cache(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
     case NGX_OK:
 
+#if (NGX_EXT && !(NGX_WIN32))
+        if (c->early_reader) {
+            break;
+        }
+#endif
+
         u->cache_status = NGX_HTTP_CACHE_HIT;
     }
 
@@ -1567,6 +1577,12 @@ ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
 {
     ngx_int_t          rc;
     ngx_http_cache_t  *c;
+
+#if (NGX_EXT && !(NGX_WIN32))
+    if (r->cache->early_reader && !ngx_http_cache_early_ready(r)) {
+        return NGX_DECLINED;
+    }
+#endif
 
     r->cached = 1;
     c = r->cache;
@@ -5455,6 +5471,12 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
 
 #endif
 
+#if (NGX_EXT && NGX_HTTP_CACHE && !(NGX_WIN32))
+    if (u->cacheable && r->cache && r->cache->early_read) {
+        ngx_http_cache_early_progress(r, p->temp_file);
+    }
+#endif
+
     if (u->peer.connection) {
 
         if (u->store) {
@@ -9156,6 +9178,24 @@ ngx_http_upstream_init_main_conf(ngx_conf_t *cf, void *conf)
     ngx_http_upstream_init_pt       init;
     ngx_http_upstream_header_t     *header;
     ngx_http_upstream_srv_conf_t  **uscfp;
+
+#if (NGX_EXT && NGX_HTTP_CACHE && !(NGX_WIN32))
+    ngx_http_upstream_main_conf_t  *old;
+
+    if (umcf->cache_early_zone == NULL && cf->cycle->old_cycle
+        && cf->cycle->old_cycle->conf_ctx)
+    {
+        old = ngx_http_cycle_get_module_main_conf(cf->cycle->old_cycle,
+                                                  ngx_http_upstream_module);
+
+        if (old && old->cache_early_zone
+            && ngx_http_cache_early_configure(cf, &umcf->cache_early_zone)
+               != NGX_OK)
+        {
+            return NGX_CONF_ERROR;
+        }
+    }
+#endif
 
     uscfp = umcf->upstreams.elts;
 

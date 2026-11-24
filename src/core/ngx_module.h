@@ -201,7 +201,7 @@
 #if (NGX_EXT)
 
 /* Bump when an extension changes the public ABI without a version change. */
-#define NGX_EXT_ABI_VERSION  3
+#define NGX_EXT_ABI_VERSION  4
 
 #if (NGX_EXPR)
 #define NGX_MODULE_SIGNATURE_EXT_1  "1"

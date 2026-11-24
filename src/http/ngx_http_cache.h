@@ -86,6 +86,13 @@ typedef struct {
 } ngx_http_file_cache_node_t;
 
 
+#if (NGX_EXT && !(NGX_WIN32))
+#define NGX_HTTP_CACHE_EARLY_INTERVAL  50
+
+typedef struct ngx_http_cache_early_s  ngx_http_cache_early_t;
+#endif
+
+
 struct ngx_http_cache_s {
     ngx_file_t                       file;
     ngx_array_t                      keys;
@@ -128,6 +135,15 @@ struct ngx_http_cache_s {
     ngx_msec_t                       lock_age;
     ngx_msec_t                       lock_time;
     ngx_msec_t                       wait_time;
+
+#if (NGX_EXT && !(NGX_WIN32))
+    ngx_http_cache_early_t          *early;
+    ngx_atomic_uint_t                early_epoch;
+    u_char                           early_id[NGX_HTTP_CACHE_KEY_LEN];
+    unsigned                         early_watch:1;
+    unsigned                         early_read:1;
+    unsigned                         early_reader:1;
+#endif
 
     ngx_event_t                      wait_event;
 
@@ -234,6 +250,15 @@ char *ngx_http_file_cache_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 char *ngx_http_file_cache_valid_set_slot(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+
+
+#if (NGX_EXT && !(NGX_WIN32))
+ngx_int_t ngx_http_cache_early_configure(ngx_conf_t *cf,
+    ngx_shm_zone_t **zone);
+void ngx_http_cache_early_progress(ngx_http_request_t *r, ngx_temp_file_t *tf);
+void ngx_http_cache_early_invalidate(ngx_shm_zone_t *zone, const u_char *id);
+ngx_uint_t ngx_http_cache_early_ready(ngx_http_request_t *r);
+#endif
 
 
 extern ngx_str_t  ngx_http_cache_status[];
