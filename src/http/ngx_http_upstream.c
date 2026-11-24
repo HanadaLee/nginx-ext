@@ -1826,12 +1826,15 @@ ngx_http_upstream_cache_check_range(ngx_http_request_t *r,
 
 
 #if (NGX_EXT)
-static ngx_int_t ngx_http_upstream_cache_test_content_type(
-    ngx_http_request_t *r, ngx_http_upstream_t *u)
+
+static ngx_int_t
+ngx_http_upstream_cache_test_content_type(ngx_http_request_t *r,
+    ngx_http_upstream_t *u)
 {
     if (ngx_http_test_content_type(r, &u->conf->cache_types) == NULL) {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "http upstream cache: not match content types, skip caching");
+                       "http upstream cache: not match content types, "
+                       "skip caching");
 
         return NGX_ERROR;
     }
