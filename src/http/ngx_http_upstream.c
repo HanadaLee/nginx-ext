@@ -472,6 +472,12 @@ ngx_module_t  ngx_http_upstream_module = {
 };
 
 
+#if (NGX_EXT && NGX_HTTP_CACHE)
+ngx_http_upstream_cache_background_init_pt
+    ngx_http_upstream_cache_background_init;
+#endif
+
+
 static ngx_http_variable_t  ngx_http_upstream_vars[] = {
 
     { ngx_string("upstream_addr"), NULL,
@@ -1708,7 +1714,22 @@ static ngx_int_t
 ngx_http_upstream_cache_background_update(ngx_http_request_t *r,
     ngx_http_upstream_t *u)
 {
+#if (NGX_EXT)
+    void                *ctx;
+    ngx_uint_t           ctx_index;
+#endif
     ngx_http_request_t  *sr;
+
+#if (NGX_EXT)
+    ctx = NULL;
+
+    if (ngx_http_upstream_cache_background_init != NULL
+        && ngx_http_upstream_cache_background_init(r, &ctx_index, &ctx)
+           != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+#endif
 
     if (r == r->main) {
         r->preserve_body = 1;
@@ -1721,6 +1742,12 @@ ngx_http_upstream_cache_background_update(ngx_http_request_t *r,
     {
         return NGX_ERROR;
     }
+
+#if (NGX_EXT)
+    if (ctx != NULL) {
+        sr->ctx[ctx_index] = ctx;
+    }
+#endif
 
     sr->header_only = 1;
 

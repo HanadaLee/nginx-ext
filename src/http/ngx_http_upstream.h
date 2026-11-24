@@ -627,6 +627,13 @@ typedef struct {
 } ngx_http_upstream_param_t;
 
 
+#if (NGX_EXT && NGX_HTTP_CACHE)
+typedef ngx_int_t (*ngx_http_upstream_cache_background_init_pt)(
+    ngx_http_request_t *r, ngx_uint_t *ctx_index, void **ctx);
+
+extern ngx_http_upstream_cache_background_init_pt
+    ngx_http_upstream_cache_background_init;
+#endif
 
 
 ngx_int_t ngx_http_upstream_create(ngx_http_request_t *r);

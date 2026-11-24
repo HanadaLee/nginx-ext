@@ -75,6 +75,7 @@ typedef struct {
     ngx_str_t                    last_modified;
     ngx_http_slice_error_e       error;
     unsigned                     done:1;
+    unsigned                     background:1;
 #endif
     unsigned                     last:1;
     unsigned                     active:1;
@@ -117,6 +118,10 @@ static ngx_int_t ngx_http_slice_error_variable(ngx_http_request_t *r,
 static void ngx_http_slice_set_error(ngx_http_slice_ctx_t *ctx,
     ngx_http_slice_error_e code);
 static ngx_str_t *ngx_http_slice_strerror(ngx_http_slice_error_e code);
+#if (NGX_HTTP_CACHE)
+static ngx_int_t ngx_http_slice_cache_background_init(ngx_http_request_t *r,
+    ngx_uint_t *ctx_index, void **data);
+#endif
 static ngx_int_t ngx_http_slice_multipart_body(ngx_http_request_t *r,
     ngx_chain_t *in, ngx_http_range_filter_t *filter,
     ngx_http_output_body_filter_pt next);
@@ -269,6 +274,50 @@ ngx_http_slice_strerror(ngx_http_slice_error_e code)
 
     return &ngx_http_slice_errors[NGX_HTTP_SLICE_ERR_NONE];
 }
+
+
+#if (NGX_HTTP_CACHE)
+
+static ngx_int_t
+ngx_http_slice_cache_background_init(ngx_http_request_t *r,
+    ngx_uint_t *ctx_index, void **data)
+{
+    u_char                *p;
+    ngx_http_slice_ctx_t  *ctx, *snapshot;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
+
+    if (ctx == NULL || ctx->done || ctx->range.len == 0) {
+        return NGX_OK;
+    }
+
+    p = ngx_strlchr(ctx->range.data, ctx->range.data + ctx->range.len, '-');
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    snapshot = ngx_pcalloc(r->pool, sizeof(ngx_http_slice_ctx_t)
+                                    + ctx->range.len);
+    if (snapshot == NULL) {
+        return NGX_ERROR;
+    }
+
+    /* ctx->start may already point at the next slice */
+
+    snapshot->start = ngx_atoof(ctx->range.data + sizeof("bytes=") - 1,
+                                p - ctx->range.data - (sizeof("bytes=") - 1));
+    snapshot->range.len = ctx->range.len;
+    snapshot->range.data = (u_char *) (snapshot + 1);
+    ngx_memcpy(snapshot->range.data, ctx->range.data, ctx->range.len);
+    snapshot->background = 1;
+
+    *ctx_index = ngx_http_slice_filter_module.ctx_index;
+    *data = snapshot;
+
+    return NGX_OK;
+}
+
+#endif
 
 #endif
 
@@ -423,6 +472,12 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
 
         return NGX_ERROR;
     }
+
+#if (NGX_EXT)
+    if (ctx->background) {
+        return ngx_http_next_header_filter(r);
+    }
+#endif
 
     ctx->start = end;
     ctx->active = 1;
@@ -1259,7 +1314,12 @@ ngx_http_slice_add_variables(ngx_conf_t *cf)
 {
     ngx_http_variable_t  *var;
 
+#if (NGX_EXT)
+    var = ngx_http_add_variable(cf, &ngx_http_slice_range_name,
+                                NGX_HTTP_VAR_NOCACHEABLE);
+#else
     var = ngx_http_add_variable(cf, &ngx_http_slice_range_name, 0);
+#endif
     if (var == NULL) {
         return NGX_ERROR;
     }
@@ -1288,6 +1348,11 @@ ngx_http_slice_init(ngx_conf_t *cf)
 
     ngx_http_next_body_filter = ngx_http_top_body_filter;
     ngx_http_top_body_filter = ngx_http_slice_body_filter;
+
+#if (NGX_EXT && NGX_HTTP_CACHE)
+    ngx_http_upstream_cache_background_init =
+                                         ngx_http_slice_cache_background_init;
+#endif
 
     return NGX_OK;
 }
