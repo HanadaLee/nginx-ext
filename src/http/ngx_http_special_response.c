@@ -49,41 +49,41 @@
 #define ngx_http_error_507_reason   "Insufficient Storage"
 
 #define ngx_http_error_400_message                                            \
-    "The server could not process the request because it was invalid."
+    "The server rejected this request as invalid."
 #define ngx_http_error_401_message                                            \
-    "Valid authentication credentials were not provided."
+    "Valid credentials are required."
 #define ngx_http_error_403_message                                            \
-    "You do not have permission to access this resource."
+    "The client does not have the required permission."
 #define ngx_http_error_404_message                                            \
-    "The requested resource could not be found."
+    "The server could not find what was requested."
 #define ngx_http_error_405_message                                            \
-    "The requested method is not supported for this resource."
+    "This HTTP method is not allowed for the requested URL."
 #define ngx_http_error_406_message                                            \
-    "The server cannot provide a response matching the request headers."
+    "No available response matches your content preferences."
 #define ngx_http_error_407_message                                            \
-    "Valid proxy authentication credentials were not provided."
+    "The proxy requires valid credentials."
 #define ngx_http_error_408_message                                            \
     "The server did not receive the complete request in time."
 #define ngx_http_error_409_message                                            \
-    "The request conflicts with the current state of the resource."
+    "The request cannot be completed in the current state."
 #define ngx_http_error_410_message                                            \
-    "The requested resource is no longer available."
+    "What was requested is no longer available."
 #define ngx_http_error_411_message                                            \
     "The request must include a valid Content-Length header."
 #define ngx_http_error_412_message                                            \
-    "One or more conditions in the request headers were not met."
+    "A condition in the request headers was not met."
 #define ngx_http_error_413_message                                            \
     "The request content exceeds the server's allowed size."
 #define ngx_http_error_414_message                                            \
     "The request URI exceeds the server's allowed length."
 #define ngx_http_error_415_message                                            \
-    "The server does not support the request content type."
+    "The server cannot accept the format of the request body."
 #define ngx_http_error_416_message                                            \
     "The server cannot provide the requested range."
 #define ngx_http_error_421_message                                            \
-    "The request was sent to a server that cannot handle it."
+    "The request reached the wrong server."
 #define ngx_http_error_429_message                                            \
-    "The client sent too many requests within a short period."
+    "The request rate exceeds the limit."
 #define ngx_http_error_494_message                                            \
     "A request header or cookie exceeds the allowed size."
 #define ngx_http_error_495_message                                            \
@@ -101,17 +101,17 @@
 #define ngx_http_error_503_message                                            \
     "The server is temporarily unable to process the request."
 #define ngx_http_error_504_message                                            \
-    "The upstream server did not respond within the allowed time."
+    "The upstream server did not respond in time."
 #define ngx_http_error_505_message                                            \
-    "The server does not support the HTTP version used by the request."
+    "The server does not support this HTTP version."
 #define ngx_http_error_507_message                                            \
-    "The server does not have enough storage to complete the request."
+    "There is not enough storage to complete this request."
 
 
 #define ngx_http_error_page(code, reason)                                     \
     "<title>" code " " reason "</title></head>" CRLF                          \
     "<body>" CRLF                                                             \
-    "<div><h1>" code " " reason "</h1>" CRLF
+    "<main><h1><b>" code "</b> <span>" reason "</span></h1>" CRLF
 
 #define ngx_http_error_page_ext(code, reason, message)                        \
     ngx_http_error_page(code, reason)                                         \
@@ -120,7 +120,7 @@
 #define ngx_http_error_page_redirect(code, reason)                            \
     "<title>" code " " reason "</title></head>" CRLF                          \
     "<body>" CRLF                                                             \
-    "<div style=\"text-align:center\">" CRLF                                  \
+    "<main style=\"text-align:center\">" CRLF                                  \
     "<h1>" code " " reason "</h1>" CRLF
 
 #define ngx_http_error_page_info(reason, message)                             \
@@ -158,8 +158,9 @@ static ngx_int_t ngx_http_send_formatted_response(ngx_http_request_t *r,
 
 
 static u_char ngx_http_error_head[] =
-"<!DOCTYPE html><html>" CRLF
-"<head>"
+"<!DOCTYPE html><html lang=\"en\">" CRLF
+"<head><meta charset=\"utf-8\">"
+"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
 ;
 
 #endif
@@ -167,7 +168,7 @@ static u_char ngx_http_error_head[] =
 
 static u_char ngx_http_error_full_tail[] =
 #if (NGX_EXT)
-"<p>" NGINX_VER "</p></div>" CRLF
+"<p>" NGINX_VER "</p></main>" CRLF
 #else
 "<hr><center>" NGINX_VER "</center>" CRLF
 #endif
@@ -178,7 +179,7 @@ static u_char ngx_http_error_full_tail[] =
 
 static u_char ngx_http_error_build_tail[] =
 #if (NGX_EXT)
-"<p>" NGINX_VER_BUILD "</p></div>" CRLF
+"<p>" NGINX_VER_BUILD "</p></main>" CRLF
 #else
 "<hr><center>" NGINX_VER_BUILD "</center>" CRLF
 #endif
@@ -189,7 +190,7 @@ static u_char ngx_http_error_build_tail[] =
 
 static u_char ngx_http_error_tail[] =
 #if (NGX_EXT)
-"</div>" CRLF
+"</main>" CRLF
 #else
 "<hr><center>openresty</center>" CRLF
 #endif
@@ -200,52 +201,55 @@ static u_char ngx_http_error_tail[] =
 
 #if (NGX_EXT)
 
-static u_char ngx_http_error_style[] =
-"<style>" CRLF
-"body{font-family:Arial,sans-serif;background-color:#f4f4f9;color:#333;"
-"margin:0;padding:0;display:flex;height:100vh;"
-"justify-content:center;align-items:center}"
-"div{background-color:white;border-radius:8px;"
-"box-shadow:0 4px 8px rgba(0,0,0,0.1);padding:20px 30px;"
-"width:100%;max-width:600px}"
-"h1{color:#f90}"
-"p{font-size:1.2em}"
-"table{width:100%;margin:20px 0;border-collapse:collapse}"
-"table td{padding:10px;border:1px solid #ddd;}"
-"table td:first-child{font-weight:bold;background-color:#f9f9f9}"
-"@media (prefers-color-scheme:dark){body{background-color:#333;color:#f4f4f9}"
-"div{background-color:black}"
-"table td{border:1px solid #444}"
-"table td:first-child{background-color:#3a3a3a}}" CRLF
-"</style>" CRLF
-;
+#define ngx_http_error_base_style                                             \
+    "body{margin:0 16px;min-height:100vh;display:grid;place-content:center;"  \
+    "grid:auto/min(100%,480px);background:#f4f6f8;color:#222632;"             \
+    "font:15px/1.5 \"Segoe UI\",Arial,sans-serif}main{"                       \
+    "padding:clamp(20px,5vw,32px);background:#fff;"                           \
+    "border:1px solid #80889824;border-radius:16px;"                          \
+    "box-shadow:0 8px 28px #1922350c}h1{display:flex;gap:12px;margin:0;"      \
+    "font-size:24px;font-weight:600;line-height:28px;color:#b5482c}b{"        \
+    "align-self:center;padding:0 11px;border-radius:99px;"                    \
+    "background:#b5482c13;font-size:15px}p{margin:12px 0 0;opacity:.78}"      \
+    "@media(prefers-color-scheme:dark){body{background:#191a20;color:#eee}"   \
+    "main{background:#23252c}h1{color:#ffa488}b{background:#ffa48818}}"
+
+#define ngx_http_error_fields_style                                           \
+    "dl{display:grid;grid:auto/fit-content(35%) 1fr;align-items:baseline;"    \
+    "gap:6px 16px;margin:20px 0 0;padding:14px 16px;border-radius:10px;"      \
+    "background:#73829912;font-size:13px;overflow-wrap:anywhere}dt{"          \
+    "opacity:.72}dd{margin:0;font:13px/20px Consolas,monospace}"
+
+
+static ngx_str_t ngx_http_error_styles[] = {
+    ngx_string("<style>" ngx_http_error_base_style "</style>" CRLF),
+    ngx_string("<style>" ngx_http_error_base_style ngx_http_error_fields_style
+               "</style>" CRLF)
+};
 
 
 static u_char ngx_http_error_fields_head[] =
-"<table><tbody>" CRLF
+"<dl>" CRLF
 ;
 
 
 static u_char ngx_http_error_field_head[] =
-"<tr>" CRLF
-"<td>"
+"<dt>"
 ;
 
 
 static u_char ngx_http_error_field_value[] =
-"</td>" CRLF
-"<td>"
+"</dt><dd>"
 ;
 
 
 static u_char ngx_http_error_field_tail[] =
-"</td>" CRLF
-"</tr>" CRLF
+"</dd>" CRLF
 ;
 
 
 static u_char ngx_http_error_fields_tail[] =
-"</tbody></table>" CRLF
+"</dl>" CRLF
 ;
 
 #endif
@@ -531,9 +535,9 @@ static char ngx_http_error_414_page[] =
 #else
 "<html>" CRLF
 "<head><title>414 Request-URI Too Large</title></head>" CRLF
-#endif
 "<body>" CRLF
 "<center><h1>414 Request-URI Too Large</h1></center>" CRLF
+#endif
 ;
 
 
@@ -1439,10 +1443,10 @@ ngx_http_send_special_response(ngx_http_request_t *r,
     ngx_uint_t    msie_padding;
 
 #if (NGX_EXT)
-    ngx_uint_t    style;
-    ngx_chain_t   out[6];
+    ngx_str_t    *style;
     ngx_buf_t    *ib;
     ngx_uint_t    i;
+    ngx_chain_t   out[6];
 
     if (clcf->error_page_format != NGX_HTTP_ERROR_PAGE_FORMAT_DEFAULT
         && ngx_http_error_pages[err].len)
@@ -1477,7 +1481,7 @@ ngx_http_send_special_response(ngx_http_request_t *r,
         ib = NULL;
     }
 
-    style = 0;
+    style = NULL;
 #endif
 
     msie_padding = 0;
@@ -1491,8 +1495,8 @@ ngx_http_send_special_response(ngx_http_request_t *r,
                                           + len;
 
         if (err >= NGX_HTTP_OFF_4XX) {
-            r->headers_out.content_length_n += sizeof(ngx_http_error_style) - 1;
-            style = 1;
+            style = &ngx_http_error_styles[ib != NULL];
+            r->headers_out.content_length_n += style->len;
         }
 #else
         r->headers_out.content_length_n = ngx_http_error_pages[err].len + len;
@@ -1557,8 +1561,8 @@ ngx_http_send_special_response(ngx_http_request_t *r,
         }
 
         b->memory = 1;
-        b->pos = ngx_http_error_style;
-        b->last = ngx_http_error_style + sizeof(ngx_http_error_style) - 1;
+        b->pos = style->data;
+        b->last = style->data + style->len;
 
         out[i].buf = b;
         out[i].next = &out[i + 1];
