@@ -602,6 +602,13 @@ ngx_http_file_cache_open(ngx_http_request_t *r)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http file cache fd: %d", of.fd);
 
+#if (NGX_EXT)
+    if (c->uniq != of.uniq) {
+        /* the cached header size belongs to a different file */
+        c->body_start = c->buffer_size;
+    }
+#endif
+
     c->file.fd = of.fd;
     c->file.log = r->connection->log;
     c->uniq = of.uniq;
