@@ -3510,14 +3510,10 @@ ngx_http_cache_early_eligible(ngx_http_request_t *r)
         p = in->content_type->value.data;
         last = p + in->content_type->value.len;
 
-        while (p < last && (*p == ' ' || *p == '\t')) {
-            p++;
-        }
+        while (p < last && (*p == ' ' || *p == '\t')) { p++; }
 
         type = p;
-        while (p < last && *p != ';' && *p != ' ' && *p != '\t') {
-            p++;
-        }
+        while (p < last && *p != ';' && *p != ' ' && *p != '\t') { p++; }
 
         if ((size_t) (p - type) == byteranges.len
             && ngx_strncasecmp(type, byteranges.data, byteranges.len) == 0)
