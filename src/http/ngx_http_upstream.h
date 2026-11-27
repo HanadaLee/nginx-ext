@@ -60,6 +60,7 @@
 #if (NGX_EXT)
 
 #define NGX_HTTP_UPSTREAM_IGN_PRAGMA         0x00000400
+#define NGX_HTTP_UPSTREAM_IGN_CDN_CC         0x00000800
 
 
 #define NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE     0x00000002
@@ -480,7 +481,8 @@ typedef struct {
     ngx_table_elt_t                 *vary;
 
     ngx_table_elt_t                 *cache_control;
-#if (NGX_EXT)
+#if (NGX_EXT && NGX_HTTP_CACHE)
+    ngx_table_elt_t                 *cdn_cache_control;
     ngx_table_elt_t                 *pragma;
 #endif
     ngx_table_elt_t                 *set_cookie;
